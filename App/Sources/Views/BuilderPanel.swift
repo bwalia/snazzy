@@ -8,6 +8,8 @@ import WebKit
 struct BuilderPanel: View {
     @Environment(AppModel.self) private var model
     @State private var bottomTab: BottomTab = .code
+    @State private var askingPR = false
+    @State private var prRef = ""
 
     enum BottomTab: String, CaseIterable { case code = "Code", steps = "Steps", console = "Console" }
 
@@ -15,6 +17,7 @@ struct BuilderPanel: View {
         let builder = model.builder
         VStack(spacing: 0) {
             header(builder)
+                .sheet(isPresented: $askingPR) { prSheet }
             Divider()
             if builder.current == nil {
                 ContentUnavailableView {
@@ -39,6 +42,25 @@ struct BuilderPanel: View {
         }
     }
 
+    private var prSheet: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Demo from a pull request").font(.headline)
+            TextField("owner/repo#123 or the PR's URL", text: $prRef).frame(width: 380)
+            HStack {
+                Spacer()
+                Button("Cancel") { askingPR = false }
+                Button("Make Demo") {
+                    model.chat.send("Make a demo of pull request \(prRef): load it, plan a 2–4 slide demo deck (what changed, why, how to test) with a short talk script, then ask me whether to record.")
+                    askingPR = false
+                    prRef = ""
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(GitRefs.parse(prRef)?.number == nil)
+            }
+        }
+        .padding(20)
+    }
+
     private func header(_ builder: BuilderController) -> some View {
         HStack(spacing: 8) {
             Menu {
@@ -48,6 +70,15 @@ struct BuilderPanel: View {
                 Divider()
                 Button("New Prototype") { _ = try? builder.createProject(name: "prototype-\(Int(Date().timeIntervalSince1970) % 10000)", kind: .prototype, title: "Prototype") }
                 Button("New Presentation") { _ = try? builder.createProject(name: "deck-\(Int(Date().timeIntervalSince1970) % 10000)", kind: .presentation, title: "Presentation") }
+                if model.developer.settings.pullRequestDemosEnabled {
+                    Divider()
+                    Button("Demo from Pull Request…") { askingPR = true }
+                    Button("Demo from Local Branch…") {
+                        if let folder = model.developer.grantRepository() {
+                            model.chat.send("Make a demo of the changes on the current branch of my \(folder.lastPathComponent) repository compared with main: load them, plan a 2–4 slide demo deck with a short talk script, then ask me whether to record.")
+                        }
+                    }
+                }
             } label: {
                 Label(builder.current?.name ?? "Projects", systemImage: builder.current?.kind == .presentation ? "play.rectangle" : "app.dashed")
             }

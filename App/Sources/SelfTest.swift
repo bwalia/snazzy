@@ -299,6 +299,14 @@ enum SelfTest {
         await Task.detached { await MainActor.run { print("main actor on main thread: \(pthread_main_np() == 1)") } }.value
         let app = existing ?? AppModel()
         app.sessionLoggingSuspended = true
+        // --dev-all: turn every developer feature on for this run, then restore.
+        let savedDev = app.developer.settings
+        if arguments.contains("--dev-all") {
+            app.developer.settings.pullRequestDemosEnabled = true
+            app.developer.settings.screenReadingEnabled = true
+            app.developer.settings.zoomEnabled = true
+        }
+        defer { app.developer.settings = savedDev }
         await app.capture.catalog.refresh()
         do {
             let kind: ProviderKind = provider == "anthropic" ? .anthropic : provider == "apple" ? .appleOnDevice : .ollama

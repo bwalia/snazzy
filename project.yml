@@ -62,6 +62,8 @@ targets:
         com.apple.security.device.camera: true
         com.apple.security.device.audio-input: true
         com.apple.security.files.user-selected.read-write: true
+        # Remember repository folders the user picks (PR demos from local branches).
+        com.apple.security.files.bookmarks.app-scope: true
         # Recordings and session logs save to ~/Movies/Snazzy Pro without save dialogs.
         com.apple.security.assets.movies.read-write: true
     configFiles:

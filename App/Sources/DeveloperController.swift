@@ -32,7 +32,7 @@ final class DeveloperController {
     }
     private(set) var recordings: [RecordingItem] = []
     /// Shown in the Recordings tab while something runs.
-    private(set) var busy: String?
+    var busy: String?
 
     @ObservationIgnored unowned let app: AppModel
     @ObservationIgnored private(set) var share: ShareService!

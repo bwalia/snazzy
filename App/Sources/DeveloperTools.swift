@@ -75,6 +75,28 @@ enum DeveloperTools {
                         "github_pr_comment": .string(o.githubComment), "jira": .string(o.jira)]
             })
         }
+        if s.pullRequestDemosEnabled {
+            tools.append(RegisteredTool(
+                name: "load_pull_request",
+                description: "Load a GitHub pull request to make a demo: title, description, changed files and diff (cut if very long). repo is \"owner/repo\" or the PR's URL. Then plan a 2–4 slide demo deck and talk script and ask whether to record.",
+                inputSchema: AssistantTools.object([
+                    "repo": ["type": "string", "minLength": 3],
+                    "number": ["type": "integer", "minimum": 1],
+                ], required: ["repo"])
+            ) { @Sendable args in
+                try await dev.loadPullRequest(args["repo"]?.stringValue ?? "", number: args["number"]?.intValue)
+            })
+            tools.append(RegisteredTool(
+                name: "load_git_changes",
+                description: "Load the changes on the current branch of a local repository the user allowed, compared with base_branch (e.g. \"main\"). The branch must be pushed to GitHub. path is the folder name or path (optional when only one folder is allowed).",
+                inputSchema: AssistantTools.object([
+                    "path": ["type": "string"],
+                    "base_branch": ["type": "string", "minLength": 1],
+                ], required: ["base_branch"])
+            ) { @Sendable args in
+                try await dev.loadGitChanges(path: args["path"]?.stringValue, base: args["base_branch"]?.stringValue ?? "main")
+            })
+        }
         return tools
     }
 }
