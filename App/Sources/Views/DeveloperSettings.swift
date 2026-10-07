@@ -16,6 +16,7 @@ struct DeveloperSettingsView: View {
                 Text("Captions are made on this Mac (.srt and .vtt). Summaries use your Writing model; with a cloud model you see the exact text before it's sent. Audio and video are never sent.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Recordings") }
+            DeveloperShareSection()
             DeveloperExtraSections()
         }
         .formStyle(.grouped)

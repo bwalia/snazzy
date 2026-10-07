@@ -26,6 +26,46 @@ enum SelfTest {
             arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         }
 
+        if let endpoint = value(after: "--s3-test") {
+            // Real S3 round trip (e.g. a local MinIO): bucket, upload, signed link, delete.
+            let dest = S3Destination(endpoint: endpoint, region: "us-east-1", bucket: "snazzy-test", prefix: "shares/", pathStyle: true)
+            let signer = SigV4(accessKey: value(after: "--access") ?? "", secretKey: value(after: "--secret") ?? "", region: "us-east-1")
+            let session = URLSession(configuration: .ephemeral)
+            do {
+                var mk = URLRequest(url: URL(string: "\(endpoint)/snazzy-test")!)
+                mk.httpMethod = "PUT"
+                signer.sign(&mk, payloadHash: SigV4.emptyPayloadHash)
+                let (_, r0) = try await session.data(for: mk)
+                print("create bucket: HTTP \((r0 as? HTTPURLResponse)?.statusCode ?? 0)")
+                let movie = FileManager.default.temporaryDirectory.appending(path: "share test (trimmed).mov")
+                try Data(repeating: 7, count: 300_000).write(to: movie)
+                let url = ShareService.objectURL(dest, key: "shares/" + movie.lastPathComponent)!
+                var put = URLRequest(url: url)
+                put.httpMethod = "PUT"
+                put.setValue("video/quicktime", forHTTPHeaderField: "Content-Type")
+                signer.sign(&put)
+                let (d1, r1) = try await session.upload(for: put, fromFile: movie)
+                try ShareService.check(r1, d1, "S3")
+                print("upload: HTTP \((r1 as? HTTPURLResponse)?.statusCode ?? 0) \(url.lastPathComponent)")
+                let link = signer.presignedURL(url: url, expires: 3600)
+                let (got, r2) = try await session.data(from: link)
+                print("signed link GET: HTTP \((r2 as? HTTPURLResponse)?.statusCode ?? 0), \(got.count) bytes")
+                let (_, rBad) = try await session.data(from: URL(string: link.absoluteString.replacingOccurrences(of: "X-Amz-Signature=", with: "X-Amz-Signature=0"))!)
+                print("tampered link: HTTP \((rBad as? HTTPURLResponse)?.statusCode ?? 0)")
+                var del = URLRequest(url: url)
+                del.httpMethod = "DELETE"
+                signer.sign(&del, payloadHash: SigV4.emptyPayloadHash)
+                let (_, r3) = try await session.data(for: del)
+                let (_, r4) = try await session.data(from: link)
+                print("delete: HTTP \((r3 as? HTTPURLResponse)?.statusCode ?? 0); link after delete: HTTP \((r4 as? HTTPURLResponse)?.statusCode ?? 0)")
+                let ok = got.count == 300_000 && (rBad as? HTTPURLResponse)?.statusCode == 403 && (r4 as? HTTPURLResponse)?.statusCode == 404
+                SelfTest.report(ok, "S3 share round trip")
+                return ok
+            } catch {
+                SelfTest.report(false, "S3: \(error.localizedDescription)")
+                return false
+            }
+        }
         if arguments.contains("--probe-dev") {
             // What the sandbox allows for developer features.
             for (path, args) in [("/usr/bin/git", ["--version"]), ("/opt/homebrew/bin/gh", ["--version"])] {

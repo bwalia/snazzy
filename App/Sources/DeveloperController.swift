@@ -35,6 +35,9 @@ final class DeveloperController {
     private(set) var busy: String?
 
     @ObservationIgnored unowned let app: AppModel
+    @ObservationIgnored private(set) var share: ShareService!
+    /// The last share result, shown as a sheet with ready-to-paste text.
+    var lastShare: ShareService.Outcome?
     @ObservationIgnored private var trimWindows: [String: NSWindow] = [:]
 
     var folder: URL { Recorder.defaultFolder }
@@ -42,6 +45,7 @@ final class DeveloperController {
     init(app: AppModel) {
         self.app = app
         settings = DeveloperSettings.load()
+        share = ShareService(app: app)
         refresh()
     }
 
@@ -242,6 +246,8 @@ final class DeveloperController {
         app.chat.logSession("summary_made", ["recording": .string(item.id), "model": .string(selection.model)])
         return out
     }
+
+    func setBusy(_ text: String?) { busy = text }
 
     func disabled(_ name: String) -> CaptureActionError {
         CaptureActionError(message: "\(name) is turned off. Turn it on in Settings › Developer.")

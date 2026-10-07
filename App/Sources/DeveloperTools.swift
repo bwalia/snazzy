@@ -58,6 +58,23 @@ enum DeveloperTools {
                 return ["file": .string(url.lastPathComponent), "summary": .string((try? String(contentsOf: url, encoding: .utf8)) ?? "")]
             })
         }
+        if s.shareEnabled {
+            tools.append(RegisteredTool(
+                name: "share_recording",
+                description: "Upload a recording to the user's own storage and get a link: target \"s3\" (their bucket, time-limited link), \"github\" (a release asset in their repo) or \"gist\" (summary and captions as a secret Gist). The user sees the file, size and destination and must approve. Returns the link and text ready to paste into Slack, a GitHub PR comment or Jira.",
+                inputSchema: AssistantTools.object([
+                    "recording_id": ["type": "string", "minLength": 1],
+                    "target": ["type": "string", "enum": ["s3", "github", "gist"]],
+                ], required: ["recording_id", "target"])
+            ) { @Sendable args in
+                let item = try await dev.recording(args["recording_id"]?.stringValue)
+                let target = ShareService.Target(rawValue: args["target"]?.stringValue ?? "") ?? .s3
+                let o = try await dev.share.share(item, to: target)
+                await MainActor.run { dev.lastShare = o }
+                return ["link": .string(o.record.url), "copied_to_clipboard": true, "slack": .string(o.slack),
+                        "github_pr_comment": .string(o.githubComment), "jira": .string(o.jira)]
+            })
+        }
         return tools
     }
 }

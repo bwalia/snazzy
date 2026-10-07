@@ -34,7 +34,15 @@ struct RecordingsPanel: View {
             }
         }
         .onAppear { dev.refresh() }
+        .sheet(item: Binding(get: { dev.lastShare.map { ShareSheetItem(outcome: $0) } }, set: { if $0 == nil { dev.lastShare = nil } })) {
+            ShareResultSheet(outcome: $0.outcome)
+        }
     }
+}
+
+struct ShareSheetItem: Identifiable {
+    let outcome: ShareService.Outcome
+    var id: UUID { outcome.record.id }
 }
 
 struct RecordingRow: View {
@@ -114,9 +122,66 @@ struct DeveloperRowActions: View {
     }
 }
 
-/// Added by the share feature.
+/// Share a recording to the user's own storage.
 struct DeveloperShareButton: View {
+    @Environment(AppModel.self) private var model
     let item: RecordingItem
     @Binding var error: String?
-    var body: some View { EmptyView() }
+
+    var body: some View {
+        let dev = model.developer!
+        if dev.settings.shareEnabled {
+            Menu("Share") {
+                let targets = dev.share.configuredTargets
+                if targets.isEmpty { Text("Set up a destination in Settings › Developer") }
+                ForEach(targets, id: \.self) { target in
+                    Button(target.label) {
+                        error = nil
+                        Task { @MainActor in
+                            do { dev.lastShare = try await dev.share.share(item, to: target) } catch let e { error = e.localizedDescription }
+                        }
+                    }
+                }
+            }
+            .fixedSize()
+        }
+    }
+}
+
+/// After sharing: the link and text ready to paste.
+struct ShareResultSheet: View {
+    let outcome: ShareService.Outcome
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Shared. The link is on your clipboard.", systemImage: "checkmark.circle.fill").font(.headline).foregroundStyle(.green)
+            Text(outcome.record.url).font(.caption.monospaced()).textSelection(.enabled).lineLimit(3)
+            block("Slack", outcome.slack)
+            block("GitHub PR comment", outcome.githubComment)
+            block("Jira", outcome.jira)
+            HStack { Spacer(); Button("Done") { dismiss() }.keyboardShortcut(.defaultAction) }
+        }
+        .padding(20)
+        .frame(width: 560)
+    }
+
+    private func block(_ title: String, _ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title).font(.caption.weight(.semibold))
+                Spacer()
+                Button(copied == title ? "Copied" : "Copy") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                    copied = title
+                }
+                .controlSize(.small)
+            }
+            Text(text).font(.system(size: 11, design: .monospaced)).textSelection(.enabled).lineLimit(8)
+                .padding(8).frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 6).fill(.quaternary.opacity(0.5)))
+        }
+    }
 }
