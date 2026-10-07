@@ -207,6 +207,17 @@ enum AssistantTools {
                 return try await builder.reloadAndReport()
             },
             RegisteredTool(
+                name: "open_sample_deck",
+                description: "Open an example presentation as a builder project, to show what a deck for a sector looks like or to start from. Samples: " + SampleDeck.all.map { "\($0.id) (\($0.sector.rawValue): \($0.title))" }.joined(separator: "; ") + ". Names and figures in samples are made up; rewrite them with the user's content when asked.",
+                inputSchema: object([
+                    "id": ["type": "string", "enum": .array(SampleDeck.all.map { .string($0.id) })],
+                ], required: ["id"])
+            ) { @Sendable args in
+                guard let sample = SampleDeck.all.first(where: { $0.id == args["id"]?.stringValue }) else { throw WorkspaceError("Unknown sample") }
+                try await builder.openSample(sample)
+                return try await builder.reloadAndReport()
+            },
+            RegisteredTool(
                 name: "write_file",
                 description: "Create or replace a file in the project with its COMPLETE content (no diffs or placeholders). The preview reloads; the result includes console_errors and a page summary. Fix any errors you see.",
                 inputSchema: object([

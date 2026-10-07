@@ -80,6 +80,24 @@ enum Templates {
                 .slide h2 { font-size: 64px; margin: 0 0 40px; color: var(--accent); }
                 .slide p, .slide li { font-size: 40px; line-height: 1.4; }
                 .slide .subtitle { color: var(--muted); }
+                .slide.title h1 { background: linear-gradient(90deg, var(--fg), var(--accent));
+                  -webkit-background-clip: text; background-clip: text; color: transparent; }
+                .slide.title::after { content: ""; width: 160px; height: 8px; border-radius: 4px;
+                  background: var(--accent); margin-top: 36px; }
+                .slide h3 { font-size: 34px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
+                .stats { display: flex; gap: 48px; }
+                .stat { flex: 1; border-top: 6px solid var(--accent); padding-top: 24px; }
+                .stat b { display: block; font-size: 110px; line-height: 1; }
+                .stat span { display: block; font-size: 32px; color: var(--muted); margin-top: 16px; }
+                .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; }
+                .cols ul { padding-left: 1.1em; margin: 0; }
+                .steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+                .steps li { counter-increment: step; display: flex; align-items: center; gap: 28px; margin: 0 0 22px; }
+                .steps li::before { content: counter(step); flex: none; width: 64px; height: 64px; border-radius: 50%;
+                  background: var(--accent); color: var(--bg); display: grid; place-items: center; font-weight: 700; }
+                .slide blockquote { font-size: 76px; line-height: 1.2; margin: 0; padding-left: 48px;
+                  border-left: 10px solid var(--accent); font-weight: 600; }
+                .slide .by { color: var(--muted); padding-left: 58px; }
                 .slide .notes { display: none; }
                 .counter { position: fixed; right: 16px; bottom: 12px; color: #888; font-size: 14px; }
 

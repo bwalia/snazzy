@@ -57,7 +57,7 @@ Warnings are treated as errors in the app target.
 | ↳ `Assistant` | `ModelProvider` protocol, Anthropic + Ollama providers, tool registry, JSON-schema validation, conversation loop |
 | ↳ `CaptureEngine` | Device catalog (mics, cameras, USB iPad/iPhone, displays, windows), camera feeds with stall detection and restart, inset transform (rotate → crop), Metal preview view, diagnostics |
 | ↳ `Builder` | Builder workspace (projects, safe file access, starter templates), partial-JSON reader for streamed tool input |
-| ↳ `Slides` | Placeholder (phase 6) |
+| ↳ `Slides` | Sample decks for 12 sectors (education, sales, healthcare, finance, HR, marketing, real estate, nonprofit, support, manufacturing, hospitality, developers) that open in the Builder; native slides in phase 6 |
 
 ## Assistant design
 

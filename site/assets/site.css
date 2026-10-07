@@ -201,6 +201,8 @@ h2 { font-size: clamp(34px, 4.6vw, 54px); line-height: 1.05; letter-spacing: -0.
 .dev-card h3 { margin: 0 0 8px; font-size: 19px; letter-spacing: -0.02em; }
 .dev-card p { margin: 0 0 14px; color: var(--muted); font-size: 15.5px; }
 .dev-card code { display: inline-block; font: 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: #DCD6FF; background: rgba(108,92,255,.14); border: 1px solid rgba(108,92,255,.3); padding: 6px 10px; border-radius: 10px; }
+.use-card { border-top: 3px solid var(--c); }
+.use-card .sector { margin: 0 0 6px; color: var(--c); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .dev-note { color: var(--muted); margin-top: 28px; }
 .dev-note a { color: #B9A9FF; }
 .privacy { background: linear-gradient(180deg, #0E1330, var(--ink)); border-top: 1px solid var(--line); }

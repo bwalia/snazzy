@@ -102,9 +102,7 @@ struct SidePanel: View {
                 case .sources:
                     SourcesPanel()
                 case .slides:
-                    ContentUnavailableView(
-                        "No slides yet", systemImage: "rectangle.on.rectangle",
-                        description: Text("Native slides arrive in phase 6. Ask the assistant to build an HTML presentation in the Builder now."))
+                    SlidesPanel()
                 case .recordings:
                     RecordingsPanel()
                 }

@@ -60,3 +60,36 @@ import Testing
         #expect(Workspace.slug("!!!") == "project")
     }
 }
+
+@Suite struct SampleDeckTests {
+    @Test func everySectorHasAWellFormedSample() throws {
+        let ids = SampleDeck.all.map(\.id)
+        #expect(Set(ids).count == ids.count)
+        #expect(Set(SampleDeck.all.map(\.sector)) == Set(SampleDeck.Sector.allCases))
+        for deck in SampleDeck.all {
+            #expect(deck.slides.count >= 4, "\(deck.id)")
+            #expect(deck.slides.first?.layout == .title, "\(deck.id)")
+            #expect(!deck.prompt.isEmpty && !deck.setup.isEmpty, "\(deck.id)")
+            for s in deck.slides where s.layout == .stats { #expect(s.items.count % 2 == 0, "\(deck.id): \(s.heading)") }
+            let html = deck.html()
+            #expect(html.components(separatedBy: "<section class=\"slide").count - 1 == deck.slides.count)
+        }
+    }
+
+    @Test func escapesText() {
+        let html = SampleDeck.render(.init(.bullets, "A & <b>", ["\"x\""]))
+        #expect(html.contains("A &amp; &lt;b&gt;") && html.contains("&quot;x&quot;"))
+    }
+
+    @Test func createsProjectAndReplacesEarlierCopy() throws {
+        let ws = Workspace(root: FileManager.default.temporaryDirectory.appending(path: "snazzy-ws-\(UUID().uuidString)"))
+        defer { try? FileManager.default.removeItem(at: ws.root) }
+        let sample = SampleDeck.all[0]
+        let p = try ws.createSample(sample)
+        try ws.write(project: p.name, path: "index.html", content: "edited")
+        let again = try ws.createSample(sample)
+        #expect(again.kind == .presentation)
+        #expect(ws.files(project: again.name) == ["deck.css", "deck.js", "index.html"])
+        #expect(try ws.read(project: again.name, path: "index.html").contains(sample.title))
+    }
+}

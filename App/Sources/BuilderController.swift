@@ -127,6 +127,17 @@ final class BuilderController {
         return project
     }
 
+    /// Copies a sample deck into the workspace and opens it.
+    @discardableResult
+    func openSample(_ sample: SampleDeck) throws -> BuilderProject {
+        onActivity?()
+        let project = try workspace.createSample(sample)
+        refreshProjects()
+        open(project.name, announce: false)
+        step(.info, "Sample “\(sample.title)” copied to \(project.name)")
+        return project
+    }
+
     func open(_ name: String, announce: Bool = true) {
         guard let project = workspace.listProjects().first(where: { $0.name == Workspace.slug(name) }) else { return }
         current = project
