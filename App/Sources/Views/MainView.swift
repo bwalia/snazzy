@@ -22,6 +22,7 @@ struct MainView: View {
             }
             .overlay(alignment: .bottom) { RecordingSavedBanner() }
         }
+        .modifier(SharingSheets())
     }
 }
 

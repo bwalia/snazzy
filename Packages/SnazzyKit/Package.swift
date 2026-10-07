@@ -21,7 +21,7 @@ let package = Package(
         .target(name: "MCP", dependencies: ["SnazzyCore"]),
         .testTarget(name: "SnazzyCoreTests", dependencies: ["SnazzyCore"]),
         .testTarget(name: "AssistantTests", dependencies: ["Assistant", "SnazzyCore"]),
-        .testTarget(name: "BuilderTests", dependencies: ["Builder"]),
+        .testTarget(name: "BuilderTests", dependencies: ["Builder", "SnazzyCore"]),
         .testTarget(name: "MCPTests", dependencies: ["MCP", "SnazzyCore"]),
         .testTarget(name: "CaptureEngineTests", dependencies: ["CaptureEngine", "SnazzyCore"]),
     ]

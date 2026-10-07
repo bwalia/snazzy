@@ -28,6 +28,7 @@ final class AppModel {
     @ObservationIgnored private(set) var presets: PresetController!
     @ObservationIgnored private(set) var mcp: MCPManager!
     @ObservationIgnored private(set) var developer: DeveloperController!
+    @ObservationIgnored private(set) var sharing: SharingController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// The right-hand panel's tab (the builder switches to it when it works).
@@ -52,6 +53,7 @@ final class AppModel {
         self.presets = PresetController(app: self)
         self.mcp = MCPManager(app: self, secrets: secrets)
         self.developer = DeveloperController(app: self)
+        self.sharing = SharingController(app: self)
         refreshStoredKeys()
         startPathMonitor()
         mcp.start()

@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import Builder
+import SnazzyCore
 
 @Suite struct PartialJSONTests {
     @Test func readsIncompleteValues() {
@@ -91,5 +92,78 @@ import Testing
         #expect(again.kind == .presentation)
         #expect(ws.files(project: again.name) == ["deck.css", "deck.js", "index.html"])
         #expect(try ws.read(project: again.name, path: "index.html").contains(sample.title))
+    }
+}
+
+@Suite struct SnazzyShareTests {
+    func temp() -> Workspace {
+        Workspace(root: FileManager.default.temporaryDirectory.appending(path: "snazzy-ws-\(UUID().uuidString)"))
+    }
+
+    func presetWithImage(_ id: String) -> SettingsPreset {
+        var setup = CaptureSetup()
+        setup.profiles["cam-1"] = DeviceProfile(crop: InsetCrop(), background: .image(id: id))
+        setup.profiles["cam-2"] = DeviceProfile(crop: InsetCrop(), background: .blur(strength: 0.5))
+        return SettingsPreset(name: "Lesson setup", capture: setup, app: nil)
+    }
+
+    @Test func roundTripsProjectPresetsAndImages() throws {
+        let ws = temp()
+        defer { try? FileManager.default.removeItem(at: ws.root) }
+        let deck = try ws.createSample(SampleDeck.all[0])
+        let bytes = Data([0, 1, 2, 255])
+        let dir = ws.projectURL(deck.name).appending(path: "img")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try bytes.write(to: dir.appending(path: "logo.png"))
+        try Data("x".utf8).write(to: ws.projectURL(deck.name).appending(path: ".DS_Store"))
+
+        let shared = try ws.shareProject(deck.name)
+        #expect(shared.files.map(\.path) == ["deck.css", "deck.js", "img/logo.png", "index.html"])
+        let share = SnazzyShare(title: "Lesson", note: "For Monday", project: shared,
+                                presets: [presetWithImage("abc123")],
+                                backgrounds: [.init(id: "abc123", name: "Classroom", data: Data([9, 9]))])
+        let data = try share.encoded()
+        #expect(data.prefix(8) == Data("SNZSHR01".utf8))
+        let back = try SnazzyShare.decode(data)
+        #expect(back.title == "Lesson" && back.note == "For Monday")
+        #expect(back.project == share.project && back.backgrounds == share.backgrounds)
+        #expect(back.presets.first?.capture?.profiles["cam-1"]?.background == .image(id: "abc123"))
+        #expect(back.contentsSummary.count == 3)
+
+        // Import into a workspace that already has a project with that name.
+        let imported = try ws.importProject(back.project!)
+        #expect(imported.name == deck.name + "-2" && imported.kind == .presentation)
+        #expect(try Data(contentsOf: ws.projectURL(imported.name).appending(path: "img/logo.png")) == bytes)
+        #expect(try ws.read(project: imported.name, path: "index.html") == ws.read(project: deck.name, path: "index.html"))
+    }
+
+    @Test func findsAndRemapsBackgroundImages() {
+        let preset = presetWithImage("old1")
+        #expect(SnazzyShare.imageIDs(in: preset) == ["old1"])
+        let remapped = SnazzyShare.remapImages(in: preset, ["old1": "new9"])
+        #expect(remapped.capture?.profiles["cam-1"]?.background == .image(id: "new9"))
+        #expect(remapped.capture?.profiles["cam-2"]?.background == .blur(strength: 0.5))
+        #expect(remapped.name == preset.name)
+    }
+
+    @Test func rejectsUnsafeOrForeignFiles() throws {
+        for bad in ["../x", "/etc/passwd", "a/../../b", "~/x", ".hidden", "a/.git/config", "a\\b", "", "a//b", "a/./b", ".snazzy-project.json"] {
+            #expect(!SnazzyShare.isSafeRelativePath(bad), "\(bad)")
+        }
+        #expect(SnazzyShare.isSafeRelativePath("img/photo 1.png"))
+
+        #expect(throws: WorkspaceError.self) { try SnazzyShare.decode(Data("hello".utf8)) }
+        let evil = SnazzyShare(title: "x", project: .init(name: "p", kind: .prototype, files: [.init(path: "../../escape.txt", data: Data())]))
+        #expect(throws: WorkspaceError.self) { try SnazzyShare.decode(try evil.encoded()) }
+        // Damaged data after a valid header.
+        #expect(throws: WorkspaceError.self) { try SnazzyShare.decode(Data("SNZSHR01".utf8) + Data(repeating: 7, count: 100)) }
+    }
+
+    @Test func capsDecompressedSize() throws {
+        // 50 MB of zeros compresses to ~50 KB; a small limit must stop it.
+        let bomb = try (Data(count: 50_000_000) as NSData).compressed(using: .zlib) as Data
+        #expect(bomb.count < 1_000_000)
+        #expect(throws: WorkspaceError.self) { try SnazzyShare.inflate(bomb, limit: 1_000_000) }
+        #expect(try SnazzyShare.inflate(bomb, limit: 60_000_000).count == 50_000_000)
     }
 }

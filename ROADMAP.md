@@ -50,6 +50,34 @@ original spec listed an iOS/iPadOS app as out of scope.
      screenshots; App Store Connect record; TestFlight round; swap the site's
      "Coming soon" button for Apple's official Mac App Store badge.
 
+### Next up, before phase 9
+
+**Sharing between Snazzy Pro users** ✅:
+- A `.snazzy` share file holding a Builder project (deck or prototype), and
+  optionally presets and background images. API keys, conversations and
+  recordings are never included.
+- A Share button (AirDrop, Messages, Mail via the macOS share menu) and Export…;
+  double-click or drag a `.snazzy` file in to import it into the Builder.
+- The assistant can export and import too ("send this deck to Sam").
+
+**Live classroom** (about 4–6 weeks in stages, after sharing):
+- *Live room on the local network* (first): students scan a QR code and join in
+  any browser, with no app or account. The Mac serves the live composite (screen,
+  slides, camera inset) with about 1–2 s delay, and a brainstorm board where
+  everyone adds sticky notes and votes. The host moderates; afterwards the
+  assistant groups the ideas and turns them into a slide deck. Nothing leaves
+  the network. About 30–50 viewers.
+- *Snazzy Pro Camera* for Zoom, Teams and Meet: a camera extension (CMIO) so
+  any video-call app shows your slides with your camera inset. Allowed on the
+  Mac App Store.
+- *Go live to YouTube, Twitch or Vimeo*: an RTMP(S) push using the platform's
+  stream key (stored in the Keychain). Needs a third-party streaming package;
+  confirm the package choice before adding it.
+- *Hosted rooms* (later, paid Pro): join from anywhere with a link, with live
+  video and the board over the internet. Needs servers, accounts and a clear
+  privacy policy, because data leaves the Mac; off by default, with consent.
+- The phase 9 iPhone/iPad app joins live rooms as a viewer or co-host.
+
 ### Companion iPhone/iPad app (phases 9–12, about 2–3 months)
 
 Why: recording the device's own camera and mic on the device beats today's

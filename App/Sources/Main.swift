@@ -1,4 +1,5 @@
 import AppKit
+import Builder
 import SnazzyCore
 import SwiftUI
 
@@ -27,7 +28,22 @@ enum Main {
     }
 }
 
+/// Receives .snazzy files opened from Finder, AirDrop or Mail.
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    @MainActor static var openHandler: (([URL]) -> Void)? {
+        didSet { if let openHandler, !pending.isEmpty { openHandler(pending); pending = [] } }
+    }
+    @MainActor private static var pending: [URL] = []
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        MainActor.assumeIsolated {
+            if let handler = Self.openHandler { handler(urls) } else { Self.pending += urls }
+        }
+    }
+}
+
 struct SnazzyProApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel()
 
     var body: some Scene {
@@ -36,6 +52,15 @@ struct SnazzyProApp: App {
                 .environment(model)
                 .environment(model.capture)
                 .frame(minWidth: 900, minHeight: 560)
+                .onAppear {
+                    let sharing = model.sharing!
+                    AppDelegate.openHandler = { urls in
+                        for url in urls where url.pathExtension.lowercased() == SnazzyShare.fileExtension { sharing.open(url) }
+                    }
+                    #if DEBUG
+                    if UserDefaults.standard.bool(forKey: "SnazzyPro.debugShareSheet") { sharing.beginExport() }
+                    #endif
+                }
         }
         .defaultSize(width: 1280, height: 800)
         .commands { AppCommands(model: model) }
@@ -69,6 +94,13 @@ struct AppCommands: Commands {
             Button("New Conversation") { model.chat.clear() }
                 .keyboardShortcut("n")
                 .disabled(model.chat.isRunning)
+        }
+        CommandGroup(after: .newItem) {
+            Divider()
+            Button("Share…") { model.sharing.beginExport() }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+            Button("Import Shared File…") { model.sharing.chooseFileToImport() }
+                .keyboardShortcut("o", modifiers: [.command, .shift])
         }
         CommandMenu("Devices") {
             Button("Open Inset Preview") { try? model.capture.openPreview() }

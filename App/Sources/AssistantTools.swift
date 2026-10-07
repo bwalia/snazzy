@@ -144,7 +144,7 @@ enum AssistantTools {
                 description: "List the camera backgrounds available (built-ins and the user's images) and which is active.",
                 inputSchema: emptySchema
             ) { @Sendable _ in await capture.backgroundsJSON() },
-        ] + recordingTools(capture) + builderTools(builder) + modelTools(app) + settingsTools(app)
+        ] + recordingTools(capture) + builderTools(builder, sharing: app.sharing) + modelTools(app) + settingsTools(app)
           + DeveloperTools.tools(app.developer)
           + (includeMCP ? app.mcp.registeredTools() : []))
     }
@@ -190,7 +190,7 @@ enum AssistantTools {
 
     // MARK: Builder
 
-    static func builderTools(_ builder: BuilderController) -> [RegisteredTool] {
+    static func builderTools(_ builder: BuilderController, sharing: SharingController) -> [RegisteredTool] {
         let project: JSONValue = ["type": "string", "description": "Project name; omit for the open project"]
         return [
             RegisteredTool(
@@ -205,6 +205,25 @@ enum AssistantTools {
                 let kind = ProjectKind(rawValue: args["kind"]?.stringValue ?? "") ?? .prototype
                 try await builder.createProject(name: args["name"]?.stringValue ?? "", kind: kind, title: args["title"]?.stringValue)
                 return try await builder.reloadAndReport()
+            },
+            RegisteredTool(
+                name: "share_project",
+                description: "Open the Share sheet so the user can send a builder project (and optionally presets) to another Snazzy Pro user as a .snazzy file via AirDrop, Messages, Mail or Save As. The user sees what's included and confirms; nothing is sent by this tool. Defaults to the current project.",
+                inputSchema: object([
+                    "project": project,
+                    "presets": ["type": "array", "items": ["type": "string"], "description": "Preset names to include"],
+                    "note": ["type": "string", "description": "Optional note for the recipient"],
+                ], required: [])
+            ) { @Sendable args in
+                let presets = args["presets"]?.arrayValue?.compactMap(\.stringValue) ?? []
+                let note = args["note"]?.stringValue ?? ""
+                let name = args["project"]?.stringValue
+                return await MainActor.run {
+                    sharing.beginExport(project: name)
+                    sharing.exportDraft?.presetNames = Set(presets)
+                    sharing.exportDraft?.note = note
+                    return ["status": "The Share sheet is open. The user reviews what's included and chooses how to send it."]
+                }
             },
             RegisteredTool(
                 name: "open_sample_deck",

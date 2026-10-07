@@ -26,6 +26,82 @@ enum SelfTest {
             arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         }
 
+        if arguments.contains("--share-roundtrip") {
+            // Export a project + preset + background image, open the file, import, verify, clean up.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let tag = UUID().uuidString.prefix(6).lowercased()
+            let library = app.capture.backgrounds
+            var made: (projects: [String], presets: [String], images: [String]) = ([], [], [])
+            func cleanUp() {
+                for p in made.projects { try? app.builder.workspace.deleteProject(p) }
+                for p in made.presets { try? app.presets.store.delete(p) }
+                for i in made.images { library.delete(i) }
+                app.presets.refresh()
+                app.builder.refreshProjects()
+            }
+            do {
+                // A real JPEG for the background library.
+                let ctx = CGContext(data: nil, width: 64, height: 36, bitsPerComponent: 8, bytesPerRow: 0,
+                                    space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+                ctx.setFillColor(CGColor(red: 0.4, green: 0.3, blue: 1, alpha: 1))
+                ctx.fill(CGRect(x: 0, y: 0, width: 64, height: 36))
+                let jpg = FileManager.default.temporaryDirectory.appending(path: "share-test-\(tag).jpg")
+                let dest = CGImageDestinationCreateWithURL(jpg as CFURL, "public.jpeg" as CFString, 1, nil)!
+                CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
+                CGImageDestinationFinalize(dest)
+                let image = try library.add(jpg)
+                made.images.append(image.id)
+
+                var setup = CaptureSetup()
+                setup.profiles["share-test-cam"] = DeviceProfile(crop: InsetCrop(), background: .image(id: image.id))
+                let presetName = "Share test \(tag)"
+                try app.presets.store.save(SettingsPreset(name: presetName, capture: setup, app: app.settings))
+                made.presets.append(presetName)
+                app.presets.refresh()
+
+                let project = try app.builder.workspace.createProject(name: "share-test-\(tag)", kind: .presentation, title: "Share test")
+                made.projects.append(project.name)
+                let fakeToken = "ghp" + "_" + String(repeating: "A1b2", count: 9)
+                try app.builder.workspace.write(project: project.name, path: "js/config.js", content: "const token = '\(fakeToken)';\n")
+
+                let draft = SharingController.ExportDraft(project: project.name, presetNames: [presetName], includeBackgrounds: true, note: "Test note")
+                let share = try app.sharing.build(draft)
+                report("export contents", share.project?.files.count == 4 && share.backgrounds.count == 1 && share.presets.first?.app == nil,
+                       share.contentsSummary.joined(separator: "; "))
+                let warnings = app.sharing.secretWarnings(share)
+                report("secret warning", warnings.count == 1 && warnings[0].hasPrefix("js/config.js"), warnings.joined())
+
+                let file = try app.sharing.temporaryFile(for: share)
+                print("file: \(file.lastPathComponent) \((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) bytes")
+                app.sharing.open(file)
+                report("open", app.sharing.pendingImport?.share.note == "Test note", app.sharing.message ?? "pending import ready")
+                app.sharing.confirmImport()
+                print("result: \(app.sharing.message ?? "")")
+
+                let importedName = "share-test-\(tag)-2"
+                made.projects.append(importedName)
+                let same = try app.builder.workspace.read(project: importedName, path: "index.html") == app.builder.workspace.read(project: project.name, path: "index.html")
+                report("project imported", same && app.builder.workspace.files(project: importedName).count == 4, importedName)
+
+                let importedPreset = app.presets.store.load("\(presetName) (shared)")
+                if let p = importedPreset { made.presets.append(p.name) }
+                let newID: String? = { if case .image(let id)? = importedPreset?.capture?.profiles["share-test-cam"]?.background { return id }; return nil }()
+                if let newID { made.images.append(newID) }
+                report("preset + background imported", newID != nil && newID != image.id && library.images.contains { $0.id == newID },
+                       "preset=\(importedPreset?.name ?? "missing") image=\(newID ?? "missing")")
+                try? FileManager.default.removeItem(at: file.deletingLastPathComponent())
+                try? FileManager.default.removeItem(at: jpg)
+            } catch {
+                report("share round trip", false, error.localizedDescription)
+            }
+            cleanUp()
+            let left = app.builder.workspace.listProjects().filter { $0.name.hasPrefix("share-test-\(tag)") }.count
+                + app.presets.presets.filter { $0.name.hasPrefix("Share test \(tag)") }.count
+                + library.images.filter { made.images.contains($0.id) }.count
+            report("cleaned up", left == 0, "\(left) leftover items")
+            return ok
+        }
         if let endpoint = value(after: "--s3-test") {
             // Real S3 round trip (e.g. a local MinIO): bucket, upload, signed link, delete.
             let dest = S3Destination(endpoint: endpoint, region: "us-east-1", bucket: "snazzy-test", prefix: "shares/", pathStyle: true)

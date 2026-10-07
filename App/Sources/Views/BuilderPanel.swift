@@ -94,6 +94,9 @@ struct BuilderPanel: View {
                 .help("Reload preview").disabled(builder.current == nil)
             Button { builder.openPopOut() } label: { Image(systemName: "macwindow.on.rectangle") }
                 .help("Open the result in its own window").disabled(builder.current == nil)
+            Button { model.sharing.beginExport(project: builder.current?.name) } label: { Image(systemName: "square.and.arrow.up") }
+                .help("Share this project with another Snazzy Pro user")
+                .disabled(builder.current == nil)
             Button { builder.revealInFinder() } label: { Image(systemName: "folder") }
                 .help("Show the project files in Finder").disabled(builder.current == nil)
         }

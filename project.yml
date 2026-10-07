@@ -49,6 +49,20 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Snazzy Pro connects to AI models running on other computers on your network, such as Ollama on a Mac Studio.
+        # .snazzy share files: open with Snazzy Pro (Finder, AirDrop, Mail).
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.snazzy.pro.share
+            UTTypeDescription: Snazzy Pro Share
+            UTTypeConformsTo: [public.data, public.content]
+            UTTypeIconFile: AppIcon
+            UTTypeTagSpecification:
+              public.filename-extension: [snazzy]
+              public.mime-type: [application/x-snazzy-share]
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Snazzy Pro Share
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Owner
+            LSItemContentTypes: [com.snazzy.pro.share]
         NSCameraUsageDescription: Snazzy Pro records your camera (including an iPad or iPhone connected by USB) as an inset in your presentation videos.
         NSMicrophoneUsageDescription: Snazzy Pro records your microphone for presentation voice-over and on-device captions.
         NSSpeechRecognitionUsageDescription: Snazzy Pro creates captions from your recording using on-device speech recognition.

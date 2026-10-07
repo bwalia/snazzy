@@ -58,6 +58,7 @@ Warnings are treated as errors in the app target.
 | ↳ `CaptureEngine` | Device catalog (mics, cameras, USB iPad/iPhone, displays, windows), camera feeds with stall detection and restart, inset transform (rotate → crop), Metal preview view, diagnostics |
 | ↳ `Builder` | Builder workspace (projects, safe file access, starter templates), partial-JSON reader for streamed tool input |
 | ↳ `Slides` | Sample decks for 12 sectors (education, sales, healthcare, finance, HR, marketing, real estate, nonprofit, support, manufacturing, hospitality, developers) that open in the Builder; native slides in phase 6 |
+| ↳ Sharing | `.snazzy` files: send a deck or prototype, presets and their background images to another Snazzy Pro user with AirDrop, Messages, Mail or Save As (File › Share…, ⇧⌘S); double-click to import. No API keys, conversations or recordings. |
 
 ## Assistant design
 
