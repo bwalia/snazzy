@@ -59,6 +59,7 @@ Warnings are treated as errors in the app target.
 | ↳ `Builder` | Builder workspace (projects, safe file access, starter templates), partial-JSON reader for streamed tool input |
 | ↳ `Slides` | Present the open Builder deck (slide list, speaker notes, Record This Deck): the "slides" source records its Present window directly, and slide changes become chapters. Plus sample decks for 12 sectors. |
 | ↳ Sharing | `.snazzy` files: send a deck or prototype, presets and their background images to another Snazzy Pro user with AirDrop, Messages, Mail or Save As (File › Share…, ⇧⌘S); double-click to import. No API keys, conversations or recordings. |
+| ↳ Live classroom | Live tab: a room on your Wi-Fi. People scan a QR code and watch the live picture (slides or screen + camera, with your mic) in their browser, and post and vote on ideas on a brainstorm board; the assistant turns the ideas into a deck. Peer to peer from your Mac: no servers, accounts or internet. Room code required. |
 
 ## Assistant design
 

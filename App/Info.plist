@@ -51,7 +51,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Snazzy Pro. All rights reserved.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Snazzy Pro connects to AI models running on other computers on your network, such as Ollama on a Mac Studio.</string>
+	<string>Snazzy Pro connects to AI models on other computers on your network (such as Ollama on a Mac Studio), and hosts live rooms that people on your Wi-Fi join from their browser.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Snazzy Pro records your microphone for presentation voice-over and on-device captions.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

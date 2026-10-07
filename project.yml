@@ -35,6 +35,8 @@ targets:
         product: Builder
       - package: SnazzyKit
         product: MCP
+      - package: SnazzyKit
+        product: Live
     info:
       path: App/Info.plist
       properties:
@@ -48,7 +50,7 @@ targets:
         # Ollama / LM Studio on this Mac or another computer on the local network.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        NSLocalNetworkUsageDescription: Snazzy Pro connects to AI models running on other computers on your network, such as Ollama on a Mac Studio.
+        NSLocalNetworkUsageDescription: Snazzy Pro connects to AI models on other computers on your network (such as Ollama on a Mac Studio), and hosts live rooms that people on your Wi-Fi join from their browser.
         # .snazzy share files: open with Snazzy Pro (Finder, AirDrop, Mail).
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: com.snazzy.pro.share

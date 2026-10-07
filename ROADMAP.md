@@ -72,18 +72,24 @@ original spec listed an iOS/iPadOS app as out of scope.
 - The assistant can export and import too ("send this deck to Sam").
 
 **Live classroom** (about 4–6 weeks in stages, after sharing):
-- *Live room on the local network* (first): students scan a QR code and join in
+- ✅ *Live room on the local network* (done): students scan a QR code and join in
   any browser, with no app or account. The Mac serves the live composite (screen,
   slides, camera inset) with about 1–2 s delay, and a brainstorm board where
   everyone adds sticky notes and votes. The host moderates; afterwards the
   assistant groups the ideas and turns them into a slide deck. Nothing leaves
   the network. About 30–50 viewers.
+  Built: H.264/AAC in 1-second fMP4 segments (AVAssetWriter HLS profile),
+  played with Media Source Extensions (Chrome, Edge, Firefox, iPad, iPhone
+  iOS 17.1+) or native HLS (Safari); board over Server-Sent Events; room code
+  required; per-browser vote and post limits; host can hide, delete, close or
+  clear; "Turn Ideas into a Deck" via get_brainstorm. Next: test on iPhone
+  Safari and a 30-device classroom; latency tuning.
 - *Snazzy Pro Camera* for Zoom, Teams and Meet: a camera extension (CMIO) so
   any video-call app shows your slides with your camera inset. Allowed on the
   Mac App Store.
 - *Go live to YouTube, Twitch or Vimeo*: an RTMP(S) push using the platform's
   stream key (stored in the Keychain). Needs a third-party streaming package;
-  confirm the package choice before adding it.
+  HaishinKit (BSD-3) approved for this.
 - *Hosted rooms* (later, paid Pro): join from anywhere with a link, with live
   video and the board over the internet. Needs servers, accounts and a clear
   privacy policy, because data leaves the Mac; off by default, with consent.

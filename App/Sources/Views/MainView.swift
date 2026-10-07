@@ -81,6 +81,7 @@ struct SidePanel: View {
         case sources = "Sources & Preview"
         case slides = "Slides"
         case recordings = "Recordings"
+        case live = "Live"
         var id: String { rawValue }
     }
 
@@ -106,6 +107,8 @@ struct SidePanel: View {
                     SlidesPanel()
                 case .recordings:
                     RecordingsPanel()
+                case .live:
+                    LivePanel()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

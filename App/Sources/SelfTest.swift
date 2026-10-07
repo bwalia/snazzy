@@ -76,6 +76,69 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--live-deck") {
+            // Ideas posted over the network become a deck via the assistant (get_brainstorm + builder tools).
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            app.live.pendingTopic = "What should our next class project be?"
+            await app.live.start()
+            guard let url = app.live.joinURL, let base = URL(string: "/", relativeTo: url) else { report("live room", false, app.live.error ?? "no URL"); return ok }
+            let ideas = [("A school garden we look after all year", "Priya"), ("Build a weather station on the roof", "Tom"),
+                         ("Make a podcast about local history", "Sam"), ("Grow vegetables for the school kitchen", "Ana"),
+                         ("Interview grandparents about the town 50 years ago", "Leo")]
+            for (i, idea) in ideas.enumerated() {
+                var r = URLRequest(url: URL(string: "api/notes?k=\(app.live.code)", relativeTo: base)!)
+                r.httpMethod = "POST"
+                r.setValue("student-\(i)", forHTTPHeaderField: "X-Snazzy-Client")
+                r.httpBody = try? JSONValue.object(["text": .string(idea.0), "name": .string(idea.1)]).encoded()
+                _ = try? await URLSession.shared.data(for: r)
+            }
+            try? await Task.sleep(for: .milliseconds(300))
+            report("ideas posted over the network", app.live.board.notes.count == ideas.count, "\(app.live.board.notes.count) ideas")
+            let before = Set(app.builder.workspace.listProjects().map(\.name))
+            let prompt = "Turn the ideas from the live brainstorm into a slide deck. Call get_brainstorm for the ideas, group them into themes, then build a presentation: a title slide with the topic, one slide per theme, and a closing slide with next steps. Add short speaker notes to every slide."
+            _ = await toolChat(prompt: prompt, model: value(after: "--model") ?? "qwen3-coder:30b", provider: "ollama", app: app)
+            let new = app.builder.workspace.listProjects().filter { !before.contains($0.name) }
+            if let deck = new.first, let html = try? app.builder.workspace.read(project: deck.name, path: "index.html") {
+                let titles = html.components(separatedBy: "<h1").count - 1 + html.components(separatedBy: "<h2").count - 1
+                report("deck from ideas", deck.kind == .presentation && titles >= 3, "\(deck.name): \(titles) headings, notes=\(html.components(separatedBy: "class=\"notes\"").count - 1)")
+                print("DECK \(app.builder.workspace.projectURL(deck.name).path)")
+                if !arguments.contains("--keep") { for p in new { try? app.builder.workspace.deleteProject(p.name) } }
+            } else {
+                report("deck from ideas", false, "no new presentation project")
+            }
+            app.live.stop()
+            return ok
+        }
+        if arguments.contains("--live-room") {
+            // Runs a live room for a while so it can be tested from browsers and tools.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let seconds = Double(value(after: "--seconds") ?? "60") ?? 60
+            app.live.pendingTopic = value(after: "--topic") ?? "Self-test ideas"
+            for _ in 0..<30 where app.capture.screen.state != .live {
+                app.capture.useScreen("selftest", true)
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+            await app.live.start()
+            print("JOIN \(app.live.joinURL?.absoluteString ?? "none") code=\(app.live.code) error=\(app.live.error ?? "none")")
+            let end = Date().addingTimeInterval(seconds)
+            var lastViewers = -1, lastIdeas = -1
+            while Date() < end {
+                try? await Task.sleep(for: .seconds(1))
+                if app.live.viewers != lastViewers || app.live.board.notes.count != lastIdeas {
+                    lastViewers = app.live.viewers
+                    lastIdeas = app.live.board.notes.count
+                    print("viewers=\(lastViewers) ideas=\(lastIdeas)")
+                }
+                if Int(end.timeIntervalSinceNow) % 5 == 0 { print("encoder: \(app.live.encoderStats) screen=\(app.capture.screen.state.description) source=\(app.capture.screenSource.map { "\($0)" } ?? "nil")") }
+            }
+            print("BOARD\n\(app.live.board.summaryText)")
+            app.live.stop()
+            try? await Task.sleep(for: .milliseconds(500))
+            report("live room", app.live.error == nil, app.live.error ?? "ran \(Int(seconds)) s")
+            return ok
+        }
         if arguments.contains("--share-roundtrip") {
             // Export a project + preset + background image, open the file, import, verify, clean up.
             let app = AppModel()

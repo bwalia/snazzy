@@ -59,6 +59,10 @@ struct SnazzyProApp: App {
                     }
                     #if DEBUG
                     if UserDefaults.standard.bool(forKey: "SnazzyPro.debugShareSheet") { sharing.beginExport() }
+                    if let topic = UserDefaults.standard.string(forKey: "SnazzyPro.debugStartLive") {
+                        model.live.pendingTopic = topic
+                        Task { await model.live.start() }
+                    }
                     #endif
                 }
         }

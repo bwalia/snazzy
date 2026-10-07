@@ -11,6 +11,7 @@ let package = Package(
         .library(name: "Slides", targets: ["Slides"]),
         .library(name: "Builder", targets: ["Builder"]),
         .library(name: "MCP", targets: ["MCP"]),
+        .library(name: "Live", targets: ["Live"]),
     ],
     targets: [
         .target(name: "SnazzyCore"),
@@ -19,10 +20,12 @@ let package = Package(
         .target(name: "Slides", dependencies: ["SnazzyCore"]),
         .target(name: "Builder", dependencies: ["SnazzyCore"]),
         .target(name: "MCP", dependencies: ["SnazzyCore"]),
+        .target(name: "Live", dependencies: ["SnazzyCore"]),
         .testTarget(name: "SnazzyCoreTests", dependencies: ["SnazzyCore"]),
         .testTarget(name: "AssistantTests", dependencies: ["Assistant", "SnazzyCore"]),
         .testTarget(name: "BuilderTests", dependencies: ["Builder", "SnazzyCore"]),
         .testTarget(name: "MCPTests", dependencies: ["MCP", "SnazzyCore"]),
+        .testTarget(name: "LiveTests", dependencies: ["Live", "SnazzyCore"]),
         .testTarget(name: "CaptureEngineTests", dependencies: ["CaptureEngine", "SnazzyCore"]),
     ]
 )

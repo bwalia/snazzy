@@ -29,6 +29,7 @@ final class AppModel {
     @ObservationIgnored private(set) var mcp: MCPManager!
     @ObservationIgnored private(set) var developer: DeveloperController!
     @ObservationIgnored private(set) var sharing: SharingController!
+    @ObservationIgnored private(set) var live: LiveController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// The right-hand panel's tab (the builder switches to it when it works).
@@ -54,6 +55,7 @@ final class AppModel {
         self.mcp = MCPManager(app: self, secrets: secrets)
         self.developer = DeveloperController(app: self)
         self.sharing = SharingController(app: self)
+        self.live = LiveController(app: self)
         refreshStoredKeys()
         startPathMonitor()
         mcp.start()
@@ -94,6 +96,7 @@ final class AppModel {
         builder.onSlideChange = { [weak self] index, slide in
             guard let self else { return }
             markSlide(index, slide)
+            live.publishStatus()
             chat.logSession("slide", ["index": .number(Double(index)), "title": .string(slide?.displayTitle ?? "")])
         }
         builder.onStep = { [weak self] step in
