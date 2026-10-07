@@ -8,7 +8,9 @@ import SnazzyCore
 /// same actions as the buttons) and return the new state.
 @MainActor
 enum AssistantTools {
-    static func registry(app: AppModel) -> ToolRegistry {
+    /// `includeMCP: false` leaves out tools proxied from other MCP servers
+    /// (used when Snazzy Pro itself serves MCP, to avoid loops).
+    static func registry(app: AppModel, includeMCP: Bool = true) -> ToolRegistry {
         let capture = app.capture
         let builder = app.builder
         let corners: [JSONValue] = InsetCorner.allCases.map { .string($0.rawValue) }
@@ -142,7 +144,8 @@ enum AssistantTools {
                 description: "List the camera backgrounds available (built-ins and the user's images) and which is active.",
                 inputSchema: emptySchema
             ) { @Sendable _ in await capture.backgroundsJSON() },
-        ] + recordingTools(capture) + builderTools(builder) + modelTools(app) + settingsTools(app))
+        ] + recordingTools(capture) + builderTools(builder) + modelTools(app) + settingsTools(app)
+          + (includeMCP ? app.mcp.registeredTools() : []))
     }
 
     // MARK: Recording

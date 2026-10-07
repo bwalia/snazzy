@@ -33,6 +33,9 @@ build/DerivedData/Build/Products/Debug/SnazzyPro.app/Contents/MacOS/SnazzyPro --
 SnazzyPro --self-test --devices [--feed "iPad"] [--seconds 5]
 # Render a builder project off-screen: console report + a PNG per slide
 SnazzyPro --self-test --builder-snapshot q3-devops --slides 3
+# MCP: Snazzy Pro's server, and chat using an external MCP server
+SnazzyPro --self-test --mcp-server
+SnazzyPro --self-test --mcp-url https://mcp.context7.com/mcp --mcp-name Context7 --chat "Look up …"
 # Record N seconds (main display + first iPad/iPhone + default mic) and inspect the files
 SnazzyPro --self-test --record 6 [--pause-at 3] [--display LG] [--feed iPad]
 # One frame of the composite from the live screen + camera
@@ -72,6 +75,25 @@ Warnings are treated as errors in the app target.
 - The chat header shows the task, model, local/cloud badge (it pulses while
   sending to a cloud provider), token use, and a warning when offline or when a
   key is missing.
+
+## MCP: data sources and AI agents
+
+- **Client** (`Packages/SnazzyKit/Sources/MCP/MCPClient.swift`): Streamable
+  HTTP; tries the modern stateless protocol (2026-07-28: `_meta`,
+  `server/discover`, `Mcp-Method`/`Mcp-Name`/`Mcp-Param-*` headers) and falls
+  back to the legacy `initialize` handshake with sessions. Tools appear to the
+  assistant as `mcp__<server>__<tool>`, plus `mcp_list_servers` and
+  `mcp_read_resource`. Header secrets live in the Keychain. Tools that aren't
+  read-only ask first (configurable per server). Results are labelled as
+  external data.
+- **Server** (`MCPServerCore` + `MCPHTTPServer`): serves both protocol eras;
+  127.0.0.1 only, bearer token, Host and Origin checks, header/body
+  validation. Off by default (Settings › MCP).
+- **Plugin:** `integrations/claude-code/snazzy-pro` (Claude Code plugin with a
+  skill), installable via `.claude-plugin/marketplace.json`. Other clients:
+  `integrations/README.md`.
+- Tested against our own server (both eras) and live against Context7 (modern)
+  and DeepWiki (legacy): `SNAZZY_MCP_LIVE=1 swift test --filter MCPLiveTests`.
 
 ## Camera backgrounds
 

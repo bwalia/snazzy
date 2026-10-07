@@ -40,6 +40,11 @@ original spec listed an iOS/iPadOS app as out of scope.
      network; default on first launch when Apple Intelligence is on.
    - Done: camera backgrounds: on-device person segmentation with blur, seven
      built-ins, the user's own images and colours; per camera, in presets and from chat.
+   - Done: MCP both ways. As a client, it connects to MCP servers (docs,
+     drives, databases, RAG) over Streamable HTTP, modern 2026-07-28 with
+     legacy fallback, and offers their tools and resources to the assistant.
+     As a server, it exposes its own tools on 127.0.0.1 with a token for AI
+     agents, packaged as a Claude Code plugin (`integrations/`).
    - Setup guide for Apple's side: `docs/launch/APP_STORE_CONNECT_SETUP.md`.
    - To do: App Store
      screenshots; App Store Connect record; TestFlight round; swap the site's

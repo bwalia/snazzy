@@ -1,0 +1,16 @@
+{
+  "name": "snazzy-pro",
+  "owner": {
+    "name": "Snazzy Pro"
+  },
+  "metadata": {
+    "description": "Snazzy Pro: a Mac presentation studio you run by conversation. Plugins that let AI agents build decks, set up cameras and record videos with it."
+  },
+  "plugins": [
+    {
+      "name": "snazzy-pro",
+      "source": "./integrations/claude-code/snazzy-pro",
+      "description": "Drive Snazzy Pro from Claude Code: build decks and prototypes, set up cameras and backgrounds, and record videos."
+    }
+  ]
+}

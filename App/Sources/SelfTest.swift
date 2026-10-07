@@ -4,6 +4,7 @@ import CaptureEngine
 import AppKit
 import AVFoundation
 import Builder
+import MCP
 import CoreImage
 import Foundation
 import ImageIO
@@ -25,6 +26,41 @@ enum SelfTest {
             arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         }
 
+        if arguments.contains("--mcp-server") {
+            // Snazzy Pro's own MCP server, exercised by the MCP client over HTTP.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            app.mcp.startServer(port: 47999)
+            defer { app.mcp.stopServer() }
+            do {
+                let client = MCPClient(url: URL(string: "http://127.0.0.1:47999/mcp")!, headers: ["Authorization": "Bearer \(app.mcp.serverToken)"])
+                try await client.connect()
+                let tools = try await client.listTools()
+                print("era: \(await client.era.map { "\($0)" } ?? "?") server: \(await client.serverName ?? "?") tools: \(tools.count)")
+                print("read-only: \(tools.filter(\.readOnly).map(\.name).joined(separator: ", "))")
+                let state = try await client.callTool("get_project_state", arguments: [:])
+                print("get_project_state: \(state.text.prefix(120))")
+                let resource = try await client.readResource("snazzy://settings")
+                let bad = MCPClient(url: URL(string: "http://127.0.0.1:47999/mcp")!, headers: ["Authorization": "Bearer wrong"])
+                var refused = false
+                do { try await bad.connect() } catch { refused = true }
+                let ok = tools.count > 20 && !state.isError && resource.contains("models") && refused
+                SelfTest.report(ok, "Snazzy Pro MCP server: \(tools.count) tools, wrong token refused=\(refused)")
+                return ok
+            } catch {
+                SelfTest.report(false, "MCP server: \(error.localizedDescription)")
+                return false
+            }
+        }
+        if let url = value(after: "--mcp-url"), let prompt = value(after: "--chat") {
+            // Chat with a temporary external MCP server connected (not saved).
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let id = app.mcp.addTemporary(name: value(after: "--mcp-name") ?? "Docs", url: url)
+            for _ in 0..<60 { if case .connected = app.mcp.status[id] { break }; try? await Task.sleep(for: .milliseconds(250)) }
+            print("MCP: \(app.mcp.status[id]?.label ?? "?")")
+            return await toolChat(prompt: prompt, model: value(after: "--model") ?? "gpt-oss:120b", provider: value(after: "--provider") ?? "ollama", app: app)
+        }
         if arguments.contains("--builder-errors") {
             // A throwaway workspace with a page that throws: the report must carry the real message.
             let root = FileManager.default.temporaryDirectory.appending(path: "builder-test-\(UUID().uuidString.prefix(6))")
@@ -198,12 +234,12 @@ enum SelfTest {
 
     /// `--chat PROMPT [--provider ollama|anthropic] [--model NAME]`: run one
     /// turn with every app tool and print the tool calls.
-    static func toolChat(prompt: String, model: String, provider: String, arguments: [String] = CommandLine.arguments) async -> Bool {
+    static func toolChat(prompt: String, model: String, provider: String, arguments: [String] = CommandLine.arguments, app existing: AppModel? = nil) async -> Bool {
         func value(after flag: String) -> String? {
             arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         }
         await Task.detached { await MainActor.run { print("main actor on main thread: \(pthread_main_np() == 1)") } }.value
-        let app = AppModel()
+        let app = existing ?? AppModel()
         app.sessionLoggingSuspended = true
         await app.capture.catalog.refresh()
         do {

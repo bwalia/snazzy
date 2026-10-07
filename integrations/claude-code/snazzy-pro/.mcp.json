@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "snazzy-pro": {
+      "type": "http",
+      "url": "http://127.0.0.1:${SNAZZY_MCP_PORT:-47823}/mcp",
+      "headers": { "Authorization": "Bearer ${SNAZZY_MCP_TOKEN}" }
+    }
+  }
+}
