@@ -42,6 +42,8 @@ public enum ContentPart: Codable, Hashable, Sendable {
     /// same provider (e.g. Anthropic thinking blocks with signatures) and is
     /// dropped when the conversation is sent to a different provider.
     case opaque(provider: ProviderKind, block: JSONValue)
+    /// An attached image (PNG/JPEG), sent to providers that accept images.
+    case image(mediaType: String, data: Data)
 }
 
 public struct ChatMessage: Codable, Hashable, Sendable, Identifiable {
@@ -56,6 +58,10 @@ public struct ChatMessage: Codable, Hashable, Sendable, Identifiable {
     }
 
     public static func user(_ text: String) -> ChatMessage { ChatMessage(role: .user, parts: [.text(text)]) }
+
+    public var images: [(mediaType: String, data: Data)] {
+        parts.compactMap { if case .image(let t, let d) = $0 { (t, d) } else { nil } }
+    }
 
     public var text: String {
         parts.compactMap { if case .text(let t) = $0 { t } else { nil } }.joined()
@@ -138,6 +144,9 @@ public enum StreamEvent: Hashable, Sendable {
     case textDelta(String)
     case thinkingDelta(String)
     case toolCallStarted(name: String)
+    /// A fragment of a tool call's JSON arguments as they stream (Anthropic),
+    /// so the UI can show e.g. a file being written live.
+    case toolInputDelta(callID: String, name: String, fragment: String)
     case completed(message: ChatMessage, stopReason: StopReason, usage: TokenUsage, servedBy: String?)
 }
 

@@ -1,4 +1,6 @@
 import Assistant
+import Builder
+import CaptureEngine
 import Foundation
 import Network
 import Observation
@@ -21,14 +23,26 @@ final class AppModel {
     private let settingsStore: SettingsStore
     private let pathMonitor = NWPathMonitor()
     @ObservationIgnored private(set) var chat: ChatSession!
+    let capture: CaptureController
+    let builder: BuilderController
+    /// Set by the headless self-test so it never writes into the user's session logs.
+    var sessionLoggingSuspended = false
+    /// The right-hand panel's tab (the builder switches to it when it works).
+    var sidePanelTab: SidePanel.Tab = .builder
 
     init(secrets: any SecretStore = KeychainStore(), settingsStore: SettingsStore = SettingsStore()) {
         self.secrets = secrets
         self.settingsStore = settingsStore
         self.settings = settingsStore.load()
+        self.capture = CaptureController()
+        self.builder = BuilderController()
         self.chat = ChatSession(app: self)
         refreshStoredKeys()
         startPathMonitor()
+        builder.onActivity = { [weak self] in self?.sidePanelTab = .builder }
+        builder.onStep = { [weak self] step in
+            self?.chat.logSession("builder", ["text": .string(step.text)])
+        }
         Log.app.info("Snazzy Pro started")
     }
 
@@ -103,25 +117,55 @@ final class AppModel {
 
     // MARK: Assistant tools
 
-    /// The app's actions as assistant tools. Phase 1 exposes project state only;
-    /// device, slide and recording tools arrive with their phases.
+    /// The app's actions as assistant tools. Each one calls the same method the
+    /// UI uses and returns the new state.
     func makeToolRegistry() -> ToolRegistry {
-        ToolRegistry([
-            RegisteredTool(
-                name: "get_project_state",
-                description: "Get the current state of the Snazzy Pro project: active model, connectivity, slides, devices and recording status. Call this before making changes so you know what is set up.",
-                inputSchema: ["type": "object", "properties": [:], "additionalProperties": false]
-            ) { [weak self] _ in
-                await MainActor.run { self?.projectState() ?? .null }
-            },
-        ])
+        AssistantTools.registry(app: self)
+    }
+
+    func modelsJSON() async -> JSONValue {
+        var providers: [String: JSONValue] = [:]
+        for kind in ProviderKind.allCases {
+            if let reason = unavailableReason(kind) {
+                providers[kind.rawValue] = ["available": false, "reason": .string(reason), "local": .bool(kind.isLocal),
+                                            "suggested": .array(kind.suggestedModels.map { .string($0) })]
+                continue
+            }
+            switch await testConnection(kind) {
+            case .success(let models):
+                providers[kind.rawValue] = ["available": true, "local": .bool(kind.isLocal),
+                    "models": .array(models.prefix(40).map { ["id": .string($0.id), "tools": $0.supportsTools.map(JSONValue.bool) ?? .null] })]
+            case .failure(let error):
+                providers[kind.rawValue] = ["available": false, "reason": .string(error.localizedDescription), "local": .bool(kind.isLocal)]
+            }
+        }
+        return ["providers": .object(providers), "active_task": .string(settings.activeTask.rawValue),
+                "tasks": .object(Dictionary(uniqueKeysWithValues: AssistantTask.allCases.map { task in
+                    let s = settings.selection(for: task)
+                    return (task.rawValue, ["provider": .string(s.provider.rawValue), "model": .string(s.model)] as JSONValue)
+                }))]
+    }
+
+    func setModel(task: String, provider: String, model: String, makeActive: Bool) async throws -> JSONValue {
+        guard let task = AssistantTask(rawValue: task) else { throw CaptureActionError(message: "Unknown task \(task)") }
+        guard let kind = ProviderKind(rawValue: provider) else { throw CaptureActionError(message: "Unknown provider \(provider)") }
+        if kind == .ollama, case .success(let models) = await testConnection(.ollama), !models.contains(where: { $0.id == model }) {
+            throw CaptureActionError(message: "Ollama has no model \(model). Installed: " + models.map(\.id).joined(separator: ", "))
+        }
+        settings.setSelection(ModelSelection(provider: kind, model: model), for: task)
+        if makeActive { settings.activeTask = task }
+        var result: [String: JSONValue] = ["task": .string(task.rawValue), "provider": .string(kind.rawValue), "model": .string(model),
+                                           "active_task": .string(settings.activeTask.rawValue),
+                                           "note": "Takes effect from the next message."]
+        if let reason = unavailableReason(kind) { result["warning"] = .string(reason) }
+        return .object(result)
     }
 
     func projectState() -> JSONValue {
         let selection = activeSelection
         return [
             "app": "Snazzy Pro",
-            "build_phase": 1,
+            "build_phase": 3,
             "assistant": [
                 "task": .string(settings.activeTask.rawValue),
                 "provider": .string(selection.provider.rawValue),
@@ -129,9 +173,14 @@ final class AppModel {
                 "local": .bool(selection.provider.isLocal),
             ],
             "online": .bool(isOnline),
+            "capture": capture.stateJSON(),
+            "builder": builder.stateJSON(),
+            "model_settings": .object(Dictionary(uniqueKeysWithValues: AssistantTask.allCases.map { task in
+                let s = settings.selection(for: task)
+                return (task.rawValue, ["provider": .string(s.provider.rawValue), "model": .string(s.model)] as JSONValue)
+            })),
             "slides": [],
-            "devices": "Device discovery is not available yet (phase 2).",
-            "recording": "idle",
+            "recording": "idle (recording arrives in phase 4)",
         ]
     }
 }

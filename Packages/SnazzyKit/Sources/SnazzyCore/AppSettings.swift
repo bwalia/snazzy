@@ -43,6 +43,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Sendable, Identifiable 
 public enum AssistantTask: String, Codable, CaseIterable, Sendable, Identifiable {
     case planning
     case writing
+    case building
     case quickCommands
 
     public var id: String { rawValue }
@@ -51,6 +52,7 @@ public enum AssistantTask: String, Codable, CaseIterable, Sendable, Identifiable
         switch self {
         case .planning: "Planning"
         case .writing: "Writing"
+        case .building: "Building"
         case .quickCommands: "Quick commands"
         }
     }
@@ -70,6 +72,8 @@ public struct ModelSelection: Codable, Hashable, Sendable {
 public struct AppSettings: Codable, Equatable, Sendable {
     public var planning: ModelSelection
     public var writing: ModelSelection
+    /// The builder agent (prototypes and HTML decks).
+    public var building: ModelSelection
     public var quickCommands: ModelSelection
     /// The task the chat currently runs as.
     public var activeTask: AssistantTask
@@ -78,25 +82,35 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var anthropicEffort: String
     public var ollamaBaseURL: String
     public var maxOutputTokens: Int
+    /// Send voice messages as soon as you stop talking (otherwise they go into the composer).
+    public var voiceAutoSend: Bool
+    /// Keep a timestamped log of each session (messages, agent steps, voice audio) in ~/Movies/Snazzy Pro/Sessions.
+    public var recordSessions: Bool
 
     public static let `default` = AppSettings(
         planning: ModelSelection(provider: .anthropic, model: "claude-opus-5-5"),
         writing: ModelSelection(provider: .anthropic, model: "claude-opus-5-5"),
+        building: ModelSelection(provider: .anthropic, model: "claude-opus-5-5"),
         quickCommands: ModelSelection(provider: .anthropic, model: "claude-sonnet-5-5"),
         activeTask: .planning,
         anthropicBaseURL: "https://api.anthropic.com",
         anthropicEffort: "medium",
         ollamaBaseURL: "http://localhost:11434",
-        maxOutputTokens: 32_000
+        maxOutputTokens: 32_000,
+        voiceAutoSend: false,
+        recordSessions: true
     )
 
     public init(
-        planning: ModelSelection, writing: ModelSelection, quickCommands: ModelSelection,
+        planning: ModelSelection, writing: ModelSelection, building: ModelSelection, quickCommands: ModelSelection,
         activeTask: AssistantTask, anthropicBaseURL: String, anthropicEffort: String,
-        ollamaBaseURL: String, maxOutputTokens: Int
+        ollamaBaseURL: String, maxOutputTokens: Int, voiceAutoSend: Bool, recordSessions: Bool
     ) {
         self.planning = planning
         self.writing = writing
+        self.building = building
+        self.voiceAutoSend = voiceAutoSend
+        self.recordSessions = recordSessions
         self.quickCommands = quickCommands
         self.activeTask = activeTask
         self.anthropicBaseURL = anthropicBaseURL
@@ -111,6 +125,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         let d = AppSettings.default
         planning = try c.decodeIfPresent(ModelSelection.self, forKey: .planning) ?? d.planning
         writing = try c.decodeIfPresent(ModelSelection.self, forKey: .writing) ?? d.writing
+        building = try c.decodeIfPresent(ModelSelection.self, forKey: .building) ?? d.building
+        voiceAutoSend = try c.decodeIfPresent(Bool.self, forKey: .voiceAutoSend) ?? d.voiceAutoSend
+        recordSessions = try c.decodeIfPresent(Bool.self, forKey: .recordSessions) ?? d.recordSessions
         quickCommands = try c.decodeIfPresent(ModelSelection.self, forKey: .quickCommands) ?? d.quickCommands
         activeTask = try c.decodeIfPresent(AssistantTask.self, forKey: .activeTask) ?? d.activeTask
         anthropicBaseURL = try c.decodeIfPresent(String.self, forKey: .anthropicBaseURL) ?? d.anthropicBaseURL
@@ -123,6 +140,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         switch task {
         case .planning: planning
         case .writing: writing
+        case .building: building
         case .quickCommands: quickCommands
         }
     }
@@ -131,6 +149,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         switch task {
         case .planning: planning = selection
         case .writing: writing = selection
+        case .building: building = selection
         case .quickCommands: quickCommands = selection
         }
     }

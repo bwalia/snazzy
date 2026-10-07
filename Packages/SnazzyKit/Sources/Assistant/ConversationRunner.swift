@@ -12,6 +12,9 @@ public struct ConversationRunner: Sendable {
         case textDelta(String)
         case thinkingDelta(String)
         case toolCallStarted(name: String)
+        case toolInputDelta(callID: String, name: String, fragment: String)
+        /// A tool is about to run (after validation).
+        case toolRunning(ToolCall)
         /// A finished assistant message to append to the history.
         case assistantMessage(ChatMessage, stopReason: StopReason, servedBy: String?)
         case toolFinished(ToolCall, ToolResult)
@@ -77,6 +80,7 @@ public struct ConversationRunner: Sendable {
                 case .textDelta(let t): emit(.textDelta(t))
                 case .thinkingDelta(let t): emit(.thinkingDelta(t))
                 case .toolCallStarted(let name): emit(.toolCallStarted(name: name))
+                case .toolInputDelta(let id, let name, let fragment): emit(.toolInputDelta(callID: id, name: name, fragment: fragment))
                 case .completed(let message, let stop, let usage, let servedBy):
                     completed = (message, stop, usage, servedBy)
                 }
@@ -124,6 +128,7 @@ public struct ConversationRunner: Sendable {
                 } else if registry.tool(named: call.name)?.requiresConfirmation == true, await !confirm(call) {
                     result = ToolResult(callID: call.id, name: call.name, content: "The user declined this action.", isError: true)
                 } else {
+                    emit(.toolRunning(call))
                     result = await registry.execute(call)
                 }
                 emit(.toolFinished(call, result))

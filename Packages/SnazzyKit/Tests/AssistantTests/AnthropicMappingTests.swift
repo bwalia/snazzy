@@ -95,6 +95,8 @@ import Testing
         #expect(parser.isFinished)
         #expect(events == [
             .thinkingDelta("Plan it."), .textDelta("Moving "), .textDelta("it."), .toolCallStarted(name: "set_inset"),
+            .toolInputDelta(callID: "toolu_9", name: "set_inset", fragment: "{\"posi"),
+            .toolInputDelta(callID: "toolu_9", name: "set_inset", fragment: "tion\": \"bottomRight\"}"),
         ])
         guard case .completed(let message, let stop, let usage, let servedBy) = parser.completion() else {
             Issue.record("no completion"); return
@@ -134,6 +136,20 @@ import Testing
         #expect(throws: ProviderError.api(type: "overloaded_error", message: "Overloaded")) {
             try parser.consume(sseLine: #"data: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}"#)
         }
+    }
+
+    @Test func imagesBecomeBase64Blocks() {
+        let png = Data([0x89, 0x50, 0x4E, 0x47])
+        let messages = AnthropicMapping.messages([
+            ChatMessage(role: .user, parts: [.image(mediaType: "image/png", data: png), .text("What is this?")]),
+        ])
+        #expect(messages[0]["content"]?.arrayValue?.first == [
+            "type": "image", "source": ["type": "base64", "media_type": "image/png", "data": .string(png.base64EncodedString())],
+        ])
+        let ollama = OllamaMapping.requestBody(ModelRequest(model: "m", messages: [
+            ChatMessage(role: .user, parts: [.image(mediaType: "image/png", data: png), .text("hi")]),
+        ]))
+        #expect(ollama["messages"]?.arrayValue?.first?["images"] == [.string(png.base64EncodedString())])
     }
 
     @Test func errorBodyMessage() {

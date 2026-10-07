@@ -135,6 +135,10 @@ public enum AnthropicMapping {
             ]
         case .opaque(let provider, let block):
             return provider == .anthropic ? block : nil
+        case .image(let mediaType, let data):
+            return ["type": "image", "source": [
+                "type": "base64", "media_type": .string(mediaType), "data": .string(data.base64EncodedString()),
+            ]]
         }
     }
 
@@ -201,8 +205,12 @@ public struct AnthropicStreamParser {
                 blocks[index]!.text += text
                 return [.textDelta(text)]
             case "input_json_delta":
-                blocks[index]!.partialJSON += delta["partial_json"]?.stringValue ?? ""
-                return []
+                let fragment = delta["partial_json"]?.stringValue ?? ""
+                blocks[index]!.partialJSON += fragment
+                guard !fragment.isEmpty else { return [] }
+                let start = blocks[index]!.start
+                return [.toolInputDelta(
+                    callID: start["id"]?.stringValue ?? "", name: start["name"]?.stringValue ?? "", fragment: fragment)]
             case "thinking_delta":
                 let text = delta["thinking"]?.stringValue ?? ""
                 blocks[index]!.thinking += text

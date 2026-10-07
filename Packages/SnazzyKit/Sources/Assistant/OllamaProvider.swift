@@ -83,7 +83,10 @@ public enum OllamaMapping {
         for message in request.messages {
             switch message.role {
             case .user:
-                out.append(["role": "user", "content": .string(message.text)])
+                var m: [String: JSONValue] = ["role": "user", "content": .string(message.text)]
+                let images = message.images
+                if !images.isEmpty { m["images"] = .array(images.map { .string($0.data.base64EncodedString()) }) }
+                out.append(.object(m))
             case .assistant:
                 var m: [String: JSONValue] = ["role": "assistant", "content": .string(message.text)]
                 let calls = message.toolCalls

@@ -9,8 +9,10 @@ struct SettingsView: View {
                 .tabItem { Label("Models", systemImage: "cpu") }
             ProvidersSettings()
                 .tabItem { Label("Providers", systemImage: "network") }
+            ChatSettings()
+                .tabItem { Label("Chat & Voice", systemImage: "waveform") }
         }
-        .frame(width: 600, height: 460)
+        .frame(width: 620, height: 480)
     }
 }
 
@@ -204,5 +206,35 @@ struct ConnectionTestRow: View {
         case .failure(let error):
             status = .failed(error.localizedDescription)
         }
+    }
+}
+
+struct ChatSettings: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var model = model
+        Form {
+            Section("Voice") {
+                Toggle("Send voice messages as soon as I stop talking", isOn: $model.settings.voiceAutoSend)
+                Text("Otherwise the transcript goes into the message box so you can check it first. Speech is transcribed on this Mac when the language supports it. Uses the microphone chosen in Sources.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Session record") {
+                Toggle("Keep a record of each session", isOn: $model.settings.recordSessions)
+                Text("Messages, tool calls, builder steps and voice clips are saved with timestamps in Movies › Snazzy Pro › Sessions. Screen and camera video of sessions are added with recording (phase 4).")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Show Sessions Folder") {
+                    try? FileManager.default.createDirectory(at: SessionLog.root, withIntermediateDirectories: true)
+                    NSWorkspace.shared.activateFileViewerSelecting([SessionLog.root])
+                }
+            }
+            Section("Limits") {
+                Stepper("Max reply length: \(model.settings.maxOutputTokens.formatted()) tokens",
+                        value: $model.settings.maxOutputTokens, in: 4_000...128_000, step: 4_000)
+                Text("Building larger prototypes needs room: 32,000 or more is recommended.").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
     }
 }

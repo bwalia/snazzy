@@ -30,6 +30,8 @@ targets:
         product: CaptureEngine
       - package: SnazzyKit
         product: Slides
+      - package: SnazzyKit
+        product: Builder
     info:
       path: App/Info.plist
       properties:
@@ -49,6 +51,8 @@ targets:
         com.apple.security.device.camera: true
         com.apple.security.device.audio-input: true
         com.apple.security.files.user-selected.read-write: true
+        # Recordings and session logs save to ~/Movies/Snazzy Pro without save dialogs.
+        com.apple.security.assets.movies.read-write: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.snazzy.pro
