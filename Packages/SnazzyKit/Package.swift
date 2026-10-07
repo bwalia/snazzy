@@ -17,5 +17,6 @@ let package = Package(
         .target(name: "Slides", dependencies: ["SnazzyCore"]),
         .testTarget(name: "SnazzyCoreTests", dependencies: ["SnazzyCore"]),
         .testTarget(name: "AssistantTests", dependencies: ["Assistant", "SnazzyCore"]),
+        .testTarget(name: "CaptureEngineTests", dependencies: ["CaptureEngine", "SnazzyCore"]),
     ]
 )
