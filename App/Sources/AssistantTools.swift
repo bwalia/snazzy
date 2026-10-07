@@ -1,4 +1,5 @@
 import Assistant
+import Broadcast
 import Builder
 import CaptureEngine
 import Foundation
@@ -146,7 +147,7 @@ enum AssistantTools {
                 description: "List the camera backgrounds available (built-ins and the user's images) and which is active.",
                 inputSchema: emptySchema
             ) { @Sendable _ in await capture.backgroundsJSON() },
-        ] + recordingTools(capture) + builderTools(builder, sharing: app.sharing) + modelTools(app) + settingsTools(app) + liveTools(app.live)
+        ] + recordingTools(capture) + builderTools(builder, sharing: app.sharing) + modelTools(app) + settingsTools(app) + liveTools(app.live) + broadcastTools(app.broadcast)
           + DeveloperTools.tools(app.developer)
           + (includeMCP ? app.mcp.registeredTools() : []))
     }
@@ -369,6 +370,33 @@ enum AssistantTools {
                     return live.brainstormJSON()
                 }
             },
+        ]
+    }
+
+    static func broadcastTools(_ b: BroadcastController) -> [RegisteredTool] {
+        [
+            RegisteredTool(
+                name: "start_broadcast",
+                description: "Go live on YouTube, Twitch, Vimeo, Facebook or a custom RTMP server, streaming the live picture (slides or screen + camera) and mic. Uses the stream key saved in the Live tab (never ask for or accept a stream key in chat: tell the user to paste it in the Live tab). The user confirms before anything is sent.",
+                inputSchema: object(["platform": ["type": "string", "enum": .array(BroadcastPlatform.allCases.map { .string($0.rawValue) })]], required: [])
+            ) { @Sendable args in
+                await MainActor.run { if let p = args["platform"]?.stringValue.flatMap(BroadcastPlatform.init(rawValue:)) { b.platform = p } }
+                await b.confirmAndStart()
+                return await MainActor.run { b.stateJSON() }
+            },
+            RegisteredTool(
+                name: "stop_broadcast",
+                description: "End the online stream.",
+                inputSchema: object([:], required: [])
+            ) { @Sendable _ in
+                await b.stop()
+                return await MainActor.run { b.stateJSON() }
+            },
+            RegisteredTool(
+                name: "get_broadcast",
+                description: "The online stream's state: platform, live or not, how long, whether a stream key is saved.",
+                inputSchema: object([:], required: [])
+            ) { @Sendable _ in await MainActor.run { b.stateJSON() } },
         ]
     }
 

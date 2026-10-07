@@ -37,6 +37,8 @@ targets:
         product: MCP
       - package: SnazzyKit
         product: Live
+      - package: SnazzyKit
+        product: Broadcast
     info:
       path: App/Info.plist
       properties:

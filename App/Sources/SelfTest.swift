@@ -76,6 +76,27 @@ enum SelfTest {
             }
             return ok
         }
+        if let server = value(after: "--broadcast-test") {
+            // Streams the real composite + mic to a test RTMP server through the app's controller.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let b = app.broadcast!
+            let savedPlatform = b.platform, savedServers = b.servers
+            let hadKey = b.savedKeys.contains(.custom)
+            b.platform = .custom
+            b.servers[.custom] = server
+            if !hadKey { b.saveKey("testkey", for: .custom) }
+            b.quality = .hd720
+            await b.start()
+            report("broadcast live", b.state == .live, "\(b.stateJSON())")
+            try? await Task.sleep(for: .seconds(Double(value(after: "--seconds") ?? "6") ?? 6))
+            await b.stop()
+            report("broadcast stopped", b.state == .idle, "\(b.stateJSON())")
+            if !hadKey { b.deleteKey(for: .custom) }
+            b.platform = savedPlatform
+            b.servers = savedServers
+            return ok
+        }
         if arguments.contains("--live-deck") {
             // Ideas posted over the network become a deck via the assistant (get_brainstorm + builder tools).
             let app = AppModel()

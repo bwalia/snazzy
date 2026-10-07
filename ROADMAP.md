@@ -87,7 +87,9 @@ original spec listed an iOS/iPadOS app as out of scope.
 - *Snazzy Pro Camera* for Zoom, Teams and Meet: a camera extension (CMIO) so
   any video-call app shows your slides with your camera inset. Allowed on the
   Mac App Store.
-- *Go live to YouTube, Twitch or Vimeo*: an RTMP(S) push using the platform's
+- ✅ *Go live to YouTube, Twitch or Vimeo* (done; also Facebook and custom
+  servers): RTMPS via HaishinKit 2.2.5, stream keys in the Keychain, asks before
+  every stream, runs alongside recording and the local room. Was: an RTMP(S) push using the platform's
   stream key (stored in the Keychain). Needs a third-party streaming package;
   HaishinKit (BSD-3) approved for this.
 - *Hosted rooms* (later, paid Pro): join from anywhere with a link, with live

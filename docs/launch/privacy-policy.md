@@ -39,6 +39,22 @@ https://www.anthropic.com/legal/privacy. You can use a local model (Ollama)
 instead to keep everything on your Mac, and you can withdraw consent in
 Settings › Chat & Voice.
 
+## Live rooms, live streams and sharing
+
+- **Live room (Live tab).** Your live picture (slides or screen with your camera
+  inset), your microphone and the brainstorm board go directly from your Mac to
+  browsers on your local network that have the room code. Nothing passes
+  through any server of ours or the internet. Ideas people post are kept in
+  memory only while the room is open, plus anything you then ask the assistant
+  to do with them.
+- **Going live online.** If you choose Go Live, your live picture and
+  microphone are sent to the service you pick (YouTube, Twitch, Vimeo, Facebook
+  or your own server) using your stream key, which is stored in your Mac's
+  Keychain. That service handles the stream under its own terms. Snazzy Pro
+  asks before every stream.
+- **Sharing (.snazzy files).** You choose what goes in the file and who you
+  send it to. Snazzy Pro doesn't send it anywhere itself.
+
 ## Permissions
 
 Snazzy Pro asks for camera, microphone, screen recording, speech recognition

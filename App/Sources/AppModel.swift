@@ -30,6 +30,7 @@ final class AppModel {
     @ObservationIgnored private(set) var developer: DeveloperController!
     @ObservationIgnored private(set) var sharing: SharingController!
     @ObservationIgnored private(set) var live: LiveController!
+    @ObservationIgnored private(set) var broadcast: BroadcastController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// The right-hand panel's tab (the builder switches to it when it works).
@@ -56,6 +57,7 @@ final class AppModel {
         self.developer = DeveloperController(app: self)
         self.sharing = SharingController(app: self)
         self.live = LiveController(app: self)
+        self.broadcast = BroadcastController(app: self)
         refreshStoredKeys()
         startPathMonitor()
         mcp.start()

@@ -1,3 +1,4 @@
+import Broadcast
 import Live
 import SwiftUI
 
@@ -15,6 +16,7 @@ struct LivePanel: View {
                     Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.callout)
                 }
                 if live.isRunning { BoardManager() }
+                BroadcastSection()
             }
             .padding(20)
             .frame(maxWidth: 900, alignment: .leading)
@@ -156,6 +158,91 @@ private struct BoardManager: View {
                 Spacer()
                 Button("Clear Board", role: .destructive) { live.clearBoard() }.disabled(board.notes.isEmpty)
             }
+        }
+    }
+}
+
+/// Going live on YouTube, Twitch, Vimeo, Facebook or a custom RTMP server.
+struct BroadcastSection: View {
+    @Environment(AppModel.self) private var model
+    @State private var keyDraft = ""
+    @State private var serverDraft = ""
+
+    var body: some View {
+        @Bindable var b = model.broadcast!
+        VStack(alignment: .leading, spacing: 12) {
+            Divider()
+            HStack {
+                Text("Go live online").font(.title3.weight(.semibold))
+                Spacer()
+                status
+            }
+            Text("Stream the same picture and sound to YouTube, Twitch, Vimeo, Facebook or your own RTMP server. This one goes over the internet, so it asks each time.")
+                .font(.callout).foregroundStyle(.secondary)
+            Form {
+                Picker("Platform", selection: $b.platform) {
+                    ForEach(BroadcastPlatform.allCases) { Text($0.displayName).tag($0) }
+                }
+                .disabled(b.isActive)
+                LabeledContent("Stream key") {
+                    if b.savedKeys.contains(b.platform) {
+                        HStack {
+                            Label("Saved in Keychain", systemImage: "key.fill").foregroundStyle(.secondary)
+                            Button("Remove") { b.deleteKey(for: b.platform) }.disabled(b.isActive)
+                        }
+                    } else {
+                        HStack {
+                            SecureField("Stream key", text: $keyDraft, prompt: Text("Paste your stream key"))
+                                .labelsHidden()
+                                .frame(minWidth: 240)
+                            Button("Save") { b.saveKey(keyDraft, for: b.platform); keyDraft = "" }
+                                .disabled(keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                    }
+                }
+                Text(b.platform.keyHelp).font(.caption).foregroundStyle(.secondary)
+                TextField("Server", text: $serverDraft, prompt: Text(b.platform.defaultServer.isEmpty ? "rtmps://your-server/app" : b.platform.defaultServer))
+                    .onSubmit { b.servers[b.platform] = serverDraft }
+                    .onChange(of: serverDraft) { _, v in b.servers[b.platform] = v }
+                    .disabled(b.isActive)
+                Picker("Quality", selection: $b.quality) {
+                    ForEach(BroadcastQuality.all) { q in Text("\(q.name) · \(String(format: "%.1f", Double(q.videoBitrate) / 1_000_000)) Mbps").tag(q) }
+                }
+                .disabled(b.isActive)
+            }
+            .formStyle(.grouped)
+            .frame(maxWidth: 560)
+            .onAppear { serverDraft = b.servers[b.platform] ?? "" }
+            .onChange(of: b.platform) { _, p in serverDraft = b.servers[p] ?? "" }
+            HStack {
+                if b.isActive {
+                    Button(role: .destructive) { Task { await b.stop() } } label: { Label("End Stream", systemImage: "stop.circle") }
+                        .controlSize(.large)
+                } else {
+                    Button { Task { await b.confirmAndStart() } } label: { Label("Go Live on \(b.platform.displayName)", systemImage: "antenna.radiowaves.left.and.right") }
+                        .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
+                        .disabled(!b.savedKeys.contains(b.platform))
+                }
+            }
+            if case .failed(let message) = b.state {
+                Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.callout)
+            }
+        }
+    }
+
+    @ViewBuilder private var status: some View {
+        let b = model.broadcast!
+        switch b.state {
+        case .connecting:
+            HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Connecting…") }.foregroundStyle(.secondary)
+        case .live:
+            TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                let s = Int(ctx.date.timeIntervalSince(b.startedAt ?? ctx.date))
+                Label("Live on \(b.platform.displayName) · \(s / 60):\(String(format: "%02d", s % 60))", systemImage: "dot.radiowaves.left.and.right")
+                    .foregroundStyle(.red).monospacedDigit()
+            }
+        default:
+            EmptyView()
         }
     }
 }

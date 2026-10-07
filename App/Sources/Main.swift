@@ -122,6 +122,9 @@ struct AppCommands: Commands {
         }
         CommandGroup(after: .help) {
             Button("Snazzy Pro for Developers") { openWindow(id: "developer-help") }
+            Button("Acknowledgements") {
+                if let url = Bundle.main.url(forResource: "Acknowledgements", withExtension: "txt") { NSWorkspace.shared.open(url) }
+            }
         }
         CommandMenu("Presets") {
             Button("Save Current Settings…") { model.presets.promptAndSave() }
