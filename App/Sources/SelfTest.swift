@@ -26,6 +26,56 @@ enum SelfTest {
             arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         }
 
+        if arguments.contains("--slides-record") {
+            // Record a deck from its Present window while changing slides; check markers and chapters.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let savedSetup = app.capture.setup
+            let tag = UUID().uuidString.prefix(6).lowercased()
+            let name = "slides-test-\(tag)"
+            defer {
+                app.capture.apply(savedSetup)
+                try? app.builder.workspace.deleteProject(name)
+                app.builder.refreshProjects()
+            }
+            do {
+                let sample = SampleDeck.all.first { $0.sector == .sales }!
+                let project = try app.builder.workspace.createProject(name: name, kind: .presentation)
+                for (path, content) in sample.files() { try app.builder.workspace.write(project: project.name, path: path, content: content) }
+                app.builder.refreshProjects()
+                app.builder.open(project.name)
+                for _ in 0..<40 where !app.builder.isDeckOpen { try? await Task.sleep(for: .milliseconds(100)) }
+                report("deck loaded", app.builder.deckSlides.count == sample.slides.count,
+                       "\(app.builder.deckSlides.count) slides, notes on slide 1: \(app.builder.deckSlides.first?.notes.isEmpty == false)")
+                app.capture.selectSlidesSource()
+                try await app.capture.startRecording(countdown: 0)
+                report("recording slides", app.capture.recorder.state == .recording, "stage=\(app.builder.stage.map { "\($0.size.width)x\($0.size.height) top=\($0.topInset)" } ?? "none") screen=\(app.capture.screen.frameSize.map { "\(Int($0.width))x\(Int($0.height))" } ?? "?")")
+                for i in 1...3 {
+                    try? await Task.sleep(for: .seconds(2.5))
+                    app.builder.nextSlide()
+                    for _ in 0..<20 where app.builder.currentSlide != i { try? await Task.sleep(for: .milliseconds(50)) }
+                    print("slide -> \(app.builder.currentSlide): \(app.builder.deckSlides[app.builder.currentSlide].displayTitle)")
+                }
+                try? await Task.sleep(for: .seconds(2.5))
+                guard let result = await app.capture.stopRecording() else { report("stop", false, "no result"); return ok }
+                print("MOVIE \(result.composite.path)")
+                print("RAW \(result.rawFolder.path)")
+                let timeline = try JSONValue.parse(Data(contentsOf: result.rawFolder.appending(path: "timeline.json")))
+                let markers = timeline["markers"]?.arrayValue ?? []
+                report("slide markers", markers.count == 4, markers.map { "\($0["at_seconds"]?.doubleValue ?? -1)s \($0["title"]?.stringValue ?? "")" }.joined(separator: " | "))
+                let chapters = Chapters.url(forMovie: result.composite)
+                let vtt = (try? String(contentsOf: chapters, encoding: .utf8)) ?? ""
+                print("CHAPTERS \(chapters.path)")
+                report("chapters file", vtt.components(separatedBy: " --> ").count - 1 == 4, "\(vtt.components(separatedBy: " --> ").count - 1) chapters")
+                report("present window unlocked", app.builder.stage != nil, "")
+                if !arguments.contains("--keep") {
+                    for url in [result.composite, chapters, result.rawFolder] { try? FileManager.default.removeItem(at: url) }
+                }
+            } catch {
+                report("slides record", false, error.localizedDescription)
+            }
+            return ok
+        }
         if arguments.contains("--share-roundtrip") {
             // Export a project + preset + background image, open the file, import, verify, clean up.
             let app = AppModel()

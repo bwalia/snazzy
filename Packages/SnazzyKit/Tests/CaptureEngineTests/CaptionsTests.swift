@@ -40,3 +40,35 @@ import Testing
         #expect(Captions.timedTranscript(cues) == "[00:00] Hello there. Second")
     }
 }
+
+@Suite struct ChapterTests {
+    @Test func slideChangesBecomeChapters() throws {
+        let marks: [Chapters.Mark] = [
+            .init(at: 0.4, title: "Welcome"),
+            .init(at: 12, title: "Agenda"),      // shown briefly: skipped
+            .init(at: 12.5, title: "Results"),   // flicked past: skipped
+            .init(at: 13, title: "Agenda"),
+            .init(at: 20, title: "Agenda"),      // same slide again: merged
+            .init(at: 40, title: "Q&A --> thanks"),
+        ]
+        let vtt = try #require(Chapters.vtt(marks, duration: 60))
+        #expect(vtt == """
+        WEBVTT
+
+        1
+        00:00:00.000 --> 00:00:13.000
+        Welcome
+
+        2
+        00:00:13.000 --> 00:00:40.000
+        Agenda
+
+        3
+        00:00:40.000 --> 00:01:00.000
+        Q&A → thanks
+
+        """)
+        #expect(Chapters.vtt([.init(at: 0, title: "Only one")], duration: 30) == nil)
+        #expect(Chapters.url(forMovie: URL(fileURLWithPath: "/x/presentation-1.mov")).lastPathComponent == "presentation-1.chapters.vtt")
+    }
+}

@@ -73,6 +73,9 @@ public final class ScreenFeed {
     public enum Source: Hashable, Sendable {
         case display(UInt32)
         case window(UInt32)
+        /// A window's content without its title bar (`topInset` points), e.g. the
+        /// app's own slide window. The stream restarts if `size` (points) changes.
+        case windowContent(UInt32, topInset: Double, size: CGSize)
     }
 
     public enum State: Equatable, Sendable {
@@ -132,8 +135,9 @@ public final class ScreenFeed {
         }
         state = .starting
         do {
-            let (filter, size) = try await makeFilter(source)
+            let (filter, size, sourceRect) = try await makeFilter(source)
             let config = SCStreamConfiguration()
+            if let sourceRect { config.sourceRect = sourceRect }
             let scale = min(1, Self.maxDimension / max(size.width, size.height))
             config.width = Int((size.width * scale).rounded(.down)) & ~1
             config.height = Int((size.height * scale).rounded(.down)) & ~1
@@ -168,13 +172,21 @@ public final class ScreenFeed {
     public func setIncludedOwnWindows(_ ids: [UInt32]) async {
         guard ids != includedWindowIDs, let source, let stream else { return }
         includedWindowIDs = ids
-        if let (filter, _) = try? await makeFilter(source) {
+        if let (filter, _, _) = try? await makeFilter(source) {
             try? await stream.updateContentFilter(filter)
         }
     }
 
-    private func makeFilter(_ source: Source) async throws -> (SCContentFilter, CGSize) {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+    private func makeFilter(_ source: Source) async throws -> (SCContentFilter, CGSize, CGRect?) {
+        var content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+        if case .windowContent(let id, _, _) = source {
+            // A window that has just opened takes a moment to show up with its real frame.
+            for _ in 0..<20 {
+                if let w = content.windows.first(where: { $0.windowID == id }), w.frame.width > 1 { break }
+                try await Task.sleep(for: .milliseconds(100))
+                content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            }
+        }
         switch source {
         case .display(let id):
             guard let display = content.displays.first(where: { $0.displayID == id }) else {
@@ -184,13 +196,22 @@ public final class ScreenFeed {
             let ownApps = content.applications.filter { $0.bundleIdentifier == ownBundle }
             let included = content.windows.filter { includedWindowIDs.contains($0.windowID) }
             let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: included)
-            return (filter, pixelSize(filter, fallback: CGSize(width: display.width, height: display.height)))
+            return (filter, pixelSize(filter, fallback: CGSize(width: display.width, height: display.height)), nil)
         case .window(let id):
             guard let window = content.windows.first(where: { $0.windowID == id }) else {
                 throw CaptureError("That window is no longer open.")
             }
             let filter = SCContentFilter(desktopIndependentWindow: window)
-            return (filter, pixelSize(filter, fallback: window.frame.size))
+            return (filter, pixelSize(filter, fallback: window.frame.size), nil)
+        case .windowContent(let id, let topInset, _):
+            guard let window = content.windows.first(where: { $0.windowID == id }), window.frame.width > 1 else {
+                throw CaptureError("The Present window isn't open.")
+            }
+            let filter = SCContentFilter(desktopIndependentWindow: window)
+            let full = filter.contentRect.width > 0 ? filter.contentRect.size : window.frame.size
+            let rect = CGRect(x: 0, y: topInset, width: full.width, height: max(1, full.height - topInset))
+            let scale = CGFloat(max(filter.pointPixelScale, 1))
+            return (filter, CGSize(width: rect.width * scale, height: rect.height * scale), rect)
         }
     }
 

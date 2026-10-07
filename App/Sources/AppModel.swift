@@ -59,7 +59,15 @@ final class AppModel {
         mcp.start()
         builder.onActivity = { [weak self] in self?.sidePanelTab = .builder }
         capture.onRecordingSaved = { [weak self] in self?.developer.refresh() }
-        capture.onRecordingEvent = { [weak self] type, fields in self?.chat.logSession(type, fields) }
+        capture.onRecordingEvent = { [weak self] type, fields in
+            guard let self else { return }
+            chat.logSession(type, fields)
+            // The first chapter is the slide showing when recording starts.
+            if type == "recording_started", capture.setup.source == .slides, builder.isDeckOpen {
+                let i = builder.currentSlide
+                markSlide(i, builder.deckSlides.indices.contains(i) ? builder.deckSlides[i] : nil)
+            }
+        }
         builder.onPopOut = { [weak self] in
             guard let self else { return }
             Task { await self.capture.screen.setIncludedOwnWindows(self.capture.ownWindowsToInclude()) }
@@ -67,10 +75,37 @@ final class AppModel {
         capture.ownWindowsToInclude = { [weak self] in
             self?.builder.popOutWindowNumber.map { [UInt32($0)] } ?? []
         }
+        // Slides: the deck's Present window is what gets recorded.
+        capture.slidesStage = { [weak self] in self?.builder.stage }
+        capture.prepareSlidesStage = { [weak self] in
+            guard let self else { return nil }
+            guard builder.current?.kind == .presentation else {
+                return "Open a slide deck in the Builder first (or pick one in the Slides tab)."
+            }
+            if builder.stage == nil { builder.openPopOut() }
+            builder.setStageLocked(true)
+            return nil
+        }
+        capture.releaseSlidesStage = { [weak self] in self?.builder.setStageLocked(false) }
+        builder.onStageChange = { [weak self] in
+            guard let self, capture.setup.source == .slides else { return }
+            Task { await self.capture.updateScreenFeed() }
+        }
+        builder.onSlideChange = { [weak self] index, slide in
+            guard let self else { return }
+            markSlide(index, slide)
+            chat.logSession("slide", ["index": .number(Double(index)), "title": .string(slide?.displayTitle ?? "")])
+        }
         builder.onStep = { [weak self] step in
             self?.chat.logSession("builder", ["text": .string(step.text)])
         }
         Log.app.info("Snazzy Pro started")
+    }
+
+    /// Notes a slide change in the recording (becomes a chapter).
+    private func markSlide(_ index: Int, _ slide: BuilderController.DeckSlide?) {
+        capture.recorder.mark(["type": "slide", "index": .number(Double(index)),
+                               "title": .string(slide?.displayTitle ?? "Slide \(index + 1)")])
     }
 
     var activeSelection: ModelSelection { settings.selection(for: settings.activeTask) }

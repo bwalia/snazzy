@@ -25,6 +25,15 @@ final class BuilderController {
         let message: String
     }
 
+    /// One slide of the open deck: its heading and speaker notes.
+    struct DeckSlide: Identifiable, Hashable {
+        let id: Int
+        let title: String
+        let notes: String
+
+        var displayTitle: String { title.isEmpty ? "Slide \(id + 1)" : title }
+    }
+
     /// A file the model is writing right now (streamed tool arguments).
     struct LiveWrite: Equatable {
         var callID: String
@@ -43,6 +52,12 @@ final class BuilderController {
     private(set) var console: [ConsoleEntry] = []
     private(set) var isLoading = false
     private(set) var reloadCount = 0
+    /// Slides of the open deck (empty when the project isn't a deck).
+    private(set) var deckSlides: [DeckSlide] = []
+    /// The slide showing in the preview and the Present window (they stay in step).
+    private(set) var currentSlide = 0
+    /// Whether the Present window is open.
+    private(set) var stageOpen = false
 
     /// Called when the builder starts working, so the UI can show the Builder tab.
     @ObservationIgnored var onActivity: (() -> Void)?
@@ -50,9 +65,15 @@ final class BuilderController {
     @ObservationIgnored var onPopOut: (() -> Void)?
     /// Session log hook.
     @ObservationIgnored var onStep: ((Step) -> Void)?
+    /// The slide changed (from the keyboard, a click, the assistant or a remote).
+    @ObservationIgnored var onSlideChange: ((Int, DeckSlide?) -> Void)?
+    /// The Present window opened, closed, moved or resized.
+    @ObservationIgnored var onStageChange: (() -> Void)?
 
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored private let bridge = WebBridge()
+    @ObservationIgnored private let deckBridge = DeckBridge()
+    @ObservationIgnored private let stageDelegate = StageWindowDelegate()
     @ObservationIgnored private let schemeHandler: ProjectSchemeHandler
     @ObservationIgnored private var liveBuffers: [String: String] = [:]
     @ObservationIgnored private var lastLiveUpdate = Date.distantPast
@@ -62,16 +83,25 @@ final class BuilderController {
     init(workspace: Workspace = Workspace(root: Workspace.defaultRoot())) {
         self.workspace = workspace
         schemeHandler = ProjectSchemeHandler(workspace: workspace)
-        webView = Self.makeWebView(bridge: bridge, schemeHandler: schemeHandler)
+        webView = Self.makeWebView(bridge: bridge, deckBridge: deckBridge, schemeHandler: schemeHandler)
         bridge.onConsole = { [weak self] level, message in self?.addConsole(level, message) }
+        deckBridge.onMessage = { [weak self] web, index, slides in self?.deckMessage(from: web, index: index, slides: slides) }
+        stageDelegate.onChange = { [weak self] in self?.stageChanged() }
         bridge.onLoad = { [weak self] loading in self?.isLoading = loading }
         try? FileManager.default.createDirectory(at: workspace.root, withIntermediateDirectories: true)
         projects = workspace.listProjects()
         if let latest = projects.first { open(latest.name, announce: false) }
     }
 
-    private static func makeWebView(bridge: WebBridge?, schemeHandler: ProjectSchemeHandler) -> WKWebView {
+    private static func makeWebView(bridge: WebBridge?, deckBridge: DeckBridge, schemeHandler: ProjectSchemeHandler) -> WKWebView {
         let config = WKWebViewConfiguration()
+        // Keep drawing when the window is covered: the Present window is
+        // recorded even when other windows are on top of it.
+        if #available(macOS 14.0, *) {
+            config.preferences.inactiveSchedulingPolicy = .none
+        }
+        config.userContentController.addUserScript(WKUserScript(source: deckScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        config.userContentController.add(deckBridge, name: "snazzyDeck")
         // Project files are served from a custom scheme (same-origin, so errors stay readable).
         config.setURLSchemeHandler(schemeHandler, forURLScheme: ProjectSchemeHandler.scheme)
         if let bridge {
@@ -86,6 +116,34 @@ final class BuilderController {
         #endif
         return view
     }
+
+    /// Reports the deck's slides (heading + speaker notes) on load and the
+    /// current slide whenever it changes. Works with any deck that exposes
+    /// `window.snazzyDeck` (the presentation template does).
+    static let deckScript = """
+        (function () {
+          let last = null;
+          const post = (m) => { try { window.webkit.messageHandlers.snazzyDeck.postMessage(m); } catch (e) {} };
+          function slides() {
+            return Array.from(document.querySelectorAll('.slide')).map(s => {
+              const h = s.querySelector('h1, h2, blockquote, h3');
+              const n = s.querySelector('.notes');
+              return { title: h ? h.textContent.replace(/\\s+/g, ' ').trim().slice(0, 160) : '',
+                       notes: n ? n.textContent.trim().slice(0, 4000) : '' };
+            });
+          }
+          function tick(full) {
+            const d = window.snazzyDeck;
+            if (!d) { if (full) post({ index: -1, slides: [] }); return; }
+            const i = d.current();
+            if (!full && i === last) return;
+            last = i;
+            post(full ? { index: i, slides: slides() } : { index: i });
+          }
+          const start = () => { tick(true); setInterval(() => tick(false), 150); };
+          if (document.readyState === 'complete') start(); else addEventListener('load', start);
+        })();
+        """
 
     /// Forwards console output and page errors to the app.
     static let consoleScript = """
@@ -140,6 +198,10 @@ final class BuilderController {
 
     func open(_ name: String, announce: Bool = true) {
         guard let project = workspace.listProjects().first(where: { $0.name == Workspace.slug(name) }) else { return }
+        if current?.name != project.name {
+            currentSlide = 0
+            deckSlides = []
+        }
         current = project
         files = workspace.files(project: project.name)
         selectedFile = files.contains("index.html") ? "index.html" : files.first
@@ -250,7 +312,7 @@ final class BuilderController {
         let sameProject = webView.url?.host() == url.host()
         let target = sameProject ? URL(string: url.absoluteString + (webView.url?.fragment.map { "#\($0)" } ?? "")) ?? url : url
         webView.load(URLRequest(url: target))
-        popOutWeb?.load(URLRequest(url: url))
+        popOutWeb?.load(URLRequest(url: deckURL(url)))
     }
 
     /// Reloads, waits for the page to settle, and reports errors and a summary.
@@ -295,8 +357,67 @@ final class BuilderController {
     }
 
     func showSlide(_ index: Int) async throws -> JSONValue {
-        _ = try? await webView.evaluateJavaScript("window.snazzyDeck && window.snazzyDeck.show(\(index))")
+        goToSlide(index)
+        try? await Task.sleep(for: .milliseconds(250))
         return try await report()
+    }
+
+    // MARK: Slides
+
+    /// Shows a slide in the preview and the Present window.
+    func goToSlide(_ index: Int) {
+        guard !deckSlides.isEmpty else { return }
+        let i = max(0, min(index, deckSlides.count - 1))
+        for web in [webView, popOutWeb].compactMap({ $0 }) {
+            web.evaluateJavaScript("window.snazzyDeck && window.snazzyDeck.show(\(i))", completionHandler: nil)
+        }
+    }
+
+    func nextSlide() { goToSlide(currentSlide + 1) }
+    func previousSlide() { goToSlide(currentSlide - 1) }
+
+    var isDeckOpen: Bool { !deckSlides.isEmpty }
+
+    /// The URL with the current slide in the fragment (deck.js starts there).
+    private func deckURL(_ url: URL) -> URL {
+        guard isDeckOpen else { return url }
+        return URL(string: url.absoluteString + "#\(currentSlide)") ?? url
+    }
+
+    private func deckMessage(from web: WKWebView?, index: Int, slides: [DeckSlide]?) {
+        if let slides {
+            // Full report after a page load. A page without a deck in the main preview clears the list.
+            if web === webView || !slides.isEmpty, slides != deckSlides { deckSlides = slides }
+        }
+        guard index >= 0 else { return }
+        let changed = index != currentSlide
+        currentSlide = index
+        // Keep the other view on the same slide.
+        for other in [webView, popOutWeb].compactMap({ $0 }) where other !== web {
+            other.evaluateJavaScript("window.snazzyDeck && window.snazzyDeck.current() !== \(index) && window.snazzyDeck.show(\(index))", completionHandler: nil)
+        }
+        if changed { onSlideChange?(index, deckSlides.indices.contains(index) ? deckSlides[index] : nil) }
+    }
+
+    // MARK: Present window
+
+    /// The Present window's capture details: window ID, title bar height and
+    /// size in points. Nil when it isn't open and visible.
+    var stage: (windowID: UInt32, topInset: Double, size: CGSize)? {
+        guard let w = popOut, w.isVisible, !w.isMiniaturized, w.windowNumber > 0 else { return nil }
+        let top = max(0, w.frame.height - w.contentLayoutRect.height)
+        return (UInt32(w.windowNumber), Double(top), w.frame.size)
+    }
+
+    /// Stops the Present window being resized (while recording: the capture size is fixed).
+    func setStageLocked(_ locked: Bool) {
+        guard let w = popOut else { return }
+        if locked { w.styleMask.remove(.resizable) } else { w.styleMask.insert(.resizable) }
+    }
+
+    private func stageChanged() {
+        stageOpen = popOut?.isVisible == true
+        onStageChange?()
     }
 
     /// The result window's number, so screen recordings include it.
@@ -306,18 +427,29 @@ final class BuilderController {
     func openPopOut() {
         guard let current, let url = indexURL else { return }
         if popOut == nil {
-            let web = Self.makeWebView(bridge: nil, schemeHandler: schemeHandler)
+            let web = Self.makeWebView(bridge: nil, deckBridge: deckBridge, schemeHandler: schemeHandler)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 720),
                                   styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
             window.contentView = web
             window.isReleasedWhenClosed = false
+            window.delegate = stageDelegate
             window.center()
             popOut = window
             popOutWeb = web
         }
-        popOut?.title = current.name
-        popOutWeb?.load(URLRequest(url: url))
+        if current.kind == .presentation {
+            popOut?.contentAspectRatio = NSSize(width: 16, height: 9)
+            popOut?.title = "Present: \(current.name)"
+        } else {
+            popOut?.contentResizeIncrements = NSSize(width: 1, height: 1)
+            popOut?.title = current.name
+        }
+        popOutWeb?.load(URLRequest(url: deckURL(url)))
         popOut?.makeKeyAndOrderFront(nil)
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["SNAZZY_STAGE_BACK"] != nil { popOut?.orderBack(nil) }
+        #endif
+        stageChanged()
         onPopOut?()
     }
 
@@ -340,6 +472,16 @@ final class BuilderController {
             "projects": .array(projects.map { ["name": .string($0.name), "kind": .string($0.kind.rawValue)] }),
             "open_project": current.map { ["name": .string($0.name), "kind": .string($0.kind.rawValue),
                                            "files": .array(files.map { .string($0) })] } ?? .null,
+            "deck": isDeckOpen ? deckJSON() : .null,
+        ]
+    }
+
+    func deckJSON() -> JSONValue {
+        [
+            "current_slide": .number(Double(currentSlide)),
+            "slide_count": .number(Double(deckSlides.count)),
+            "present_window_open": .bool(stageOpen),
+            "slides": .array(deckSlides.map { ["index": .number(Double($0.id)), "title": .string($0.displayTitle), "has_notes": .bool(!$0.notes.isEmpty)] }),
         ]
     }
 }
@@ -377,4 +519,38 @@ final class WebBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
             onLoad?(false)
         }
     }
+}
+
+/// Receives slide reports from the deck script (preview and Present window).
+final class DeckBridge: NSObject, WKScriptMessageHandler {
+    var onMessage: ((WKWebView?, Int, [BuilderController.DeckSlide]?) -> Void)?
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any] else { return }
+        let index = (body["index"] as? NSNumber)?.intValue ?? -1
+        let slides = (body["slides"] as? [[String: Any]]).map { list in
+            list.enumerated().map { i, s in
+                BuilderController.DeckSlide(id: i, title: s["title"] as? String ?? "", notes: s["notes"] as? String ?? "")
+            }
+        }
+        let web = message.webView
+        MainActor.assumeIsolated { onMessage?(web, index, slides) }
+    }
+}
+
+/// Tells the controller when the Present window closes, moves or resizes.
+@MainActor
+final class StageWindowDelegate: NSObject, NSWindowDelegate {
+    var onChange: (() -> Void)?
+
+    private func changed() {
+        // After AppKit finishes updating the window.
+        Task { @MainActor [weak self] in self?.onChange?() }
+    }
+
+    func windowWillClose(_ notification: Notification) { changed() }
+    func windowDidEndLiveResize(_ notification: Notification) { changed() }
+    func windowDidMiniaturize(_ notification: Notification) { changed() }
+    func windowDidDeminiaturize(_ notification: Notification) { changed() }
+    func windowDidChangeScreen(_ notification: Notification) { changed() }
 }

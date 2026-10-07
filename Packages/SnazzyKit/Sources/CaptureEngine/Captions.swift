@@ -115,3 +115,44 @@ public enum Captions {
         return out.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
+
+/// Chapters from slide changes, as a WebVTT chapters file next to the movie.
+public enum Chapters {
+    public struct Mark: Equatable, Sendable {
+        /// Seconds from the start of the movie.
+        public var at: Double
+        public var title: String
+
+        public init(at: Double, title: String) {
+            self.at = at
+            self.title = title
+        }
+    }
+
+    /// `presentation-….mov` → `presentation-….chapters.vtt`.
+    public static func url(forMovie movie: URL) -> URL {
+        movie.deletingPathExtension().appendingPathExtension("chapters.vtt")
+    }
+
+    /// Chapters from marks: slides shown under `minimum` seconds are skipped
+    /// (flicking past them), repeats are merged, the first starts at 0.
+    /// Nil when there are fewer than two chapters.
+    public static func vtt(_ marks: [Mark], duration: Double, minimum: Double = 1.5) -> String? {
+        let sorted = marks.map { Mark(at: min(max(0, $0.at), duration), title: $0.title) }.sorted { $0.at < $1.at }
+        var kept: [Mark] = []
+        for (i, m) in sorted.enumerated() {
+            let end = i + 1 < sorted.count ? sorted[i + 1].at : duration
+            guard end - m.at >= minimum else { continue }
+            if kept.last?.title == m.title { continue }
+            kept.append(m)
+        }
+        guard kept.count >= 2 else { return nil }
+        kept[0].at = 0
+        let cues = kept.enumerated().map { i, m -> String in
+            let end = i + 1 < kept.count ? kept[i + 1].at : duration
+            let title = m.title.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "-->", with: "→")
+            return "\(i + 1)\n\(Captions.timestamp(m.at, separator: ".")) --> \(Captions.timestamp(end, separator: "."))\n\(title)\n"
+        }
+        return "WEBVTT\n\n" + cues.joined(separator: "\n")
+    }
+}

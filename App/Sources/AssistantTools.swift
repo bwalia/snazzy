@@ -41,7 +41,7 @@ enum AssistantTools {
 
             RegisteredTool(
                 name: "select_capture_source",
-                description: "Choose what is recorded: a display (by name like \"LG\" or \"main\", or ID), a window (by app/title or ID), or the app's slides.",
+                description: "Choose what is recorded: a display (by name like \"LG\" or \"main\", or ID), a window (by app/title or ID), or \"slides\": the open Builder deck, recorded straight from its Present window (no menu bar or other windows; it opens when recording starts). Slide changes become chapters.",
                 inputSchema: object([
                     "type": ["type": "string", "enum": ["display", "window", "slides"]],
                     "name": ["type": "string", "description": "Display or window name, part of it, or ID. Not needed for slides."],
@@ -51,7 +51,9 @@ enum AssistantTools {
                 switch args["type"]?.stringValue {
                 case "display": _ = try await capture.selectDisplay(name.isEmpty ? "main" : name)
                 case "window": _ = try await capture.selectWindow(name)
-                default: await capture.selectSlidesSource()
+                default:
+                    await capture.selectSlidesSource()
+                    await MainActor.run { if builder.isDeckOpen, builder.stage == nil { builder.openPopOut() } }
                 }
                 return await capture.stateJSON()
             },
@@ -282,10 +284,37 @@ enum AssistantTools {
             },
             RegisteredTool(
                 name: "show_slide",
-                description: "Show a slide of the open presentation in the preview (0-based index).",
+                description: "Go to a slide of the open deck (0-based index). Moves the preview and the Present window, which is what's recorded.",
                 inputSchema: object(["index": ["type": "integer", "minimum": 0]], required: ["index"])
             ) { @Sendable args in
                 try await builder.showSlide(args["index"]?.intValue ?? 0)
+            },
+            RegisteredTool(
+                name: "next_slide",
+                description: "Go to the next slide of the open deck (e.g. when the user says \"next slide\" while presenting or recording).",
+                inputSchema: object([:], required: [])
+            ) { @Sendable _ in
+                await MainActor.run { builder.nextSlide() }
+                try? await Task.sleep(for: .milliseconds(250))
+                return await MainActor.run { builder.deckJSON() }
+            },
+            RegisteredTool(
+                name: "previous_slide",
+                description: "Go back one slide in the open deck.",
+                inputSchema: object([:], required: [])
+            ) { @Sendable _ in
+                await MainActor.run { builder.previousSlide() }
+                try? await Task.sleep(for: .milliseconds(250))
+                return await MainActor.run { builder.deckJSON() }
+            },
+            RegisteredTool(
+                name: "open_present_window",
+                description: "Open the open deck in its Present window (16:9), the window recorded when the capture source is slides.",
+                inputSchema: object([:], required: [])
+            ) { @Sendable _ in
+                await MainActor.run { builder.openPopOut() }
+                try? await Task.sleep(for: .milliseconds(400))
+                return await MainActor.run { builder.deckJSON() }
             },
         ]
     }

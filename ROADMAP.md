@@ -25,8 +25,19 @@ original spec listed an iOS/iPadOS app as out of scope.
 4. **Recording** ✅ (screen preview, recorder, raw tracks; presets added): screen + mic + one camera inset, single process, composited
    file plus raw tracks, auto-named. Stall detection.
 5. **Sync**: clap calibration, per-device delay, manual slider.
-6. **Slides**: outline → slides → script from chat, slide recording mode,
-   teleprompter.
+6. **Slides** (core done ✅): the Builder makes the deck, the Slides tab presents
+   it, recording captures it.
+   - Done: "slides" capture source records the deck's 16:9 Present window
+     directly (no title bar, menu bar or other windows; keeps rendering when
+     covered). Preview and Present window stay on the same slide.
+   - Done: Present view (slide list, speaker notes as a teleprompter, Record
+     This Deck); next/previous from the toolbar menu (⌥⌘←/→), the assistant
+     ("next slide") and later the iPhone/iPad remote and Watch.
+   - Done: slide changes saved as timeline markers and a `.chapters.vtt` next
+     to the movie.
+   - Next: speaker notes for every sample slide; outline → slides → script from
+     chat as a guided flow; camera big on title slides, small on content slides
+     (phase 7 re-layout using the slide markers); embed chapters in the .mov.
 7. **Post**: timeline, trim, captions, re-layout inset, exports.
 
 8. **Mac App Store launch** (in progress, see `docs/launch/APP_STORE.md`):

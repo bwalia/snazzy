@@ -347,14 +347,24 @@ final class CaptureController {
 
     // MARK: Screen and recording preview
 
-    /// The ScreenCaptureKit source for the current selection (slides come in phase 6).
+    /// The ScreenCaptureKit source for the current selection. Slides are the
+    /// deck's Present window, captured without its title bar.
     var screenSource: ScreenFeed.Source? {
         switch setup.source {
         case .display(let id, _)?: .display(id)
         case .window(let id, _, _)?: .window(id)
+        case .slides?: slidesStage?().map { .windowContent($0.windowID, topInset: $0.topInset, size: $0.size) }
         default: nil
         }
     }
+
+    /// The Present window to record when the source is slides (set by the app).
+    @ObservationIgnored var slidesStage: (() -> (windowID: UInt32, topInset: Double, size: CGSize)?)?
+    /// Opens and locks the Present window before recording slides; returns an
+    /// error message when there's no deck to present.
+    @ObservationIgnored var prepareSlidesStage: (() -> String?)?
+    /// Unlocks the Present window after recording.
+    @ObservationIgnored var releaseSlidesStage: (() -> Void)?
 
     /// Someone (the Sources panel, the floating preview, the recorder) needs the screen feed.
     func useScreen(_ user: String, _ active: Bool) {
@@ -465,9 +475,15 @@ final class CaptureController {
 
     /// Starts recording the selected screen, the inset camera and the mic.
     func startRecording(countdown: Int = 3) async throws {
+        if setup.source == .slides {
+            if let problem = prepareSlidesStage?() { throw CaptureActionError(message: problem) }
+            // The window needs a moment to appear before it can be captured.
+            for _ in 0..<20 where slidesStage?() == nil { try? await Task.sleep(for: .milliseconds(100)) }
+        }
         guard screenSource != nil else {
+            if setup.source == .slides { releaseSlidesStage?() }
             throw CaptureActionError(message: setup.source == .slides
-                ? "Recording slides arrives in phase 6. Choose a display or window for now."
+                ? "The Present window isn't open. Open a deck in the Builder first."
                 : "Choose a display or window to record first.")
         }
         restoreInsetFeed()
@@ -486,8 +502,10 @@ final class CaptureController {
             }
         } catch {
             useScreen("recorder", false)
+            if setup.source == .slides { releaseSlidesStage?() }
             throw error
         }
+        if recorder.state != .recording, setup.source == .slides { releaseSlidesStage?() }
     }
 
     func pauseRecording() { recorder.pause() }
@@ -497,6 +515,7 @@ final class CaptureController {
     func stopRecording() async -> RecordingResult? {
         let result = await recorder.stop()
         useScreen("recorder", false)
+        releaseSlidesStage?()
         if let result {
             onRecordingSaved?()
             onRecordingEvent?("recording_saved", ["file": .string(result.composite.path), "seconds": .number(result.duration)])

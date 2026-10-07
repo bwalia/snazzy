@@ -1,10 +1,40 @@
 import Builder
 import SwiftUI
 
+/// The Slides tab: present (and record) the open deck, or browse sample decks.
+struct SlidesPanel: View {
+    enum Mode: String, CaseIterable, Identifiable {
+        case present = "Present"
+        case samples = "Sample Decks"
+        var id: String { rawValue }
+    }
+
+    @Environment(AppModel.self) private var model
+    @State private var mode: Mode?
+
+    var body: some View {
+        let current = mode ?? (model.builder.isDeckOpen ? .present : .samples)
+        VStack(spacing: 0) {
+            Picker("Slides", selection: Binding(get: { current }, set: { mode = $0 })) {
+                ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 320)
+            .padding(.top, 10)
+            switch current {
+            case .present: PresentView(showSamples: { mode = .samples })
+            case .samples: SampleGallery(opened: { mode = .present })
+            }
+        }
+    }
+}
+
 /// Example decks for different jobs and sectors. Opening one copies it into the
 /// Builder, where the assistant can rewrite it with your own content.
-struct SlidesPanel: View {
+struct SampleGallery: View {
     @Environment(AppModel.self) private var model
+    var opened: () -> Void = {}
     @State private var sector: SampleDeck.Sector?
     @State private var error: String?
 
@@ -60,6 +90,7 @@ struct SlidesPanel: View {
         do {
             try model.builder.openSample(deck)
             model.sidePanelTab = .builder
+            opened()
         } catch {
             self.error = error.localizedDescription
         }

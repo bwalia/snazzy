@@ -160,6 +160,16 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("p", modifiers: [.command, .control])
             .disabled(recorder.state != .recording && recorder.state != .paused)
+            Divider()
+            Button("Next Slide") { model.builder.nextSlide() }
+                .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
+                .disabled(!model.builder.isDeckOpen)
+            Button("Previous Slide") { model.builder.previousSlide() }
+                .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
+                .disabled(!model.builder.isDeckOpen)
+            Button("Open Present Window") { model.builder.openPopOut() }
+                .disabled(!model.builder.isDeckOpen)
+            Divider()
             Button("Reset Zoom") { model.capture.animateZoom(to: nil) }
                 .keyboardShortcut("0", modifiers: [.command, .option])
                 .disabled(model.capture.screenZoom == nil)

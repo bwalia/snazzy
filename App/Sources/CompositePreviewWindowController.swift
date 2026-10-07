@@ -75,7 +75,7 @@ struct CompositePreviewContent: View {
 
     private var screenMessage: String {
         if capture.screenSource == nil {
-            return capture.setup.source == .slides ? "Slides capture arrives in phase 6" : "Choose a display or window to record"
+            return capture.setup.source == .slides ? "Open the Present window to see your slides here" : "Choose a display or window to record"
         }
         return capture.screen.state.description
     }

@@ -135,6 +135,13 @@ public final class Recorder {
         diagnostics.log("Recording resumed", category: "recording")
     }
 
+    /// Notes an event at the current recording time (saved in timeline.json;
+    /// `"type": "slide"` markers also become chapters).
+    public func mark(_ fields: [String: JSONValue]) {
+        guard state == .recording || state == .paused else { return }
+        session?.mark(fields)
+    }
+
     /// Keeps the composite in step with layout/crop changes made while recording.
     public func update(spec: CompositeSpec) {
         session?.setSpec(spec)
@@ -229,8 +236,18 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     private let stateLock = NSLock()
     private var _failure: String?
     private var _recorded: Double = 0
+    private var _markers: [JSONValue] = []
     var failure: String? { stateLock.withLock { _failure } }
     var recordedSeconds: Double { stateLock.withLock { _recorded } }
+
+    /// Notes an event (e.g. a slide change) at the current recording time.
+    func mark(_ fields: [String: JSONValue]) {
+        stateLock.withLock {
+            var m = fields
+            m["at_seconds"] = .number((_recorded * 1000).rounded() / 1000)
+            _markers.append(.object(m))
+        }
+    }
 
     init(composite: URL, rawFolder: URL, spec: CompositeSpec) throws {
         compositeURL = composite
@@ -480,6 +497,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     }
 
     private func writeTimeline(_ result: RecordingResult, recordingStart: Date) {
+        let markers = stateLock.withLock { _markers }
         let freezes: [JSONValue] = result.freezes.map {
             ["at_seconds": .number(max(0, $0.start.timeIntervalSince(recordingStart))), "duration_seconds": .number($0.duration)]
         }
@@ -501,10 +519,20 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
                 "video_delay_ms": .number(spec.profile.videoDelayMs),
             ],
             "camera_freezes": .array(freezes),
+            "markers": .array(markers),
             "composite_starts_at_seconds": .number(queue.sync { sessionStart?.seconds } ?? 0),
             "note": "Times are seconds from the start of the recording with pauses removed. Raw tracks share this timeline; the composite movie begins at composite_starts_at_seconds.",
         ]
         try? timeline.encoded().write(to: rawFolder.appending(path: "timeline.json"))
+        // Slide changes become chapters (WebVTT) next to the movie.
+        let start = queue.sync { sessionStart?.seconds } ?? 0
+        let slides: [Chapters.Mark] = markers.compactMap { m in
+            guard m["type"]?.stringValue == "slide", let at = m["at_seconds"]?.doubleValue else { return nil }
+            return Chapters.Mark(at: at - start, title: m["title"]?.stringValue ?? "Slide \((m["index"]?.intValue ?? 0) + 1)")
+        }
+        if let vtt = Chapters.vtt(slides, duration: result.duration) {
+            try? vtt.write(to: Chapters.url(forMovie: result.composite), atomically: true, encoding: .utf8)
+        }
     }
 }
 
