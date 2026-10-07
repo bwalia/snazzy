@@ -40,6 +40,12 @@ struct SnazzyProApp: App {
         .defaultSize(width: 1280, height: 800)
         .commands { AppCommands(model: model) }
 
+        Window("For Developers", id: "developer-help") {
+            DeveloperHelpView()
+                .environment(model)
+        }
+        .defaultSize(width: 600, height: 640)
+
         Window("Diagnostics", id: "diagnostics") {
             DiagnosticsView()
                 .environment(model.capture)
@@ -77,6 +83,9 @@ struct AppCommands: Commands {
                 .disabled(model.capture.openPreviewIDs.isEmpty && !model.capture.compositePreviewOpen)
             Divider()
             Button("Refresh Devices") { Task { await model.capture.catalog.refresh() } }
+        }
+        CommandGroup(after: .help) {
+            Button("Snazzy Pro for Developers") { openWindow(id: "developer-help") }
         }
         CommandMenu("Presets") {
             Button("Save Current Settings…") { model.presets.promptAndSave() }

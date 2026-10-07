@@ -25,6 +25,7 @@
     <nav class="links" aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
+      <a href="#developers">Developers</a>
       <a href="#privacy">Privacy</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -198,6 +199,23 @@
     </div>
   </section>
 
+  <section id="developers" aria-labelledby="dev-title">
+    <div class="wrap">
+      <p class="eyebrow">For developers</p>
+      <h2 id="dev-title">Demo your code in one take.</h2>
+      <p class="section-lede">Turn a pull request into a short demo, explain the error in your terminal, and share the result with your team. Each feature is a switch in Settings, and your code stays on your Mac unless you approve otherwise.</p>
+      <div class="dev-grid">
+        <div class="dev-card reveal"><h3>Demo a pull request</h3><p>Loads the PR's description and diff and plans a 2–4 slide demo with a talk script.</p><code>“Make a demo of PR #123.”</code></div>
+        <div class="dev-card reveal"><h3>Explain your terminal</h3><p>Reads the window you're showing with on-device text recognition. Secrets are hidden before anything goes to a cloud model.</p><code>“Explain what's in my terminal.”</code></div>
+        <div class="dev-card reveal"><h3>Zoom to the error</h3><p>Smoothly zooms the recording to the line that matters, then back out.</p><code>“Zoom in on the stack trace.”</code></div>
+        <div class="dev-card reveal"><h3>Trim without re-encoding</h3><p>Cut the start or end in seconds. The original and its raw tracks stay untouched.</p><code>“Cut the first 5 seconds.”</code></div>
+        <div class="dev-card reveal"><h3>Captions and a summary</h3><p>Captions made on your Mac (.srt, .vtt, or burned in) and a summary with chapters.</p><code>“Summarise my last recording.”</code></div>
+        <div class="dev-card reveal"><h3>Share to your own storage</h3><p>Your S3, R2 or MinIO bucket, or GitHub. Get a link and text ready for Slack, a PR or Jira.</p><code>“Share it to S3.”</code></div>
+      </div>
+      <p class="dev-note reveal">Also: an MCP server so Claude Code, Cursor and other agents can drive Snazzy Pro, and an MCP client so the assistant can search your docs and data. <a href="https://github.com/bwalia/snazzy/tree/main/integrations">Set it up</a>.</p>
+    </div>
+  </section>
+
   <section id="privacy" class="privacy" aria-labelledby="privacy-title">
     <div class="wrap">
       <p class="eyebrow">Privacy</p>
@@ -219,6 +237,7 @@
         <details><summary>Which Macs does it run on?</summary><p>Macs running macOS 15 or later. Apple silicon is recommended, especially for local AI models.</p></details>
         <details><summary>Do I need an AI subscription?</summary><p>No. Run a free local model with Ollama, or use Claude from Anthropic with your own API key. You can mix them: a local model for quick commands, Claude for writing.</p></details>
         <details><summary>Can I use my iPhone or iPad as the camera?</summary><p>Yes. Connect it by cable and point it at yourself, or use Continuity Camera wirelessly. Snazzy Pro crops out the Camera app's buttons and remembers the framing for each device. A dedicated iPhone and iPad companion app is planned.</p></details>
+        <details><summary>Does my code leave my Mac?</summary><p>Not with a local model. With a cloud model, Snazzy Pro shows you the exact text (a diff, a transcript or your terminal's text, with likely secrets hidden) and only sends it if you approve. Audio and video are never sent. Share links upload only to storage you own, after you confirm.</p></details>
         <details><summary>Is there a Windows version?</summary><p>Not at the moment. Snazzy Pro is a native Mac app built on Apple's capture and AI frameworks.</p></details>
         <details><summary>What do recordings look like?</summary><p>A 1080p video (H.264 with AAC audio) that opens anywhere, plus the raw screen, camera and microphone tracks in a folder next to it, so the camera layout can be changed later.</p></details>
         <details><summary>Where do I get help?</summary><p>See the <a href="support.html">support page</a>, or open an issue on <a href="https://github.com/bwalia/snazzy/issues">GitHub</a>.</p></details>
