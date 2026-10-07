@@ -1,0 +1,16 @@
+# Xcode / build
+*.xcodeproj/
+build/
+DerivedData/
+.build/
+.swiftpm/
+xcuserdata/
+*.xcuserstate
+.DS_Store
+
+# Secrets must never be committed (keys live in the Keychain)
+*.env
+.env*
+/secrets/
+*.secrets
+secrets.json

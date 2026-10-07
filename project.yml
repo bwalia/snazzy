@@ -1,0 +1,72 @@
+name: SnazzyPro
+options:
+  bundleIdPrefix: com.snazzy
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+packages:
+  SnazzyKit:
+    path: Packages/SnazzyKit
+targets:
+  SnazzyPro:
+    type: application
+    platform: macOS
+    sources:
+      - path: App/Sources
+    dependencies:
+      - package: SnazzyKit
+        product: SnazzyCore
+      - package: SnazzyKit
+        product: Assistant
+      - package: SnazzyKit
+        product: CaptureEngine
+      - package: SnazzyKit
+        product: Slides
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Snazzy Pro
+        CFBundleName: Snazzy Pro
+        LSApplicationCategoryType: public.app-category.video
+        LSMinimumSystemVersion: "15.0"
+        NSHumanReadableCopyright: ""
+        NSCameraUsageDescription: Snazzy Pro records your camera (including an iPad or iPhone connected by USB) as an inset in your presentation videos.
+        NSMicrophoneUsageDescription: Snazzy Pro records your microphone for presentation voice-over and on-device captions.
+        NSSpeechRecognitionUsageDescription: Snazzy Pro creates captions from your recording using on-device speech recognition.
+    entitlements:
+      path: App/SnazzyPro.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.device.camera: true
+        com.apple.security.device.audio-input: true
+        com.apple.security.files.user-selected.read-write: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.snazzy.pro
+        PRODUCT_NAME: SnazzyPro
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: YES
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+schemes:
+  SnazzyPro:
+    build:
+      targets:
+        SnazzyPro: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - package: SnazzyKit/SnazzyCoreTests
+        - package: SnazzyKit/AssistantTests

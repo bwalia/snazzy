@@ -1,0 +1,208 @@
+import Assistant
+import SnazzyCore
+import SwiftUI
+
+struct SettingsView: View {
+    var body: some View {
+        TabView {
+            ModelsSettings()
+                .tabItem { Label("Models", systemImage: "cpu") }
+            ProvidersSettings()
+                .tabItem { Label("Providers", systemImage: "network") }
+        }
+        .frame(width: 600, height: 460)
+    }
+}
+
+/// Provider and model per task.
+struct ModelsSettings: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(AssistantTask.allCases) { task in
+                    TaskModelRow(task: task)
+                }
+            } footer: {
+                Text("Use Test connection on the Providers tab to list installed or available models.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+struct TaskModelRow: View {
+    @Environment(AppModel.self) private var model
+    let task: AssistantTask
+
+    var body: some View {
+        let selection = model.settings.selection(for: task)
+        LabeledContent(task.displayName) {
+            HStack {
+                Picker("Provider", selection: providerBinding) {
+                    ForEach(ProviderKind.allCases) { Text($0.displayName).tag($0) }
+                }
+                .labelsHidden()
+                .frame(width: 140)
+                TextField("Model", text: modelBinding)
+                    .frame(minWidth: 160)
+                Menu {
+                    let known = knownModels(selection.provider)
+                    if known.isEmpty { Text("No models yet: test the connection") }
+                    ForEach(known, id: \.self) { id in Button(id) { modelBinding.wrappedValue = id } }
+                } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                LocationBadge(provider: selection.provider, sending: false)
+            }
+        }
+    }
+
+    private func knownModels(_ provider: ProviderKind) -> [String] {
+        let discovered = model.discoveredModels[provider]?.filter { $0.supportsTools != false }.map(\.id) ?? []
+        var seen = Set<String>()
+        return (provider.suggestedModels + discovered).filter { seen.insert($0).inserted }
+    }
+
+    private var providerBinding: Binding<ProviderKind> {
+        Binding {
+            model.settings.selection(for: task).provider
+        } set: { newValue in
+            guard newValue != model.settings.selection(for: task).provider else { return }
+            let defaultModel = knownModels(newValue).first ?? ""
+            model.settings.setSelection(ModelSelection(provider: newValue, model: defaultModel), for: task)
+        }
+    }
+
+    private var modelBinding: Binding<String> {
+        Binding {
+            model.settings.selection(for: task).model
+        } set: { newValue in
+            var selection = model.settings.selection(for: task)
+            selection.model = newValue.trimmingCharacters(in: .whitespaces)
+            model.settings.setSelection(selection, for: task)
+        }
+    }
+}
+
+struct ProvidersSettings: View {
+    @Environment(AppModel.self) private var model
+    @State private var anthropicKey = ""
+    @State private var keyError: String?
+
+    var body: some View {
+        @Bindable var model = model
+        Form {
+            Section {
+                LabeledContent("API key") {
+                    HStack {
+                        SecureField(model.storedKeys.contains(.anthropic) ? "Stored in Keychain" : "sk-ant-…", text: $anthropicKey)
+                            .textContentType(.password)
+                        Button("Save") { saveKey() }
+                            .disabled(anthropicKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                        if model.storedKeys.contains(.anthropic) {
+                            Button("Remove", role: .destructive) { removeKey() }
+                        }
+                    }
+                }
+                if model.storedKeys.contains(.anthropic) {
+                    Label("Key stored in the macOS Keychain", systemImage: "lock.fill")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if let keyError {
+                    Text(keyError).font(.caption).foregroundStyle(.red)
+                }
+                TextField("Base URL", text: $model.settings.anthropicBaseURL)
+                Picker("Effort", selection: $model.settings.anthropicEffort) {
+                    ForEach(["low", "medium", "high", "xhigh", "max"], id: \.self) { Text($0).tag($0) }
+                }
+                ConnectionTestRow(provider: .anthropic)
+            } header: {
+                HStack {
+                    Text("Anthropic")
+                    LocationBadge(provider: .anthropic, sending: false)
+                }
+            }
+
+            Section {
+                TextField("Base URL", text: $model.settings.ollamaBaseURL)
+                ConnectionTestRow(provider: .ollama)
+            } header: {
+                HStack {
+                    Text("Ollama")
+                    LocationBadge(provider: .ollama, sending: false)
+                }
+            } footer: {
+                Text("OpenAI-compatible, LM Studio and Apple on-device providers come in a later phase.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func saveKey() {
+        do {
+            try model.saveAPIKey(anthropicKey, for: .anthropic)
+            anthropicKey = ""
+            keyError = nil
+        } catch {
+            keyError = error.localizedDescription
+        }
+    }
+
+    private func removeKey() {
+        do {
+            try model.deleteAPIKey(for: .anthropic)
+            keyError = nil
+        } catch {
+            keyError = error.localizedDescription
+        }
+    }
+}
+
+struct ConnectionTestRow: View {
+    @Environment(AppModel.self) private var model
+    let provider: ProviderKind
+    @State private var status: Status = .idle
+
+    enum Status: Equatable {
+        case idle, testing
+        case ok(String)
+        case failed(String)
+    }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Button("Test connection") { Task { await test() } }
+                .disabled(status == .testing)
+            switch status {
+            case .idle: EmptyView()
+            case .testing: ProgressView().controlSize(.small)
+            case .ok(let message):
+                Label(message, systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+            case .failed(let message):
+                Label(message, systemImage: "xmark.octagon.fill").foregroundStyle(.red).lineLimit(3)
+            }
+        }
+        .font(.callout)
+    }
+
+    private func test() async {
+        if let reason = model.unavailableReason(provider) {
+            status = .failed(reason)
+            return
+        }
+        status = .testing
+        switch await model.testConnection(provider) {
+        case .success(let models):
+            let toolModels = models.filter { $0.supportsTools != false }.count
+            status = .ok("Connected: \(models.count) models (\(toolModels) with tool support)")
+        case .failure(let error):
+            status = .failed(error.localizedDescription)
+        }
+    }
+}
