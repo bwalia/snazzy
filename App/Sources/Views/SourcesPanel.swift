@@ -7,12 +7,48 @@ struct SourcesPanel: View {
     @Environment(CaptureController.self) private var capture
     @Environment(\.openWindow) private var openWindow
 
+    /// Panel width at which previews move into their own large column.
+    static let wideWidth: CGFloat = 860
+
     var body: some View {
+        GeometryReader { geo in
+            if geo.size.width >= Self.wideWidth {
+                // Wide: big previews that grow with the window, controls on the right.
+                HStack(spacing: 0) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 18) {
+                            PreviewHeader()
+                            RecordingPreviewBlock(maxHeight: nil)
+                            if capture.insetFeed != nil {
+                                Text("Camera").font(.headline)
+                                CameraPreviewBlock(maxHeight: max(240, geo.size.height * 0.42))
+                            }
+                        }
+                        .padding(20)
+                    }
+                    .frame(maxWidth: .infinity)
+                    Divider()
+                    controls(showsPreviews: false)
+                        .frame(width: min(460, max(380, geo.size.width * 0.34)))
+                }
+            } else {
+                controls(showsPreviews: true)
+            }
+        }
+        .task {
+            await capture.catalog.refresh()
+            capture.restoreInsetFeed()
+        }
+        .onAppear { capture.useScreen("sources-panel", true) }
+        .onDisappear { capture.useScreen("sources-panel", false) }
+    }
+
+    private func controls(showsPreviews: Bool) -> some View {
         Form {
-            RecordingPreviewSection()
+            if showsPreviews { RecordingPreviewSection() }
             MicSection()
             SourceSection()
-            InsetDeviceSection()
+            InsetDeviceSection(showsPreview: showsPreviews)
             if capture.setup.insetDevice != nil {
                 BackgroundSection()
                 CropSection()
@@ -23,12 +59,6 @@ struct SourcesPanel: View {
             }
         }
         .formStyle(.grouped)
-        .task {
-            await capture.catalog.refresh()
-            capture.restoreInsetFeed()
-        }
-        .onAppear { capture.useScreen("sources-panel", true) }
-        .onDisappear { capture.useScreen("sources-panel", false) }
     }
 }
 
@@ -121,6 +151,7 @@ private struct SourceSection: View {
 
 private struct InsetDeviceSection: View {
     @Environment(CaptureController.self) private var capture
+    var showsPreview = true
     @State private var error: String?
 
     var body: some View {
@@ -168,30 +199,38 @@ private struct InsetDeviceSection: View {
                 Text(error).font(.callout).foregroundStyle(.red)
             }
 
-            if let feed = capture.insetFeed {
-                VStack(alignment: .leading, spacing: 6) {
-                    InsetPreviewContent(feed: feed)
-                        .aspectRatio(previewAspect(feed), contentMode: .fit)
-                        .frame(maxHeight: 260)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    HStack {
-                        FeedStatusLine(feed: feed)
-                        Spacer()
-                        if capture.openPreviewIDs.contains(feed.device.id) {
-                            Button("Close Preview") { capture.closePreview(deviceID: feed.device.id) }
-                        } else {
-                            Button("Open Floating Preview") { try? capture.openPreview(deviceID: feed.device.id) }
-                        }
-                    }
-                }
+            if showsPreview, capture.insetFeed != nil {
+                CameraPreviewBlock(maxHeight: 260)
             }
         }
     }
+}
 
-    private func previewAspect(_ feed: CameraFeed) -> CGFloat {
-        guard let raw = feed.frameSize else { return 16.0 / 9.0 }
-        let size = InsetGeometry.contentSize(raw: raw, profile: capture.profile(for: feed.device.id, kind: feed.device.kind))
-        return size.height > 0 ? size.width / size.height : 16.0 / 9.0
+/// The inset camera's live preview in a fixed 16:9 frame (the picture is
+/// letterboxed inside), so crop and zoom changes never resize the layout.
+struct CameraPreviewBlock: View {
+    @Environment(CaptureController.self) private var capture
+    let maxHeight: CGFloat?
+
+    var body: some View {
+        if let feed = capture.insetFeed {
+            VStack(alignment: .leading, spacing: 6) {
+                InsetPreviewContent(feed: feed)
+                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .frame(maxWidth: maxHeight.map { $0 * 16 / 9 } ?? .infinity, maxHeight: maxHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                HStack {
+                    FeedStatusLine(feed: feed)
+                    Spacer()
+                    if capture.openPreviewIDs.contains(feed.device.id) {
+                        Button("Close Floating Preview") { capture.closePreview(deviceID: feed.device.id) }
+                    } else {
+                        Button("Open Floating Preview") { try? capture.openPreview(deviceID: feed.device.id) }
+                    }
+                }
+                .frame(maxWidth: maxHeight.map { $0 * 16 / 9 } ?? .infinity)
+            }
+        }
     }
 }
 
@@ -313,14 +352,46 @@ struct LabeledSlider: View {
 }
 
 /// Exactly what will be recorded (screen + camera inset), or the screen alone.
-private struct RecordingPreviewSection: View {
-    @Environment(CaptureController.self) private var capture
+enum PreviewMode: String, CaseIterable { case recording = "Recording", screen = "Screen only" }
+
+/// "Preview" title with the Recording / Screen only switch.
+private struct PreviewHeader: View {
     @AppStorage("SnazzyPro.previewMode") private var mode = PreviewMode.recording
 
-    enum PreviewMode: String, CaseIterable { case recording = "Recording", screen = "Screen only" }
+    var body: some View {
+        HStack {
+            Text("Preview").font(.headline)
+            Spacer()
+            Picker("", selection: $mode) {
+                ForEach(PreviewMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+        }
+    }
+}
 
+/// In the narrow (one-column) layout, the preview is the first form section.
+private struct RecordingPreviewSection: View {
     var body: some View {
         Section {
+            RecordingPreviewBlock(maxHeight: 340)
+        } header: {
+            PreviewHeader()
+        }
+    }
+}
+
+/// What will be recorded (screen + inset), or the screen alone; grows with
+/// the available width when `maxHeight` is nil.
+struct RecordingPreviewBlock: View {
+    @Environment(CaptureController.self) private var capture
+    @AppStorage("SnazzyPro.previewMode") private var mode = PreviewMode.recording
+    let maxHeight: CGFloat?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
             if !capture.catalog.screenRecordingAllowed || capture.screen.state == .needsPermission {
                 PermissionBlock()
             } else {
@@ -332,8 +403,8 @@ private struct RecordingPreviewSection: View {
                     }
                 }
                 .aspectRatio(mode == .recording ? 16.0 / 9.0 : screenAspect, contentMode: .fit)
-                .frame(maxHeight: 340)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .frame(maxHeight: maxHeight)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
                 HStack {
                     Circle().fill(capture.screen.state == .live ? Color.green : Color.orange).frame(width: 8, height: 8)
                     Text(statusText).font(.caption)
@@ -347,17 +418,6 @@ private struct RecordingPreviewSection: View {
                 Text("Snazzy Pro's own windows (chat, previews, this panel) are left out of the recording; the Builder's result window is included.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-        } header: {
-            HStack {
-                Text("Preview")
-                Spacer()
-                Picker("", selection: $mode) {
-                    ForEach(PreviewMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-            }
         }
     }
 
@@ -368,7 +428,7 @@ private struct RecordingPreviewSection: View {
 
     private var statusText: String {
         guard capture.screen.state == .live else {
-            return capture.screenSource == nil ? "Choose a display or window below" : capture.screen.state.description
+            return capture.screenSource == nil ? "Choose a display or window" : capture.screen.state.description
         }
         let size = capture.screen.frameSize.map { "\(Int($0.width))×\(Int($0.height))" } ?? ""
         return "Screen live · \(size)" + (mode == .recording ? " · records at 1920×1080" : "")

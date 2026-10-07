@@ -193,3 +193,12 @@ Warnings are treated as errors in the app target.
 - The app is sandboxed: network client, camera, audio input, user-selected files.
 - Debug builds are ad-hoc signed. Each rebuild changes the signature, so macOS
   may ask once to allow Keychain access to the stored key.
+
+## Licence
+
+The core of Snazzy Pro is open source under the [Apache License 2.0](LICENSE).
+The name, logo and icon are trademarks and aren't covered by it (see
+[NOTICE](NOTICE) and [TRADEMARKS.md](TRADEMARKS.md)). Pro features are
+proprietary and not in this repository; the plan is in
+[docs/business/PRO.md](docs/business/PRO.md). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
+

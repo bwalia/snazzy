@@ -30,7 +30,9 @@ final class AppModel {
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// The right-hand panel's tab (the builder switches to it when it works).
-    var sidePanelTab: SidePanel.Tab = .builder
+    var sidePanelTab: SidePanel.Tab = SidePanel.Tab(rawValue: UserDefaults.standard.string(forKey: "SnazzyPro.sidePanelTab") ?? "") ?? .builder {
+        didSet { UserDefaults.standard.set(sidePanelTab.rawValue, forKey: "SnazzyPro.sidePanelTab") }
+    }
 
     init(secrets: any SecretStore = KeychainStore(), settingsStore: SettingsStore = SettingsStore()) {
         self.secrets = secrets
