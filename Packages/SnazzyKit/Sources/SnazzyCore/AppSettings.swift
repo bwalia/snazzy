@@ -1,8 +1,9 @@
 import Foundation
 
-/// Model providers. Phase 1 implements Anthropic and Ollama; OpenAI-compatible,
-/// LM Studio and Apple on-device are added in later phases.
+/// Model providers. OpenAI-compatible and LM Studio come later.
 public enum ProviderKind: String, Codable, CaseIterable, Sendable, Identifiable {
+    /// Apple Intelligence's on-device model (FoundationModels, macOS 26+): no key, no network.
+    case appleOnDevice
     case anthropic
     case ollama
 
@@ -10,6 +11,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Sendable, Identifiable 
 
     public var displayName: String {
         switch self {
+        case .appleOnDevice: "Apple Intelligence (on-device)"
         case .anthropic: "Anthropic"
         case .ollama: "Ollama (local)"
         }
@@ -18,6 +20,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Sendable, Identifiable 
     /// Local providers never send content off this Mac.
     public var isLocal: Bool {
         switch self {
+        case .appleOnDevice: true
         case .anthropic: false
         case .ollama: true
         }
@@ -27,12 +30,15 @@ public enum ProviderKind: String, Codable, CaseIterable, Sendable, Identifiable 
     public var keychainAccount: String? {
         switch self {
         case .anthropic: "anthropic"
-        case .ollama: nil
+        case .ollama, .appleOnDevice: nil
         }
     }
 
+    public static let appleModelID = "apple-on-device"
+
     public var suggestedModels: [String] {
         switch self {
+        case .appleOnDevice: [Self.appleModelID]
         case .anthropic: ["claude-opus-5-5", "claude-sonnet-5-5"]
         case .ollama: []
         }
@@ -166,6 +172,9 @@ public struct SettingsStore: Sendable {
     public init(suiteName: String? = nil) { self.suiteName = suiteName }
 
     private var defaults: UserDefaults { suiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard }
+
+    /// Whether settings were ever saved (false on first launch).
+    public var hasSaved: Bool { defaults.data(forKey: Self.key) != nil }
 
     public func load() -> AppSettings {
         guard let data = defaults.data(forKey: Self.key) else { return .default }

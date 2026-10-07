@@ -206,10 +206,10 @@ enum SelfTest {
         app.sessionLoggingSuspended = true
         await app.capture.catalog.refresh()
         do {
-            let p: any ModelProvider = provider == "anthropic"
-                ? try app.makeProvider(.anthropic) : try app.makeProvider(.ollama)
-            let runner = ConversationRunner(provider: p, registry: app.makeToolRegistry(), model: model,
-                                            system: ChatSession.systemPrompt, maxTokens: 8000,
+            let kind: ProviderKind = provider == "anthropic" ? .anthropic : provider == "apple" ? .appleOnDevice : .ollama
+            let p = try app.makeProvider(kind)
+            let runner = ConversationRunner(provider: p, registry: app.makeToolRegistry(), model: kind == .appleOnDevice ? ProviderKind.appleModelID : model,
+                                            system: kind == .appleOnDevice ? ChatSession.compactSystemPrompt : ChatSession.systemPrompt, maxTokens: 8000,
                                             effort: provider == "anthropic" ? "low" : nil)
             for try await event in runner.run(history: [.user(prompt)]) {
                 switch event {

@@ -100,6 +100,27 @@ struct ProvidersSettings: View {
         @Bindable var model = model
         Form {
             Section {
+                if let reason = AppleOnDeviceProvider.unavailableReason {
+                    Label(reason, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                } else {
+                    Label("Ready. Runs on this Mac: no key, no network, nothing leaves your computer.", systemImage: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                }
+                Text("Best for quick commands and device setup. It has a small memory, so use a larger model for long writing or big prototypes.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Use for All Tasks") {
+                    let apple = ModelSelection(provider: .appleOnDevice, model: ProviderKind.appleModelID)
+                    for task in AssistantTask.allCases { model.settings.setSelection(apple, for: task) }
+                }
+                .disabled(!AppleOnDeviceProvider.isAvailable)
+            } header: {
+                HStack {
+                    Text("Apple Intelligence")
+                    LocationBadge(provider: .appleOnDevice, sending: false)
+                }
+            }
+
+            Section {
                 LabeledContent("API key") {
                     HStack {
                         SecureField(model.storedKeys.contains(.anthropic) ? "Stored in Keychain" : "sk-ant-…", text: $anthropicKey)
@@ -139,7 +160,7 @@ struct ProvidersSettings: View {
                     LocationBadge(provider: .ollama, sending: false)
                 }
             } footer: {
-                Text("OpenAI-compatible, LM Studio and Apple on-device providers come in a later phase.")
+                Text("OpenAI-compatible and LM Studio providers come in a later phase.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

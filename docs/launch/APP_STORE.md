@@ -44,12 +44,11 @@ Status and everything needed to submit Snazzy Pro to the Mac App Store.
 
 ## 3. Strongly recommended before submitting
 
-- **Works with no setup.** App Review won't have Ollama or an Anthropic key.
-  Today the chat needs one of them. Fix: add the **Apple on-device model**
-  provider (FoundationModels, macOS 26+, already in the spec). Then chat,
-  device setup and presets work out of the box, offline and private, and cloud
-  models are an upgrade. Until then, put a **review-only Anthropic API key**
-  in the review notes (and revoke it after review).
+- **Works with no setup** ✅: on a Mac with Apple Intelligence on (macOS 26+),
+  the app uses Apple's on-device model for every task on first launch, so chat,
+  device setup, recording and presets work with no key and no network. For
+  reviewers on Macs without Apple Intelligence, still include a temporary
+  Anthropic key in the review notes and revoke it after review.
 - **Lip-sync calibration (phase 5)** before marketing it for camera-inset videos.
 - **Screenshots** from a clean demo session (no personal windows). See section 5.
 

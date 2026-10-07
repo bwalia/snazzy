@@ -34,7 +34,14 @@ final class AppModel {
     init(secrets: any SecretStore = KeychainStore(), settingsStore: SettingsStore = SettingsStore()) {
         self.secrets = secrets
         self.settingsStore = settingsStore
-        self.settings = settingsStore.load()
+        var initial = settingsStore.load()
+        // First launch: if Apple's on-device model is available, use it for every
+        // task, so the assistant works with no key, no Ollama and no network.
+        if !settingsStore.hasSaved, AppleOnDeviceProvider.isAvailable {
+            let apple = ModelSelection(provider: .appleOnDevice, model: ProviderKind.appleModelID)
+            for task in AssistantTask.allCases { initial.setSelection(apple, for: task) }
+        }
+        self.settings = initial
         self.capture = CaptureController()
         self.builder = BuilderController()
         self.chat = ChatSession(app: self)
@@ -90,11 +97,14 @@ final class AppModel {
             return try AnthropicProvider(apiKey: key, baseURL: settings.anthropicBaseURL)
         case .ollama:
             return try OllamaProvider(baseURL: settings.ollamaBaseURL)
+        case .appleOnDevice:
+            return try AppleOnDeviceProvider()
         }
     }
 
     /// Why a provider can't be used right now, if it can't.
     func unavailableReason(_ kind: ProviderKind) -> String? {
+        if kind == .appleOnDevice { return AppleOnDeviceProvider.unavailableReason }
         if !kind.isLocal && !isOnline { return "Offline: cloud models are unavailable. Local models still work." }
         if kind.keychainAccount != nil && !storedKeys.contains(kind) {
             return "No \(kind.displayName) API key. Add one in Settings."

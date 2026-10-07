@@ -36,8 +36,9 @@ original spec listed an iOS/iPadOS app as out of scope.
      consent prompt (guideline 5.1.2), no private API (Builder serves projects
      over `snazzy-project://`), export-compliance and local-network keys, self-test
      compiled out of Release, archive/upload script (`Scripts/archive-appstore.sh`).
-   - To do: Apple on-device model provider (FoundationModels), so the app works
-     with no API key or Ollama, for App Review and first launch; App Store
+   - Done: Apple on-device model provider (FoundationModels): no key, no
+     network; default on first launch when Apple Intelligence is on.
+   - To do: camera backgrounds (blur, built-in and uploaded images); App Store
      screenshots; App Store Connect record; TestFlight round; swap the site's
      "Coming soon" button for Apple's official Mac App Store badge.
 

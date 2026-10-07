@@ -124,6 +124,9 @@ public struct ModelRequest: Sendable {
     public var maxTokens: Int
     /// Anthropic `output_config.effort`; ignored by providers without it.
     public var effort: String?
+    /// For providers that run tools inside their own loop (Apple on-device):
+    /// validates, confirms and runs a call exactly like the conversation runner.
+    public var toolExecutor: (@Sendable (ToolCall) async -> ToolResult)?
 
     public init(
         model: String, system: String? = nil, messages: [ChatMessage], tools: [ToolDefinition] = [],

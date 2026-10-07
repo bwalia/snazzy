@@ -54,7 +54,7 @@ public struct ConversationRunner: Sendable {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    try await loop(history: history) { continuation.yield($0) }
+                    try await loop(history: history) { @Sendable in continuation.yield($0) }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -64,15 +64,34 @@ public struct ConversationRunner: Sendable {
         }
     }
 
-    private func loop(history: [ChatMessage], emit: (Event) -> Void) async throws {
+    private func loop(history: [ChatMessage], emit: @escaping @Sendable (Event) -> Void) async throws {
         var messages = history
         var invalidRounds = 0
 
         for _ in 0..<maxToolRounds {
             try Task.checkCancellation()
-            let request = ModelRequest(
+            var request = ModelRequest(
                 model: model, system: system, messages: messages, tools: registry.definitions,
                 maxTokens: maxTokens, effort: effort)
+            // Providers that run tools themselves (Apple on-device) use this, so
+            // calls get the same validation, confirmation and UI events.
+            let inline = InlineCalls()
+            request.toolExecutor = { [registry, confirm] call in
+                emit(.toolCallStarted(name: call.name))
+                let errors = registry.validate(call)
+                let result: ToolResult
+                if !errors.isEmpty {
+                    result = ToolRegistry.invalidResult(call, errors: errors, schema: registry.tool(named: call.name)?.definition.inputSchema)
+                } else if registry.tool(named: call.name)?.requiresConfirmation == true, await !confirm(call) {
+                    result = ToolResult(callID: call.id, name: call.name, content: "The user declined this action.", isError: true)
+                } else {
+                    emit(.toolRunning(call))
+                    result = await registry.execute(call)
+                }
+                emit(.toolFinished(call, result))
+                inline.append(call, result)
+                return result
+            }
 
             var completed: (ChatMessage, StopReason, TokenUsage, String?)?
             for try await event in provider.stream(request) {
@@ -87,6 +106,17 @@ public struct ConversationRunner: Sendable {
             }
             guard let (assistant, stop, usage, servedBy) = completed else {
                 throw ProviderError.malformedResponse("stream ended without a message")
+            }
+            // Record tools the provider ran itself in the usual call/result form,
+            // so the history works with every provider.
+            let ran = inline.all
+            if !ran.isEmpty {
+                let calls = ChatMessage(role: .assistant, parts: ran.map { .toolCall($0.0) })
+                let results = ChatMessage(role: .tool, parts: ran.map { .toolResult($0.1) })
+                messages.append(calls)
+                messages.append(results)
+                emit(.assistantMessage(calls, stopReason: .toolUse, servedBy: servedBy))
+                emit(.toolResults(results))
             }
             messages.append(assistant)
             emit(.assistantMessage(assistant, stopReason: stop, servedBy: servedBy))
@@ -153,4 +183,13 @@ public struct ConversationRunner: Sendable {
         }
         emit(.needsUser("Stopped after \(maxToolRounds) tool rounds. Say \"continue\" to keep going."))
     }
+}
+
+/// Tool calls a provider ran inside its own loop during one turn.
+final class InlineCalls: @unchecked Sendable {
+    private let lock = NSLock()
+    private var calls: [(ToolCall, ToolResult)] = []
+
+    func append(_ call: ToolCall, _ result: ToolResult) { lock.withLock { calls.append((call, result)) } }
+    var all: [(ToolCall, ToolResult)] { lock.withLock { calls } }
 }

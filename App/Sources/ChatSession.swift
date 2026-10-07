@@ -127,6 +127,15 @@ final class ChatSession {
         inline SVG for diagrams and charts. Prototypes should look real: sensible sample data, working interactions, no placeholder lorem ipsum.
         """
 
+    /// For Apple's small on-device model: the essentials only, to save context.
+    static let compactSystemPrompt = """
+        You are the assistant in Snazzy Pro, a Mac app for making and recording video presentations. \
+        Change the app only with your tools, and never claim a tool did something it didn't. \
+        Pick devices by the names list_devices returns. iPads and iPhones on USB can take up to 30 seconds to appear. \
+        For a deck or prototype: create_project, then write_file with complete content, then fix any console_errors. \
+        Keep replies short. If something needs a larger model (long documents, complex code), say so and suggest switching models.
+        """
+
     // MARK: Conversations
 
     func newConversation() {
@@ -287,7 +296,8 @@ final class ChatSession {
 
         let runner = ConversationRunner(
             provider: provider, registry: app.makeToolRegistry(), model: selection.model,
-            system: Self.systemPrompt, maxTokens: app.settings.maxOutputTokens,
+            system: selection.provider == .appleOnDevice ? Self.compactSystemPrompt : Self.systemPrompt,
+            maxTokens: app.settings.maxOutputTokens,
             effort: selection.provider == .anthropic ? app.settings.anthropicEffort : nil,
             confirm: { call in await ChatSession.confirm(call) })
 
