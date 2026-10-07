@@ -1,6 +1,7 @@
 import AVFoundation
 import AVKit
 import AppKit
+import Assistant
 import CaptureEngine
 import Foundation
 import Observation
@@ -139,6 +140,107 @@ final class DeveloperController {
                 NSAlert(error: error).runModal()
             }
         }
+    }
+
+    // MARK: Feature 2: captions and summary
+
+    struct CaptionResult {
+        var srt: URL
+        var vtt: URL
+        var burned: URL?
+        var cues: [CaptionCue]
+    }
+
+    /// Transcribes on this Mac and writes `<name>.srt` / `<name>.vtt`
+    /// (plus a captioned copy if asked).
+    func makeCaptions(_ item: RecordingItem, burnIn: Bool) async throws -> CaptionResult {
+        guard settings.captionsEnabled else { throw disabled("Captions") }
+        busy = "Transcribing \(item.id) on this Mac…"
+        defer { busy = nil }
+        let words = try await RecordingTranscriber.words(in: item.url)
+        guard !words.isEmpty else { throw CaptureActionError(message: "No speech found in \(item.id).") }
+        let cues = Captions.cues(from: words)
+        let srt = item.sidecar("srt"), vtt = item.sidecar("vtt")
+        try Captions.srt(cues).write(to: srt, atomically: true, encoding: .utf8)
+        try Captions.vtt(cues).write(to: vtt, atomically: true, encoding: .utf8)
+        var burned: URL?
+        if burnIn {
+            busy = "Adding captions to a copy of \(item.id)…"
+            let out = RecordingEditor.sibling(of: item.url, suffix: "captioned", ext: "mp4")
+            try await CaptionBurner.burn(item.url, cues: cues, to: out)
+            burned = out
+        }
+        refresh()
+        app.chat.logSession("captions_made", ["recording": .string(item.id), "cues": .number(Double(cues.count))])
+        return CaptionResult(srt: srt, vtt: vtt, burned: burned, cues: cues)
+    }
+
+    /// Captions from the .srt if they exist, otherwise made now.
+    func captionCues(_ item: RecordingItem) async throws -> [CaptionCue] {
+        if let text = try? String(contentsOf: item.sidecar("srt"), encoding: .utf8) {
+            let cues = Self.parseSRT(text)
+            if !cues.isEmpty { return cues }
+        }
+        return try await makeCaptions(item, burnIn: false).cues
+    }
+
+    static func parseSRT(_ text: String) -> [CaptionCue] {
+        text.components(separatedBy: "\n\n").compactMap { block in
+            let lines = block.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+            guard lines.count >= 3, let arrow = lines[1].range(of: " --> ") else { return nil }
+            func secs(_ s: String) -> Double? {
+                let p = s.replacingOccurrences(of: ",", with: ".").split(separator: ":").compactMap { Double($0) }
+                return p.count == 3 ? p[0] * 3600 + p[1] * 60 + p[2] : nil
+            }
+            guard let a = secs(String(lines[1][..<arrow.lowerBound])), let b = secs(String(lines[1][arrow.upperBound...])) else { return nil }
+            return CaptionCue(start: a, end: b, text: lines[2...].joined(separator: "\n"))
+        }
+    }
+
+    /// A title, 3–5 bullets and chapter times, written by the Writing model.
+    /// Only the transcript text is sent, and only after review if the model is in the cloud.
+    func summarize(_ item: RecordingItem) async throws -> URL {
+        guard settings.captionsEnabled else { throw disabled("Captions and summaries") }
+        let cues = try await captionCues(item)
+        let selection = app.settings.selection(for: .writing)
+        if let reason = app.unavailableReason(selection.provider) { throw CaptureActionError(message: reason) }
+        let provider = try app.makeProvider(selection.provider)
+        // The on-device model has a small context: send less of a long transcript.
+        let limit = selection.provider == .appleOnDevice ? 7_000 : 120_000
+        var transcript = Captions.timedTranscript(cues)
+        if transcript.count > limit { transcript = String(transcript.prefix(limit)) + " …" }
+        let duration = cues.last?.end ?? 0
+        let chapters = duration >= 120
+            ? "\n## Chapters\nOne line per topic change, \"- mm:ss Topic\", using the [mm:ss] markers in the transcript (3 to 8 lines)."
+            : ""
+        let prompt = """
+            Summarise this recording transcript. Reply in Markdown with exactly:
+            # <a short title>
+            3 to 5 bullet points (lines starting with "- ") giving the key points, without timestamps.\(chapters)
+            Refer to the speaker as "the speaker" or "they". Don't add anything that isn't in the transcript.
+
+            Transcript:
+            \(transcript)
+            """
+        if !selection.provider.isLocal {
+            guard CloudReview.confirm(provider: selection.provider.displayName, what: "this transcript", text: prompt,
+                                      note: "Summaries use your Writing model (\(selection.model)). Choose a local model in Settings › Models to keep it on this Mac.")
+            else { throw CaptureActionError(message: "Not sent. The summary was cancelled.") }
+        }
+        busy = "Summarising \(item.id) with \(selection.model)…"
+        defer { busy = nil }
+        var text = ""
+        let request = ModelRequest(model: selection.model, system: "You write concise, accurate summaries.", messages: [.user(prompt)],
+                                   maxTokens: 2_000, effort: selection.provider == .anthropic ? "low" : nil)
+        for try await event in provider.stream(request) {
+            if case .completed(let message, _, _, _) = event { text = message.text }
+        }
+        guard !text.isEmpty else { throw CaptureActionError(message: "The model returned no summary.") }
+        let out = item.sidecar("md")
+        try text.write(to: out, atomically: true, encoding: .utf8)
+        refresh()
+        app.chat.logSession("summary_made", ["recording": .string(item.id), "model": .string(selection.model)])
+        return out
     }
 
     func disabled(_ name: String) -> CaptureActionError {

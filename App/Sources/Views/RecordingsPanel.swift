@@ -79,8 +79,43 @@ struct RecordingRow: View {
     }
 }
 
-/// Buttons added by later developer features (captions, summary, share).
+/// Captions, summary and share buttons for a recording.
 struct DeveloperRowActions: View {
+    @Environment(AppModel.self) private var model
+    let item: RecordingItem
+    @Binding var error: String?
+
+    var body: some View {
+        let dev = model.developer!
+        if dev.settings.captionsEnabled {
+            Menu("Captions") {
+                Button("Make Captions (.srt, .vtt)") { run { _ = try await dev.makeCaptions(item, burnIn: false) } }
+                Button("Make Captions + Captioned Copy") { run { _ = try await dev.makeCaptions(item, burnIn: true) } }
+                if item.hasCaptions {
+                    Divider()
+                    Button("Show Captions in Finder") { NSWorkspace.shared.activateFileViewerSelecting([item.sidecar("srt")]) }
+                }
+            }
+            .fixedSize()
+            if item.hasSummary {
+                Button("Summary") { NSWorkspace.shared.open(item.sidecar("md")) }
+            } else {
+                Button("Summarise") { run { _ = try await dev.summarize(item) } }
+            }
+        }
+        DeveloperShareButton(item: item, error: $error)
+    }
+
+    private func run(_ work: @escaping @MainActor () async throws -> Void) {
+        error = nil
+        Task { @MainActor in
+            do { try await work() } catch let e { error = e.localizedDescription }
+        }
+    }
+}
+
+/// Added by the share feature.
+struct DeveloperShareButton: View {
     let item: RecordingItem
     @Binding var error: String?
     var body: some View { EmptyView() }

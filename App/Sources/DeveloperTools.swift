@@ -32,6 +32,32 @@ enum DeveloperTools {
                         "raw_tracks_trimmed": .bool(r.rawFolder != nil)]
             })
         }
+        if s.captionsEnabled {
+            tools.append(RegisteredTool(
+                name: "make_captions",
+                description: "Make captions for a recording with on-device speech recognition: saves <name>.srt and <name>.vtt next to it. burn_in: true also saves '<name> (captioned).mp4' with captions drawn into the video. recording_id can be \"latest\".",
+                inputSchema: AssistantTools.object([
+                    "recording_id": ["type": "string", "minLength": 1],
+                    "burn_in": ["type": "boolean"],
+                ], required: ["recording_id"])
+            ) { @Sendable args in
+                let item = try await dev.recording(args["recording_id"]?.stringValue)
+                let r = try await dev.makeCaptions(item, burnIn: args["burn_in"]?.boolValue ?? false)
+                var out: [String: JSONValue] = ["srt": .string(r.srt.lastPathComponent), "vtt": .string(r.vtt.lastPathComponent),
+                                                "caption_count": .number(Double(r.cues.count))]
+                if let b = r.burned { out["captioned_video"] = .string(b.lastPathComponent) }
+                return .object(out)
+            })
+            tools.append(RegisteredTool(
+                name: "summarize_recording",
+                description: "Write a short summary of a recording (title, 3–5 bullets, chapter times) from its transcript using the Writing model, saved as <name>.md. Makes captions first if needed. recording_id can be \"latest\".",
+                inputSchema: AssistantTools.object(["recording_id": ["type": "string", "minLength": 1]], required: ["recording_id"])
+            ) { @Sendable args in
+                let item = try await dev.recording(args["recording_id"]?.stringValue)
+                let url = try await dev.summarize(item)
+                return ["file": .string(url.lastPathComponent), "summary": .string((try? String(contentsOf: url, encoding: .utf8)) ?? "")]
+            })
+        }
         return tools
     }
 }
