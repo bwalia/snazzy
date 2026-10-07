@@ -21,7 +21,7 @@ public struct AppleOnDeviceProvider: ModelProvider {
     /// Why the on-device model can't be used, or nil if it can.
     public static var unavailableReason: String? {
         #if canImport(FoundationModels)
-        guard #available(macOS 26.0, *) else { return "Apple Intelligence models need macOS 26 or later." }
+        guard #available(macOS 26.0, iOS 26.0, *) else { return "Apple Intelligence models need macOS 26 or later." }
         switch SystemLanguageModel.default.availability {
         case .available:
             return nil
@@ -47,7 +47,7 @@ public struct AppleOnDeviceProvider: ModelProvider {
 
     public func stream(_ request: ModelRequest) -> AsyncThrowingStream<StreamEvent, Error> {
         #if canImport(FoundationModels)
-        if #available(macOS 26.0, *) {
+        if #available(macOS 26.0, iOS 26.0, *) {
             return AppleSession.stream(request)
         }
         #endif
@@ -123,7 +123,7 @@ public struct AppleOnDeviceProvider: ModelProvider {
 }
 
 #if canImport(FoundationModels)
-@available(macOS 26.0, *)
+@available(macOS 26.0, iOS 26.0, *)
 enum AppleSession {
     static func stream(_ request: ModelRequest) -> AsyncThrowingStream<StreamEvent, Error> {
         AsyncThrowingStream { continuation in
@@ -187,7 +187,7 @@ enum AppleSession {
         while !tools.isEmpty {
             // Exact count on macOS 26.4+; otherwise a conservative estimate per tool.
             var cost = tools.count * 140
-            if #available(macOS 26.4, *), let exact = try? await model.tokenCount(for: tools) { cost = exact }
+            if #available(macOS 26.4, iOS 26.4, *), let exact = try? await model.tokenCount(for: tools) { cost = exact }
             if cost <= budget { break }
             tools.removeLast()
         }
@@ -214,7 +214,7 @@ enum AppleSession {
 }
 
 /// One of the app's tools, exposed to FoundationModels with its JSON schema.
-@available(macOS 26.0, *)
+@available(macOS 26.0, iOS 26.0, *)
 struct AppleTool: Tool {
     typealias Arguments = GeneratedContent
     typealias Output = String
@@ -242,7 +242,7 @@ struct AppleTool: Tool {
 }
 
 /// Converts the JSON Schema subset our tools use into a FoundationModels schema.
-@available(macOS 26.0, *)
+@available(macOS 26.0, iOS 26.0, *)
 enum AppleSchema {
     static func convert(_ schema: JSONValue, name: String) -> DynamicGenerationSchema {
         let description = schema["description"]?.stringValue
