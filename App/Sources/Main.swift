@@ -7,7 +7,10 @@ import SwiftUI
 @main
 enum Main {
     static func main() {
+        #if DEBUG
         if CommandLine.arguments.contains("--self-test") {
+            setvbuf(stdout, nil, _IONBF, 0)
+            print("Snazzy Pro self-test (\(Bundle.main.bundleIdentifier ?? "?"))")
             // Same AppKit main run loop as the real app (dispatchMain() leaves
             // main-actor work running off the main thread, which breaks AppKit).
             let app = NSApplication.shared
@@ -17,9 +20,10 @@ enum Main {
                 exit(ok ? 0 : 1)
             }
             app.run()
-        } else {
-            SnazzyProApp.main()
+            return
         }
+        #endif
+        SnazzyProApp.main()
     }
 }
 
@@ -73,6 +77,33 @@ struct AppCommands: Commands {
                 .disabled(model.capture.openPreviewIDs.isEmpty && !model.capture.compositePreviewOpen)
             Divider()
             Button("Refresh Devices") { Task { await model.capture.catalog.refresh() } }
+        }
+        CommandMenu("Presets") {
+            Button("Save Current Settings…") { model.presets.promptAndSave() }
+                .keyboardShortcut("s", modifiers: [.command, .option])
+            Divider()
+            if model.presets.presets.isEmpty {
+                Text("No presets yet")
+            }
+            ForEach(model.presets.presets) { preset in
+                Button((preset.name == model.presets.activeName ? "✓ " : "") + preset.name) {
+                    _ = try? model.presets.load(preset.name)
+                }
+            }
+            Divider()
+            Menu("Delete Preset") {
+                ForEach(model.presets.presets) { preset in
+                    Button(preset.name) {
+                        let alert = NSAlert()
+                        alert.messageText = "Delete preset “\(preset.name)”?"
+                        alert.addButton(withTitle: "Delete")
+                        alert.addButton(withTitle: "Cancel")
+                        if alert.runModal() == .alertFirstButtonReturn { try? model.presets.delete(preset.name) }
+                    }
+                }
+            }
+            .disabled(model.presets.presets.isEmpty)
+            Button("Show Presets Folder") { model.presets.revealFolder() }
         }
         CommandMenu("Record") {
             let recorder = model.capture.recorder

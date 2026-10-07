@@ -114,6 +114,10 @@ final class ChatSession {
         If a capability has no tool yet (recording and video export come later), say so plainly and explain what the user can do instead. \
         Keep replies short and practical; use Markdown.
 
+        Settings: get_settings shows every setting; update_settings changes app options. Presets save and load whole setups \
+        (microphone, screen, camera inset, layout, crop, models). When the user settles on a setup they are likely to reuse, offer to save it \
+        as a preset with a descriptive name; when they mention a known preset or kind of session, load it. Never put API keys in presets.
+
         Building: for an app prototype or a presentation, call create_project (kind "prototype" or "presentation"), then write files with write_file. \
         The user watches each file being written and sees the result live in the Builder panel. \
         write_file replaces the whole file, so always send complete content. Keep HTML, CSS and JS in separate files. \
@@ -253,6 +257,10 @@ final class ChatSession {
         let selection = app.activeSelection
         if let reason = app.unavailableReason(selection.provider) {
             notice(reason, isError: true)
+            return false
+        }
+        guard Self.hasCloudConsent(selection.provider, app: app) else {
+            notice("Not sent. Choose a local model, or allow \(selection.provider.displayName) when asked.", isError: false)
             return false
         }
         let provider: any ModelProvider
@@ -447,6 +455,21 @@ final class ChatSession {
         if app.settings.voiceAutoSend, !isRunning { sendDraft(viaVoice: true) }
     }
 
+    // MARK: Presets
+
+    /// Remembers which preset this conversation uses.
+    func presetLoaded(_ name: String) {
+        conversation.presetName = name
+        save()
+        logSession("preset_loaded", ["name": .string(name)])
+    }
+
+    /// The conversation's preset, if it differs from what is loaded now.
+    var suggestedPreset: String? {
+        guard let name = conversation.presetName, name != app.presets.activeName else { return nil }
+        return name
+    }
+
     // MARK: Session log
 
     private func sessionLogForCurrent() -> SessionLog {
@@ -534,6 +557,28 @@ final class ChatSession {
             }
         }
         return items
+    }
+
+    /// Before anything goes to a cloud AI provider for the first time, explain
+    /// what is shared and ask (App Store guideline 5.1.2). Local models never ask.
+    static func hasCloudConsent(_ provider: ProviderKind, app: AppModel) -> Bool {
+        guard !provider.isLocal else { return true }
+        if app.settings.cloudConsent.contains(provider.rawValue) { return true }
+        let alert = NSAlert()
+        alert.messageText = "Send your messages to \(provider.displayName)?"
+        alert.informativeText = """
+            To answer with a cloud model, Snazzy Pro sends \(provider.displayName) your messages, any files or images you attach, \
+            and what the assistant's tools return (for example device names, your settings, and the files of projects it builds). \
+            Recordings, camera and screen video are never sent.
+
+            \(provider.displayName) handles this data under its own terms and privacy policy, using your API key. \
+            To keep everything on this Mac, choose a local model (Ollama) instead. You can withdraw this in Settings › Chat & Voice.
+            """
+        alert.addButton(withTitle: "Allow")
+        alert.addButton(withTitle: "Not Now")
+        guard alert.runModal() == .alertFirstButtonReturn else { return false }
+        app.settings.cloudConsent.append(provider.rawValue)
+        return true
     }
 
     /// Destructive tools ask before running.

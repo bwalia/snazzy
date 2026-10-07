@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snazzy Pro Brand</title>
+<style>
+  @font-face { font-family: "Manrope"; src: url("fonts/Manrope-Variable.ttf") format("truetype"); font-weight: 200 800; }
+  :root {
+    --ink: #0B1020; --night: #141A33; --violet: #6C5CFF; --magenta: #D946EF; --coral: #FF6A55;
+    --record: #FF4D5E; --live: #34D399; --cloud: #FFB020; --mist: #E8EAF6; --slate: #8A93B5;
+    --spotlight: linear-gradient(135deg, #6C5CFF 0%, #D946EF 52%, #FF6A55 100%);
+    --bg: #F6F7FC; --fg: var(--ink); --muted: #5A6283; --card: #FFFFFF; --line: #E3E6F3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0B1020; --fg: #F2F4FB; --muted: #9AA3C2; --card: #141A33; --line: #232B4D; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 "Manrope", system-ui, sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 24px 96px; }
+  .hero { position: relative; overflow: hidden; background: var(--ink); color: #fff; padding: 88px 24px 72px; }
+  .hero::before { content: ""; position: absolute; inset: -40% -10% auto auto; width: 70%; height: 140%;
+    background: radial-gradient(closest-side, rgba(123,97,255,.45), transparent); pointer-events: none; }
+  .hero .inner { position: relative; max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: center; }
+  .hero h1 { font-size: clamp(44px, 7vw, 84px); line-height: 1; letter-spacing: -0.03em; margin: 0 0 18px; font-weight: 800; }
+  .hero h1 span { background: var(--spotlight); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { font-size: 20px; color: #C9CEE6; margin: 0; max-width: 34ch; }
+  .hero img { width: min(300px, 40vw); filter: drop-shadow(0 30px 60px rgba(0,0,0,.5)); }
+  h2 { font-size: 30px; letter-spacing: -0.02em; margin: 72px 0 8px; font-weight: 800; }
+  h2 + p.lead { color: var(--muted); margin: 0 0 28px; max-width: 64ch; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+  .tile { border-radius: 18px; display: grid; place-items: center; padding: 28px; min-height: 200px; border: 1px solid var(--line); }
+  .tile.light { background: #fff; } .tile.dark { background: var(--ink); } .tile.spot { background: var(--spotlight); }
+  .tile img { max-width: 100%; max-height: 120px; }
+  .caption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .swatch { border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
+  .swatch .chip { height: 110px; }
+  .swatch .meta { padding: 12px 14px; font-size: 14px; }
+  .swatch .meta b { display: block; font-size: 15px; }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; }
+  .gradient-bar { height: 120px; border-radius: 18px; background: var(--spotlight); display: flex; align-items: flex-end; padding: 16px; color: #fff; font-weight: 700; }
+  .type-sample .big { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
+  .type-sample .mid { font-size: 24px; font-weight: 600; margin-top: 8px; }
+  .type-sample .body { color: var(--muted); margin-top: 8px; }
+  .sizes { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; }
+  .sizes figure { margin: 0; text-align: center; } .sizes figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 18px; overflow: hidden; border: 1px solid var(--line); }
+  td, th { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  .do { color: #1E9E6A; } .dont { color: #D5404F; }
+  @media (prefers-color-scheme: dark) { .do { color: var(--live); } .dont { color: #FF7A86; } }
+  .pip { position: relative; aspect-ratio: 16/9; border-radius: 22px; background: var(--spotlight); }
+  .pip::after { content: ""; position: absolute; right: 6%; bottom: 8%; width: 30%; aspect-ratio: 16/11; border-radius: 16px;
+    background: var(--ink); border: 5px solid #fff; box-shadow: 0 12px 30px rgba(5,6,15,.45); }
+  .pip i { position: absolute; right: calc(6% + 15% - 12px); bottom: calc(8% + 10.3% - 12px); width: 24px; height: 24px; border-radius: 50%;
+    background: var(--record); z-index: 1; box-shadow: 0 0 18px rgba(255,77,94,.7); }
+  footer { color: var(--muted); font-size: 13px; margin-top: 72px; }
+  @media (max-width: 700px) { .hero .inner { grid-template-columns: 1fr; } .hero img { width: 160px; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="inner">
+    <div>
+      <img src="lockup-on-dark.svg" alt="Snazzy Pro" style="width:min(360px,70vw);filter:none;margin-bottom:36px">
+      <h1>Just <span>say it.</span></h1>
+      <p>Your presentation studio, run by conversation. Plan, build, set up, record and ship, all by talking.</p>
+    </div>
+    <img src="png/icon-1024.png" alt="Snazzy Pro app icon">
+  </div>
+</header>
+<main>
+  <h2>The mark</h2>
+  <p class="lead">The product in one picture: a vivid stage (your slide or screen) with an AI sparkle, and a camera inset in the corner with a live record dot.</p>
+  <div class="grid">
+    <div><div class="tile light"><img src="lockup.svg" alt="Lockup on light"></div><div class="caption">lockup.svg, the default logo</div></div>
+    <div><div class="tile dark"><img src="lockup-on-dark.svg" alt="Lockup on dark"></div><div class="caption">lockup-on-dark.svg</div></div>
+    <div><div class="tile light"><img src="logo-glyph.svg" alt="Glyph"></div><div class="caption">logo-glyph.svg, the mark alone</div></div>
+    <div><div class="tile spot" style="color:#fff"><img src="logo-mono.svg" alt="One-colour mark" style="filter:invert(1)"></div><div class="caption">logo-mono.svg, one colour</div></div>
+  </div>
+
+  <h2>App icon</h2>
+  <p class="lead">macOS icon grid (824 px body on 1024). Below 64 px, a simplified version keeps the mark readable.</p>
+  <div class="card sizes">
+    <figure><img src="png/icon-1024.png" width="256" alt=""><figcaption>256</figcaption></figure>
+    <figure><img src="png/icon-1024.png" width="128" alt=""><figcaption>128</figcaption></figure>
+    <figure><img src="png/icon-1024.png" width="64" alt=""><figcaption>64</figcaption></figure>
+    <figure><img src="png/icon-small-1024.png" width="32" alt=""><figcaption>32</figcaption></figure>
+    <figure><img src="png/icon-small-1024.png" width="16" alt=""><figcaption>16</figcaption></figure>
+  </div>
+
+  <h2>Colour</h2>
+  <p class="lead">Deep ink and a spotlight gradient. Red means recording and nothing else. Mint marks things that are live or local; amber marks the cloud.</p>
+  <div class="gradient-bar">Spotlight · 135° · #6C5CFF → #D946EF → #FF6A55</div>
+  <div class="grid" style="margin-top:16px">
+    <div class="swatch"><div class="chip" style="background:#0B1020"></div><div class="meta"><b>Ink</b><span class="mono">#0B1020</span> · dark backgrounds</div></div>
+    <div class="swatch"><div class="chip" style="background:#141A33"></div><div class="meta"><b>Night</b><span class="mono">#141A33</span> · dark surfaces</div></div>
+    <div class="swatch"><div class="chip" style="background:#6C5CFF"></div><div class="meta"><b>Violet</b><span class="mono">#6C5CFF</span> · accent</div></div>
+    <div class="swatch"><div class="chip" style="background:#D946EF"></div><div class="meta"><b>Magenta</b><span class="mono">#D946EF</span> · highlight</div></div>
+    <div class="swatch"><div class="chip" style="background:#FF6A55"></div><div class="meta"><b>Coral</b><span class="mono">#FF6A55</span> · warm highlight</div></div>
+    <div class="swatch"><div class="chip" style="background:#FF4D5E"></div><div class="meta"><b>Record</b><span class="mono">#FF4D5E</span> · recording only</div></div>
+    <div class="swatch"><div class="chip" style="background:#34D399"></div><div class="meta"><b>Live</b><span class="mono">#34D399</span> · live, local, success</div></div>
+    <div class="swatch"><div class="chip" style="background:#FFB020"></div><div class="meta"><b>Cloud</b><span class="mono">#FFB020</span> · cloud, warnings</div></div>
+    <div class="swatch"><div class="chip" style="background:#E8EAF6"></div><div class="meta"><b>Mist</b><span class="mono">#E8EAF6</span> · light surfaces</div></div>
+    <div class="swatch"><div class="chip" style="background:#8A93B5"></div><div class="meta"><b>Slate</b><span class="mono">#8A93B5</span> · secondary text</div></div>
+  </div>
+
+  <h2>Typography</h2>
+  <p class="lead">Manrope for the brand (open licence, outlined in the wordmark). The macOS system font inside the app.</p>
+  <div class="grid">
+    <div class="card type-sample">
+      <div class="big">From idea to on-camera.</div>
+      <div class="mid">Manrope SemiBold · subheads</div>
+      <div class="body">Manrope Regular for body copy: short sentences, plain words, what happens next.</div>
+    </div>
+    <div class="card type-sample" style="font-family:system-ui,-apple-system,sans-serif">
+      <div class="big" style="font-weight:700">Inside the app</div>
+      <div class="mid">SF Pro (system font)</div>
+      <div class="body"><span class="mono">SF Mono</span> for code and file names in the Builder.</div>
+    </div>
+  </div>
+
+  <h2>Signature motif</h2>
+  <p class="lead">Picture-in-picture: a small rounded box in the corner of a larger one. Use it for illustrations, empty states and video thumbnails. Only the record dot pulses, and only while recording.</p>
+  <div class="grid">
+    <div class="pip"><i></i></div>
+    <div class="card">
+      <b>Shape</b><p class="caption">Rounded corners of about 18% of a shape's height.</p>
+      <b>Motion</b><p class="caption">150–250 ms, ease-out. Calm and quick, never bouncy.</p>
+      <b>Clear space</b><p class="caption">Around the logo, at least the height of the camera inset.</p>
+      <b>Minimum size</b><p class="caption">Glyph 16 px tall; lockup 120 px wide.</p>
+    </div>
+  </div>
+
+  <h2>Voice</h2>
+  <p class="lead">Plain, confident, warm. Say what happened and what's next.</p>
+  <table>
+    <tr><th>Do</th><th>Don't</th></tr>
+    <tr><td class="do">Recording saved. 4:12, no dropped frames.</td><td class="dont">Your amazing masterpiece has been successfully saved!</td></tr>
+    <tr><td class="do">Your iPad isn't sending video. Is it unlocked?</td><td class="dont">Error -11819: device stall detected.</td></tr>
+    <tr><td class="do">Built a 6-slide deck. Want a darker theme?</td><td class="dont">As an AI, I have generated slides for you.</td></tr>
+  </table>
+
+  <h2>Name</h2>
+  <p class="lead"><b>Snazzy Pro</b>: two words, both capitalised. Short form in running text: <b>Snazzy</b>. Not "SnazzyPro", "Snazzy pro" or "SNAZZY PRO".</p>
+
+  <footer>Source files: <span class="mono">docs/brand/</span> · Wordmark set in Manrope ExtraBold (SIL Open Font License) · Full rules in <span class="mono">BRAND.md</span></footer>
+</main>
+</body>
+</html>

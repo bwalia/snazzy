@@ -2,9 +2,11 @@
 
 A native macOS app (Swift, SwiftUI, macOS 15+) for making video presentations,
 driven by a chat assistant that can use local (Ollama) or cloud (Anthropic) models.
-See `PROMPT.md` for the full spec and phase plan.
+Website: https://bwalia.github.io/snazzy/ (source in `site/`, deployed by
+`.github/workflows/pages.yml`). Brand: `docs/brand/`. Launch plan: `docs/launch/APP_STORE.md`.
+Phase plan: `ROADMAP.md`.
 
-**Status: phase 4 (recording)** of the plan in `ROADMAP.md`.
+**Status: phase 4 (recording) done; preparing the Mac App Store launch (phase 8).**
 Phase 1 added the XcodeGen project, Keychain-stored keys and streaming chat
 with tool calling (Ollama, Anthropic). Phase 2 adds device discovery, live
 camera/iPad feeds with stall detection, per-device crop/rotation, floating

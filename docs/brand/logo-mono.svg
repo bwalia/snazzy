@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="160 230 740 550" width="740" height="550">
+  <title>Snazzy Pro glyph, one colour (uses currentColor)</title>
+  <defs>
+    <mask id="cut">
+      <rect x="160" y="230" width="740" height="550" fill="#fff"/>
+      <path transform="translate(342 432) scale(96)" fill="#000"
+            d="M0,-1 C0.1,-0.28 0.28,-0.1 1,0 C0.28,0.1 0.1,0.28 0,1 C-0.1,0.28 -0.28,0.1 -1,0 C-0.28,-0.1 -0.1,-0.28 0,-1 Z"/>
+      <path transform="translate(468 336) scale(38)" fill="#000"
+            d="M0,-1 C0.1,-0.28 0.28,-0.1 1,0 C0.28,0.1 0.1,0.28 0,1 C-0.1,0.28 -0.28,0.1 -1,0 C-0.28,-0.1 -0.1,-0.28 0,-1 Z"/>
+      <rect x="532" y="504" width="348" height="258" rx="64" fill="#000"/>
+    </mask>
+    <mask id="dotcut">
+      <rect x="160" y="230" width="740" height="550" fill="#fff"/>
+      <circle cx="706" cy="633" r="50" fill="#000"/>
+    </mask>
+  </defs>
+  <g fill="currentColor">
+    <rect x="190" y="262" width="580" height="410" rx="78" mask="url(#cut)"/>
+    <rect x="556" y="528" width="300" height="210" rx="48" mask="url(#dotcut)"/>
+  </g>
+</svg>

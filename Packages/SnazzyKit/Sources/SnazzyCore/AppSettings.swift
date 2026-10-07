@@ -69,7 +69,7 @@ public struct ModelSelection: Codable, Hashable, Sendable {
 }
 
 /// Non-secret settings, persisted as JSON in UserDefaults.
-public struct AppSettings: Codable, Equatable, Sendable {
+public struct AppSettings: Codable, Hashable, Sendable {
     public var planning: ModelSelection
     public var writing: ModelSelection
     /// The builder agent (prototypes and HTML decks).
@@ -86,6 +86,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var voiceAutoSend: Bool
     /// Keep a timestamped log of each session (messages, agent steps, voice audio) in ~/Movies/Snazzy Pro/Sessions.
     public var recordSessions: Bool
+    /// Cloud providers the user has agreed to send content to (App Store 5.1.2).
+    public var cloudConsent: [String] = []
 
     public static let `default` = AppSettings(
         planning: ModelSelection(provider: .anthropic, model: "claude-opus-5-5"),
@@ -128,6 +130,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         building = try c.decodeIfPresent(ModelSelection.self, forKey: .building) ?? d.building
         voiceAutoSend = try c.decodeIfPresent(Bool.self, forKey: .voiceAutoSend) ?? d.voiceAutoSend
         recordSessions = try c.decodeIfPresent(Bool.self, forKey: .recordSessions) ?? d.recordSessions
+        cloudConsent = try c.decodeIfPresent([String].self, forKey: .cloudConsent) ?? []
         quickCommands = try c.decodeIfPresent(ModelSelection.self, forKey: .quickCommands) ?? d.quickCommands
         activeTask = try c.decodeIfPresent(AssistantTask.self, forKey: .activeTask) ?? d.activeTask
         anthropicBaseURL = try c.decodeIfPresent(String.self, forKey: .anthropicBaseURL) ?? d.anthropicBaseURL

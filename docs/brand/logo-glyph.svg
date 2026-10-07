@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="160 230 740 550" width="740" height="550">
+  <title>Snazzy Pro glyph</title>
+  <defs>
+    <linearGradient id="spotlight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6C5CFF"/>
+      <stop offset="0.52" stop-color="#D946EF"/>
+      <stop offset="1" stop-color="#FF6A55"/>
+    </linearGradient>
+  </defs>
+  <rect x="190" y="262" width="580" height="410" rx="78" fill="url(#spotlight)"/>
+  <path transform="translate(342 432) scale(96)" fill="#FFFFFF"
+        d="M0,-1 C0.1,-0.28 0.28,-0.1 1,0 C0.28,0.1 0.1,0.28 0,1 C-0.1,0.28 -0.28,0.1 -1,0 C-0.28,-0.1 -0.1,-0.28 0,-1 Z"/>
+  <path transform="translate(468 336) scale(38)" fill="#FFFFFF" fill-opacity="0.85"
+        d="M0,-1 C0.1,-0.28 0.28,-0.1 1,0 C0.28,0.1 0.1,0.28 0,1 C-0.1,0.28 -0.28,0.1 -1,0 C-0.28,-0.1 -0.1,-0.28 0,-1 Z"/>
+  <rect x="548" y="520" width="316" height="226" rx="56" fill="#0E1330" stroke="#FFFFFF" stroke-width="16"/>
+  <circle cx="706" cy="633" r="70" fill="#141A40" stroke="#3A4386" stroke-width="7"/><circle cx="706" cy="633" r="46" fill="#FF4D5E"/>
+</svg>

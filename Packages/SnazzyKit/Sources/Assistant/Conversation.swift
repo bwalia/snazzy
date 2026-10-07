@@ -11,6 +11,8 @@ public struct Conversation: Codable, Identifiable, Hashable, Sendable {
     /// Tokens used across the conversation.
     public var inputTokens: Int
     public var outputTokens: Int
+    /// The settings preset last loaded in this conversation, if any.
+    public var presetName: String?
 
     public init(id: UUID = UUID(), title: String = "New conversation", created: Date = Date(),
                 messages: [ChatMessage] = [], inputTokens: Int = 0, outputTokens: Int = 0) {

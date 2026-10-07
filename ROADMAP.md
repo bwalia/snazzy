@@ -2,7 +2,9 @@
 
 Phases are delivered and verified one at a time (see `PROMPT.md` §7 for the
 original plan). Phase 3 was added on 2026-10-07; the original phases 3–6 moved
-down by one.
+down by one. Phases 8–12 were added on 2026-10-07: the Mac App Store launch,
+then a companion iPhone/iPad app. The companion app is a scope change: the
+original spec listed an iOS/iPadOS app as out of scope.
 
 1. **Skeleton** ✅: XcodeGen project, app launches, settings with Keychain-stored
    keys, streaming chat against Ollama and Anthropic, tool calling.
@@ -20,12 +22,58 @@ down by one.
    - A fully functional chat system: conversations persisted, multiple
      conversations, attachments, copy/retry/edit, agents and LLMs configurable
      from chat.
-4. **Recording** (built, in review): screen + mic + one camera inset, single process, composited
+4. **Recording** ✅ (screen preview, recorder, raw tracks; presets added): screen + mic + one camera inset, single process, composited
    file plus raw tracks, auto-named. Stall detection.
 5. **Sync**: clap calibration, per-device delay, manual slider.
 6. **Slides**: outline → slides → script from chat, slide recording mode,
    teleprompter.
 7. **Post**: timeline, trim, captions, re-layout inset, exports.
+
+8. **Mac App Store launch** (in progress, see `docs/launch/APP_STORE.md`):
+   - Done: brand and app icon (`docs/brand/`, Liquid Glass layers in
+     `docs/brand/icon-layers/`), landing site with privacy and support pages
+     (`site/`, GitHub Pages), privacy manifest, third-party AI
+     consent prompt (guideline 5.1.2), no private API (Builder serves projects
+     over `snazzy-project://`), export-compliance and local-network keys, self-test
+     compiled out of Release, archive/upload script (`Scripts/archive-appstore.sh`).
+   - To do: Apple on-device model provider (FoundationModels), so the app works
+     with no API key or Ollama, for App Review and first launch; App Store
+     screenshots; App Store Connect record; TestFlight round; swap the site's
+     "Coming soon" button for Apple's official Mac App Store badge.
+
+### Companion iPhone/iPad app (phases 9–12, about 2–3 months)
+
+Why: recording the device's own camera and mic on the device beats today's
+USB screen mirroring. You get the real 4K camera, no Camera-app buttons to crop
+out, and no mirroring delay or stalls. The device can also be a remote control
+and a teleprompter. The phase 4 raw-track + timeline design already supports
+re-compositing from device files.
+
+9. **Remote control** (2–3 weeks):
+   - Move SnazzyCore, Assistant and Builder into packages that build for macOS and iOS.
+   - Discovery and pairing over the local network (Bonjour), confirmed with a
+     pairing code or QR code; an encrypted channel.
+   - Controls: start, pause and stop recording, next and previous slide, status and warnings.
+   - Teleprompter on the iPad, and voice chat with the assistant from the device.
+10. **Device capture** (3–5 weeks):
+   - Record the device camera (up to 4K) and mic locally on the device.
+   - A low-latency compressed live preview streamed to the Mac (feeds the
+     composite preview like any other camera).
+   - After stopping, transfer the full-quality file to the Mac, resumable and
+     verified with checksums.
+11. **Clock sync and Mac integration** (1–2 weeks):
+   - A network time handshake between Mac and device (NTP-style, repeated during
+     recording), with clap calibration (phase 5) as a check.
+   - The Mac builds the final video from the device file (re-composite, re-layout, lip sync).
+12. **Device hardening and release** (about 1 week):
+   - Permissions; keep the screen awake while recording (the camera stops if the
+     app goes to the background or the device locks); battery and heat warnings;
+     Wi-Fi quality warnings (they affect the preview, not the final file).
+   - TestFlight, then App Store (iOS/iPadOS).
+
+Already available meanwhile: Continuity Camera gives the Mac an iPhone's camera
+and mic wirelessly, and Snazzy Pro lists it as a camera. It covers the iPhone
+camera case today, but not remote control, iPad, or full-quality local recording.
 
 ### Phase 3 follow-ups
 - Give vision-capable models a screenshot of the result after each write

@@ -122,7 +122,7 @@ enum AssistantTools {
                 await capture.closePreview(deviceID: id)
                 return await capture.stateJSON()
             },
-        ] + recordingTools(capture) + builderTools(builder) + modelTools(app))
+        ] + recordingTools(capture) + builderTools(builder) + modelTools(app) + settingsTools(app))
     }
 
     // MARK: Recording
@@ -232,6 +232,71 @@ enum AssistantTools {
                 inputSchema: object(["index": ["type": "integer", "minimum": 0]], required: ["index"])
             ) { @Sendable args in
                 try await builder.showSlide(args["index"]?.intValue ?? 0)
+            },
+        ]
+    }
+
+    // MARK: Settings and presets
+
+    static func settingsTools(_ app: AppModel) -> [RegisteredTool] {
+        let parts: JSONValue = ["type": "string", "enum": ["all", "capture", "models"],
+                                "description": "capture = mic, screen, camera inset, layout, crop; models = model per task and options"]
+        @Sendable func partSet(_ v: JSONValue?) -> PresetParts {
+            switch v?.stringValue { case "capture": .capture; case "models": .models; default: .all }
+        }
+        return [
+            RegisteredTool(
+                name: "get_settings",
+                description: "Get all of Snazzy Pro's settings: models per task, Anthropic/Ollama options, voice and session-record options, the capture setup (mic, screen, inset camera, layout, crop) and saved presets. API keys are never shown.",
+                inputSchema: emptySchema
+            ) { @Sendable _ in await app.settingsJSON() },
+            RegisteredTool(
+                name: "update_settings",
+                description: "Change app options: voice_auto_send (send voice messages as soon as the user stops talking), record_sessions (keep a session record), effort (Anthropic: low, medium, high, xhigh, max), max_output_tokens. Use set_model for models and the capture tools for devices.",
+                inputSchema: object([
+                    "voice_auto_send": ["type": "boolean"],
+                    "record_sessions": ["type": "boolean"],
+                    "effort": ["type": "string", "enum": ["low", "medium", "high", "xhigh", "max"]],
+                    "max_output_tokens": ["type": "integer", "minimum": 4000, "maximum": 128000],
+                ], required: [])
+            ) { @Sendable args in
+                await app.updateOptions(voiceAutoSend: args["voice_auto_send"]?.boolValue, recordSessions: args["record_sessions"]?.boolValue,
+                                        effort: args["effort"]?.stringValue, maxOutputTokens: args["max_output_tokens"]?.intValue)
+            },
+            RegisteredTool(
+                name: "list_presets",
+                description: "List saved settings presets with what each contains, and which one is active.",
+                inputSchema: emptySchema
+            ) { @Sendable _ in await app.presets.listJSON() },
+            RegisteredTool(
+                name: "save_preset",
+                description: "Save the current settings as a named preset (replaces a preset with the same name). include: all (default), capture, or models.",
+                inputSchema: object([
+                    "name": ["type": "string", "minLength": 1, "maxLength": 80],
+                    "notes": ["type": "string", "description": "What this preset is for"],
+                    "include": parts,
+                ], required: ["name"])
+            ) { @Sendable args in
+                let p = try await app.presets.save(name: args["name"]?.stringValue ?? "", notes: args["notes"]?.stringValue ?? "",
+                                                   parts: partSet(args["include"]))
+                return PresetController.summary(p)
+            },
+            RegisteredTool(
+                name: "load_preset",
+                description: "Load a saved preset by name (partial names work). apply: all (default), capture, or models. Returns the resulting settings.",
+                inputSchema: object(["name": ["type": "string", "minLength": 1], "apply": parts], required: ["name"])
+            ) { @Sendable args in
+                try await app.presets.load(args["name"]?.stringValue ?? "", parts: partSet(args["apply"]))
+                return await app.settingsJSON()
+            },
+            RegisteredTool(
+                name: "delete_preset",
+                description: "Delete a saved preset (asks the user first).",
+                inputSchema: object(["name": ["type": "string", "minLength": 1]], required: ["name"]),
+                requiresConfirmation: true
+            ) { @Sendable args in
+                try await app.presets.delete(args["name"]?.stringValue ?? "")
+                return await app.presets.listJSON()
             },
         ]
     }

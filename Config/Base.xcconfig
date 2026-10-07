@@ -1,0 +1,10 @@
+// Shared build settings. Code signing defaults to ad-hoc ("-"), which works
+// anywhere but makes macOS forget camera/mic/screen permissions after each
+// rebuild. To sign with your own certificate, create Config/Local.xcconfig
+// (git-ignored) with e.g.:
+//   CODE_SIGN_IDENTITY = <SHA-1 of your Apple Development identity>
+// List identities with: security find-identity -v -p codesigning
+CODE_SIGN_IDENTITY = -
+CODE_SIGN_STYLE = Manual
+
+#include? "Local.xcconfig"

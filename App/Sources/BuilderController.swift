@@ -53,6 +53,7 @@ final class BuilderController {
 
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored private let bridge = WebBridge()
+    @ObservationIgnored private let schemeHandler: ProjectSchemeHandler
     @ObservationIgnored private var liveBuffers: [String: String] = [:]
     @ObservationIgnored private var lastLiveUpdate = Date.distantPast
     @ObservationIgnored private var popOut: NSWindow?
@@ -60,7 +61,8 @@ final class BuilderController {
 
     init(workspace: Workspace = Workspace(root: Workspace.defaultRoot())) {
         self.workspace = workspace
-        webView = Self.makeWebView(bridge: bridge)
+        schemeHandler = ProjectSchemeHandler(workspace: workspace)
+        webView = Self.makeWebView(bridge: bridge, schemeHandler: schemeHandler)
         bridge.onConsole = { [weak self] level, message in self?.addConsole(level, message) }
         bridge.onLoad = { [weak self] loading in self?.isLoading = loading }
         try? FileManager.default.createDirectory(at: workspace.root, withIntermediateDirectories: true)
@@ -68,18 +70,20 @@ final class BuilderController {
         if let latest = projects.first { open(latest.name, announce: false) }
     }
 
-    private static func makeWebView(bridge: WebBridge) -> WKWebView {
+    private static func makeWebView(bridge: WebBridge?, schemeHandler: ProjectSchemeHandler) -> WKWebView {
         let config = WKWebViewConfiguration()
-        let script = WKUserScript(source: consoleScript, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        config.userContentController.addUserScript(script)
-        config.userContentController.add(bridge, name: "snazzy")
-        config.preferences.setValue(true, forKey: "developerExtrasEnabled")
-        // Project files load from file://; without this WebKit treats each script
-        // as cross-origin and reports every error as just "Script error.".
-        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+        // Project files are served from a custom scheme (same-origin, so errors stay readable).
+        config.setURLSchemeHandler(schemeHandler, forURLScheme: ProjectSchemeHandler.scheme)
+        if let bridge {
+            let script = WKUserScript(source: consoleScript, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+            config.userContentController.addUserScript(script)
+            config.userContentController.add(bridge, name: "snazzy")
+        }
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = bridge
-        view.setValue(false, forKey: "drawsBackground")
+        #if DEBUG
+        view.isInspectable = true
+        #endif
         return view
     }
 
@@ -222,20 +226,20 @@ final class BuilderController {
 
     var indexURL: URL? {
         guard let current else { return nil }
-        let dir = workspace.projectURL(current.name)
-        let index = dir.appending(path: "index.html")
-        return FileManager.default.fileExists(atPath: index.path) ? index : nil
+        let index = workspace.projectURL(current.name).appending(path: "index.html")
+        guard FileManager.default.fileExists(atPath: index.path) else { return nil }
+        return ProjectSchemeHandler.url(project: current.name)
     }
 
     func reload() {
-        guard let current, let url = indexURL else { return }
-        let dir = workspace.projectURL(current.name)
+        guard let url = indexURL else { return }
         console.removeAll()
         reloadCount += 1
         // Keep the deck on the same slide across reloads.
-        let target = webView.url?.path == url.path ? URL(string: url.absoluteString + (webView.url?.fragment.map { "#\($0)" } ?? "")) ?? url : url
-        webView.loadFileURL(target, allowingReadAccessTo: dir)
-        if let popOutWeb { popOutWeb.loadFileURL(url, allowingReadAccessTo: dir) }
+        let sameProject = webView.url?.host() == url.host()
+        let target = sameProject ? URL(string: url.absoluteString + (webView.url?.fragment.map { "#\($0)" } ?? "")) ?? url : url
+        webView.load(URLRequest(url: target))
+        popOutWeb?.load(URLRequest(url: url))
     }
 
     /// Reloads, waits for the page to settle, and reports errors and a summary.
@@ -291,8 +295,7 @@ final class BuilderController {
     func openPopOut() {
         guard let current, let url = indexURL else { return }
         if popOut == nil {
-            let config = WKWebViewConfiguration()
-            let web = WKWebView(frame: .zero, configuration: config)
+            let web = Self.makeWebView(bridge: nil, schemeHandler: schemeHandler)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 720),
                                   styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
             window.contentView = web
@@ -302,7 +305,7 @@ final class BuilderController {
             popOutWeb = web
         }
         popOut?.title = current.name
-        popOutWeb?.loadFileURL(url, allowingReadAccessTo: workspace.projectURL(current.name))
+        popOutWeb?.load(URLRequest(url: url))
         popOut?.makeKeyAndOrderFront(nil)
         onPopOut?()
     }

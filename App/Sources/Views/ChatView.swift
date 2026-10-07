@@ -14,6 +14,16 @@ struct ChatView: View {
         VStack(spacing: 0) {
             ChatHeader()
             Divider()
+            if let preset = chat.suggestedPreset {
+                HStack {
+                    Image(systemName: "slider.horizontal.3")
+                    Text("This conversation used the preset “\(preset)”.").font(.callout)
+                    Spacer()
+                    Button("Load It") { _ = try? model.presets.load(preset) }
+                }
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Color.accentColor.opacity(0.1))
+            }
             transcript(chat)
             Divider()
             Composer(inputFocused: $inputFocused)

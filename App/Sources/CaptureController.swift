@@ -61,6 +61,25 @@ final class CaptureController {
         insetFeed = feeds.acquire(info)
     }
 
+    // MARK: Presets
+
+    /// Replaces the whole capture setup (from a preset) and brings feeds in line.
+    func apply(_ newSetup: CaptureSetup) {
+        let oldSource = setup.source
+        setup = newSetup
+        // Inset camera: swap feeds if it changed.
+        if insetFeed?.device.id != newSetup.insetDevice?.uniqueID {
+            if let feed = insetFeed { feeds.release(feed.device.id) }
+            insetFeed = nil
+            restoreInsetFeed()
+        }
+        for id in openPreviewIDs { previewWindows[id]?.contentChanged() }
+        recorder.update(spec: compositeSpec)
+        checkMic()
+        if oldSource != newSetup.source { sourceChanged() }
+        diagnostics.log("Capture settings loaded from preset")
+    }
+
     // MARK: Microphone
 
     @discardableResult

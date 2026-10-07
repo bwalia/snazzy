@@ -9,6 +9,7 @@ struct SourcesPanel: View {
 
     var body: some View {
         Form {
+            RecordingPreviewSection()
             MicSection()
             SourceSection()
             InsetDeviceSection()
@@ -16,7 +17,6 @@ struct SourcesPanel: View {
                 CropSection()
             }
             LayoutSection()
-            RecordingPreviewSection()
             Section {
                 Button("Show Diagnostics") { openWindow(id: "diagnostics") }
             }
@@ -100,13 +100,9 @@ private struct SourceSection: View {
                 }
             }
             if !capture.catalog.screenRecordingAllowed {
-                HStack {
-                    Label("Screen recording permission is needed to list windows and record the screen.",
-                          systemImage: "lock.trianglebadge.exclamationmark")
-                        .font(.callout).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Allow…") { capture.catalog.requestScreenRecording() }
-                }
+                Label("Windows appear here once screen recording is allowed (see the preview above).",
+                      systemImage: "lock.trianglebadge.exclamationmark")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         } header: {
             HStack {
@@ -315,36 +311,108 @@ struct LabeledSlider: View {
     }
 }
 
-/// Exactly what will be recorded: the screen with the camera inset on top.
+/// Exactly what will be recorded (screen + camera inset), or the screen alone.
 private struct RecordingPreviewSection: View {
+    @Environment(CaptureController.self) private var capture
+    @AppStorage("SnazzyPro.previewMode") private var mode = PreviewMode.recording
+
+    enum PreviewMode: String, CaseIterable { case recording = "Recording", screen = "Screen only" }
+
+    var body: some View {
+        Section {
+            if !capture.catalog.screenRecordingAllowed || capture.screen.state == .needsPermission {
+                PermissionBlock()
+            } else {
+                Group {
+                    if mode == .recording {
+                        CompositePreviewContent()
+                    } else {
+                        ScreenOnlyPreview()
+                    }
+                }
+                .aspectRatio(mode == .recording ? 16.0 / 9.0 : screenAspect, contentMode: .fit)
+                .frame(maxHeight: 340)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                HStack {
+                    Circle().fill(capture.screen.state == .live ? Color.green : Color.orange).frame(width: 8, height: 8)
+                    Text(statusText).font(.caption)
+                    Spacer()
+                    if capture.compositePreviewOpen {
+                        Button("Close Floating Preview") { capture.closeCompositePreview() }
+                    } else {
+                        Button("Open Floating Preview") { capture.openCompositePreview() }
+                    }
+                }
+                Text("Snazzy Pro's own windows (chat, previews, this panel) are left out of the recording; the Builder's result window is included.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        } header: {
+            HStack {
+                Text("Preview")
+                Spacer()
+                Picker("", selection: $mode) {
+                    ForEach(PreviewMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+        }
+    }
+
+    private var screenAspect: CGFloat {
+        guard let s = capture.screen.frameSize, s.height > 0 else { return 16.0 / 9.0 }
+        return s.width / s.height
+    }
+
+    private var statusText: String {
+        guard capture.screen.state == .live else {
+            return capture.screenSource == nil ? "Choose a display or window below" : capture.screen.state.description
+        }
+        let size = capture.screen.frameSize.map { "\(Int($0.width))×\(Int($0.height))" } ?? ""
+        return "Screen live · \(size)" + (mode == .recording ? " · records at 1920×1080" : "")
+    }
+}
+
+/// The screen alone, as captured.
+private struct ScreenOnlyPreview: NSViewRepresentable {
+    @Environment(CaptureController.self) private var capture
+
+    func makeNSView(context: Context) -> ImagePreviewView {
+        let view = ImagePreviewView()
+        let screen = capture.screen
+        view.provider = { [weak screen] in
+            guard let frame = screen?.receiver.latest else { return nil }
+            return (frame.image, frame.sequence)
+        }
+        return view
+    }
+
+    func updateNSView(_ view: ImagePreviewView, context: Context) {}
+}
+
+/// Explains and fixes missing screen-recording permission.
+private struct PermissionBlock: View {
     @Environment(CaptureController.self) private var capture
 
     var body: some View {
-        Section("Preview of the recording") {
-            CompositePreviewContent()
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Snazzy Pro needs Screen Recording permission to show and record your screen.", systemImage: "lock.trianglebadge.exclamationmark")
+                .font(.callout.weight(.medium))
+            Text("1. Click Open System Settings and switch on Snazzy Pro under Screen & System Audio Recording.\n2. Click Quit & Reopen (macOS only applies the permission after a restart).")
+                .font(.callout).foregroundStyle(.secondary)
             HStack {
-                Circle().fill(capture.screen.state == .live ? Color.green : Color.orange).frame(width: 8, height: 8)
-                Text(capture.screen.state == .live ? "Screen live\(capture.screen.frameSize.map { " · \(Int($0.width))×\(Int($0.height))" } ?? "") · output 1920×1080"
-                     : capture.screen.state.description)
-                    .font(.caption)
-                Spacer()
-                if capture.screen.state == .needsPermission {
-                    Button("Allow Screen Recording…") { capture.catalog.requestScreenRecording() }
+                Button("Open System Settings") {
+                    capture.catalog.requestScreenRecording()
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                        NSWorkspace.shared.open(url)
+                    }
                 }
-                if capture.compositePreviewOpen {
-                    Button("Close Floating Preview") { capture.closeCompositePreview() }
-                } else {
-                    Button("Open Floating Preview") { capture.openCompositePreview() }
-                }
+                .buttonStyle(.borderedProminent)
+                Button("Quit & Reopen") { AppRelaunch.relaunch() }
+                Button("Check Again") { Task { await capture.catalog.refreshScreenContent(); await capture.updateScreenFeed() } }
             }
-            if capture.screen.state == .needsPermission {
-                Text("After allowing Snazzy Pro in System Settings › Privacy & Security › Screen & System Audio Recording, quit and reopen the app.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Text("Snazzy Pro's own windows (chat, previews, this panel) are left out of the recording; the Builder's result window is included.")
-                .font(.caption).foregroundStyle(.secondary)
         }
+        .padding(.vertical, 4)
     }
 }

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snazzy Pro: presentations, just by talking</title>
+<meta name="description" content="Snazzy Pro is a Mac presentation studio you run by conversation. It plans your talk, builds the slides or a prototype, frames your camera and records the video.">
+<meta name="theme-color" content="#0B1020">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Snazzy Pro: just say it.">
+<meta property="og:description" content="A Mac presentation studio you run by conversation. Plan, build, frame and record, by talking.">
+<meta property="og:image" content="https://bwalia.github.io/snazzy/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="fonts/Manrope-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="Snazzy Pro home"><img src="assets/lockup-on-dark.svg" alt="Snazzy Pro" width="130" height="34"></a>
+    <nav class="links" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn small primary" href="#get">Get Snazzy Pro</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <img class="icon" src="assets/icon-512.png" alt="" width="112" height="112">
+      <h1 id="hero-title">Just <span class="grad">say it.</span></h1>
+      <p class="lede">Snazzy Pro is a presentation studio you run by conversation. It plans your talk, builds the slides, frames your camera and records the video.</p>
+      <div class="ctas" id="get">
+        <!-- At launch, replace with Apple's official "Download on the Mac App Store" badge and the app's App Store URL. -->
+        <a class="btn primary" href="https://github.com/bwalia/snazzy/releases" aria-label="Coming soon to the Mac App Store: follow releases on GitHub">Coming soon to the Mac App Store</a>
+        <a class="btn secondary" href="#how">See how it works</a>
+      </div>
+      <p class="fine">For Mac · macOS 15 or later · Works with local or cloud AI</p>
+
+      <div class="stage" aria-hidden="true">
+        <div class="window">
+          <div class="titlebar"><i></i><i></i><i></i><span class="title">Snazzy Pro</span><span class="rec"><b></b>REC 0:42</span></div>
+          <div class="panes">
+            <div class="chat">
+              <div class="msg user d1">Make a 5-slide deck on our Q3 DevOps results for leadership, then record me presenting it with my iPad camera bottom-right.</div>
+              <div class="msg bot d2">On it. Building the deck and setting up your camera.</div>
+              <div class="tool d3">create_project q3-results</div>
+              <div class="tool d4">write_file index.html</div>
+              <div class="tool d5">select_inset_device iPad</div>
+              <div class="tool live d6">start_recording</div>
+              <div class="msg bot d7">Recording. Deck is live, iPad framed bottom-right, USB mic at a good level.</div>
+            </div>
+            <div class="preview">
+              <div class="slide">
+                <div>
+                  <h3>Q3 DevOps <span>results</span></h3>
+                  <p>Deploys up 40% · MTTR 25 min · 99.95% uptime</p>
+                </div>
+                <div class="bars"><div></div><div></div><div></div><div></div></div>
+                <div class="inset"><span class="head"></span><span class="body"></span><span class="dot"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" aria-labelledby="how-title">
+    <div class="wrap center">
+      <p class="eyebrow">How it works</p>
+      <h2 id="how-title">Talk. Build. Record.</h2>
+      <p class="section-lede">One conversation takes you from an idea to a finished video. Every step also has buttons, if you prefer clicking.</p>
+      <div class="steps" style="text-align:left">
+        <div class="step reveal">
+          <span class="n">1</span>
+          <h3>Talk</h3>
+          <p>Say what you need, by typing or out loud. The assistant asks a couple of questions, then plans the outline and writes your script.</p>
+          <q>Make it five minutes, for the leadership team.</q>
+        </div>
+        <div class="step reveal">
+          <span class="n">2</span>
+          <h3>Build</h3>
+          <p>Watch the slides, or a clickable app prototype, being written live. The assistant checks its own work and fixes errors before you see them.</p>
+          <q>Add a chart of the pipeline. Darker theme.</q>
+        </div>
+        <div class="step reveal">
+          <span class="n">3</span>
+          <h3>Record</h3>
+          <p>Screen or slides, your camera in the corner and your mic, all in one take. Saved automatically, ready to share.</p>
+          <q>Put my iPad camera bottom-right and start recording.</q>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="facts" role="list" aria-label="At a glance">
+    <div class="wrap">
+      <div class="fact reveal" role="listitem"><b>1 take</b><span>Screen, camera and mic on one clock</span></div>
+      <div class="fact reveal" role="listitem"><b>Local or cloud</b><span>Ollama on your Mac, or Claude</span></div>
+      <div class="fact reveal" role="listitem"><b>Raw tracks</b><span>Change the layout after recording</span></div>
+      <div class="fact reveal" role="listitem"><b>0 save dialogs</b><span>Every take named and saved for you</span></div>
+    </div>
+  </div>
+
+  <section id="features" aria-label="Features">
+    <div class="wrap">
+      <div class="feature reveal">
+        <div>
+          <p class="eyebrow">Builder</p>
+          <h3>Watch your slides being written.</h3>
+          <p>Ask for a deck or a working prototype. Code appears as the assistant writes it, the preview updates on every save, and console errors go straight back to the assistant so it can fix them.</p>
+          <ul>
+            <li>16:9 slide decks with speaker notes and charts</li>
+            <li>Clickable app prototypes with real interactions</li>
+            <li>Present the result in its own window, or record it</li>
+          </ul>
+        </div>
+        <div class="art" aria-hidden="true">
+<div class="code"><span class="k">&lt;section</span> <span class="t">class</span>=<span class="s">"slide"</span><span class="k">&gt;</span>
+  <span class="k">&lt;h2&gt;</span>Pipeline, start to finish<span class="k">&lt;/h2&gt;</span>
+  <span class="k">&lt;svg</span> <span class="t">viewBox</span>=<span class="s">"0 0 800 200"</span><span class="k">&gt;</span>
+    <span class="k">&lt;rect</span> <span class="t">class</span>=<span class="s">"stage build"</span> …<span class="k">/&gt;</span>
+    <span class="k">&lt;rect</span> <span class="t">class</span>=<span class="s">"stage test"</span> …<span class="k">/&gt;</span>
+    <span class="k">&lt;rect</span> <span class="t">class</span>=<span class="s">"stage deploy"</span><span class="cursor"></span></div>
+          <span class="badge">● No console errors</span>
+        </div>
+      </div>
+
+      <div class="feature reveal">
+        <div>
+          <p class="eyebrow">Camera</p>
+          <h3>Your camera, framed perfectly.</h3>
+          <p>Use your Mac's camera, a USB webcam, Continuity Camera, or the iPad or iPhone on your desk, connected by cable. Drag and pinch the live preview to frame yourself. Previews never appear in the recording.</p>
+          <ul>
+            <li>Crop, zoom and rotation remembered for each device</li>
+            <li>Corner, size, border and rounded corners for the inset</li>
+            <li>Waits patiently for an iPad or iPhone to appear</li>
+          </ul>
+        </div>
+        <div class="art" aria-hidden="true">
+          <div class="frame"><span class="label">Roadmap 2027</span><div class="pip"></div><div class="handles"></div></div>
+        </div>
+      </div>
+
+      <div class="feature reveal">
+        <div>
+          <p class="eyebrow">Recording</p>
+          <h3>One take. Nothing out of step.</h3>
+          <p>Screen, camera and microphone are captured in one place, on one clock, so they stay in step. Pause and resume freely. If a camera freezes or gets unplugged, the recording carries on and the freeze is marked.</p>
+          <ul>
+            <li>1080p H.264 video, ready to share</li>
+            <li>Raw screen, camera and mic tracks kept alongside</li>
+            <li>Saved to Movies › Snazzy Pro with a timestamped name</li>
+          </ul>
+        </div>
+        <div class="art" aria-hidden="true">
+          <div class="tracks">
+            <div class="track screen"><span>Screen</span><div class="bar"><i></i></div></div>
+            <div class="track camera"><span>Camera</span><div class="bar"><i></i><span class="gap"></span></div></div>
+            <div class="track mic"><span>Mic</span><div class="bar"><i></i></div></div>
+            <div class="track final"><span>Your video</span><div class="bar"><i></i></div></div>
+          </div>
+          <p class="timeline-note">Camera paused for 3 s at 2:14. Screen and mic kept recording.</p>
+        </div>
+      </div>
+
+      <div class="feature reveal">
+        <div>
+          <p class="eyebrow">Voice and AI</p>
+          <h3>Talk instead of typing.</h3>
+          <p>Press the mic and speak. It's transcribed on your Mac. Pick the AI per task, and save complete setups as presets you can switch between in a sentence.</p>
+          <ul>
+            <li>Local models with Ollama: nothing leaves your Mac</li>
+            <li>Claude from Anthropic with your own key, only after you agree</li>
+            <li>Presets: "load my desk setup", "save this as Demo day"</li>
+          </ul>
+        </div>
+        <div class="art" aria-hidden="true">
+          <div class="wave"><i style="height:30%"></i><i style="height:60%;animation-delay:.1s"></i><i style="height:90%;animation-delay:.2s"></i><i style="height:55%;animation-delay:.3s"></i><i style="height:75%;animation-delay:.4s"></i><i style="height:40%;animation-delay:.5s"></i><i style="height:85%;animation-delay:.6s"></i><i style="height:50%;animation-delay:.7s"></i><i style="height:70%;animation-delay:.8s"></i><i style="height:35%;animation-delay:.9s"></i></div>
+          <div class="chips">
+            <span class="chip local">● Local · gpt-oss</span>
+            <span class="chip local">● Local · qwen3-coder</span>
+            <span class="chip cloud">● Cloud · Claude Opus</span>
+            <span class="chip">Preset: Desk setup</span>
+            <span class="chip">Preset: Demo day</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" class="privacy" aria-labelledby="privacy-title">
+    <div class="wrap">
+      <p class="eyebrow">Privacy</p>
+      <h2 id="privacy-title">Your Mac. Your recordings.</h2>
+      <p class="section-lede">No accounts, no analytics, no servers of ours. Everything you make stays on your Mac.</p>
+      <div class="grid">
+        <div class="card reveal"><h3>Stays local</h3><p>Recordings, projects, conversations and presets live on your Mac. Your API keys live in the Keychain.</p></div>
+        <div class="card reveal"><h3>Asks first</h3><p>Before anything goes to a cloud AI, Snazzy Pro tells you exactly what's sent and asks. Recordings and video are never sent.</p></div>
+        <div class="card reveal"><h3>Works offline</h3><p>With a local model, the assistant, voice transcription and recording all work without a network.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" aria-labelledby="faq-title">
+    <div class="wrap center">
+      <p class="eyebrow">FAQ</p>
+      <h2 id="faq-title">Questions, answered.</h2>
+      <div class="faq" style="text-align:left">
+        <details><summary>Which Macs does it run on?</summary><p>Macs running macOS 15 or later. Apple silicon is recommended, especially for local AI models.</p></details>
+        <details><summary>Do I need an AI subscription?</summary><p>No. Run a free local model with Ollama, or use Claude from Anthropic with your own API key. You can mix them: a local model for quick commands, Claude for writing.</p></details>
+        <details><summary>Can I use my iPhone or iPad as the camera?</summary><p>Yes. Connect it by cable and point it at yourself, or use Continuity Camera wirelessly. Snazzy Pro crops out the Camera app's buttons and remembers the framing for each device. A dedicated iPhone and iPad companion app is planned.</p></details>
+        <details><summary>Is there a Windows version?</summary><p>Not at the moment. Snazzy Pro is a native Mac app built on Apple's capture and AI frameworks.</p></details>
+        <details><summary>What do recordings look like?</summary><p>A 1080p video (H.264 with AAC audio) that opens anywhere, plus the raw screen, camera and microphone tracks in a folder next to it, so the camera layout can be changed later.</p></details>
+        <details><summary>Where do I get help?</summary><p>See the <a href="support.html">support page</a>, or open an issue on <a href="https://github.com/bwalia/snazzy/issues">GitHub</a>.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing" aria-labelledby="closing-title">
+    <div class="wrap">
+      <img src="assets/icon-512.png" alt="" width="96" height="96">
+      <h2 id="closing-title">Your next presentation is one sentence away.</h2>
+      <p class="section-lede">Snazzy Pro is coming soon to the Mac App Store.</p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/bwalia/snazzy/releases">Follow releases</a>
+        <a class="btn secondary" href="https://github.com/bwalia/snazzy">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="assets/lockup-on-dark.svg" alt="Snazzy Pro" width="100" height="26">
+    <span>© 2026 Snazzy Pro</span>
+    <nav aria-label="Footer">
+      <a href="privacy.html">Privacy</a>
+      <a href="support.html">Support</a>
+      <a href="https://github.com/bwalia/snazzy">GitHub</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  // Fade sections in as they scroll into view (skipped with reduced motion).
+  (function () {
+    var items = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      items.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -10% 0px' });
+    items.forEach(function (el) { io.observe(el); });
+  })();
+</script>
+</body>
+</html>

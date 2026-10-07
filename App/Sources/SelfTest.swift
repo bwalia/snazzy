@@ -1,7 +1,9 @@
+#if DEBUG
 import Assistant
 import CaptureEngine
 import AppKit
 import AVFoundation
+import Builder
 import CoreImage
 import Foundation
 import ImageIO
@@ -23,6 +25,48 @@ enum SelfTest {
             arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         }
 
+        if arguments.contains("--builder-errors") {
+            // A throwaway workspace with a page that throws: the report must carry the real message.
+            let root = FileManager.default.temporaryDirectory.appending(path: "builder-test-\(UUID().uuidString.prefix(6))")
+            defer { try? FileManager.default.removeItem(at: root) }
+            let builder = BuilderController(workspace: Workspace(root: root))
+            let window = NSWindow(contentRect: NSRect(x: -3000, y: 0, width: 800, height: 600), styleMask: [.borderless], backing: .buffered, defer: false)
+            window.contentView = builder.webView
+            window.orderFrontRegardless()
+            do {
+                try builder.createProject(name: "errors", kind: .prototype, title: "Errors")
+                let report = try await builder.writeFile(project: nil, path: "app.js",
+                                                         content: "document.title = 'loaded';\nmissingFunction();\n")
+                let errors = report["console_errors"]?.arrayValue?.compactMap(\.stringValue) ?? []
+                let title = report["page"]?["title"]?.stringValue ?? ""
+                print("errors: \(errors)  title: \(title)")
+                let ok = errors.contains { $0.contains("missingFunction") && $0.contains("app.js") }
+                SelfTest.report(ok, "builder reports readable script errors over \(ProjectSchemeHandler.scheme)://")
+                return ok
+            } catch {
+                SelfTest.report(false, "builder errors: \(error.localizedDescription)")
+                return false
+            }
+        }
+        if let name = value(after: "--preset-roundtrip") {
+            // Save current settings under `name`, load it back, compare, then delete it.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let before = (app.capture.setup, app.settings)
+            do {
+                try app.presets.save(name: name, notes: "self-test")
+                let loaded = try app.presets.load(String(name.prefix(6)))
+                let same = app.capture.setup == before.0 && app.settings == before.1 && loaded.name == name
+                SelfTest.report(same, "preset roundtrip \(loaded.name): settings unchanged=\(same)")
+                try app.presets.delete(name)
+                SelfTest.report(!app.presets.presets.contains { $0.name == name }, "preset deleted")
+                UserDefaults.standard.removeObject(forKey: "SnazzyPro.activePreset")
+                return same
+            } catch {
+                SelfTest.report(false, "preset roundtrip: \(error.localizedDescription)")
+                return false
+            }
+        }
         if let prompt = value(after: "--chat") {
             return await toolChat(prompt: prompt, model: value(after: "--model") ?? "gpt-oss:120b", provider: value(after: "--provider") ?? "ollama")
         }
@@ -356,3 +400,4 @@ enum SelfTest {
         return result
     }
 }
+#endif

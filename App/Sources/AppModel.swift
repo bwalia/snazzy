@@ -25,6 +25,7 @@ final class AppModel {
     @ObservationIgnored private(set) var chat: ChatSession!
     let capture: CaptureController
     let builder: BuilderController
+    @ObservationIgnored private(set) var presets: PresetController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// The right-hand panel's tab (the builder switches to it when it works).
@@ -37,6 +38,7 @@ final class AppModel {
         self.capture = CaptureController()
         self.builder = BuilderController()
         self.chat = ChatSession(app: self)
+        self.presets = PresetController(app: self)
         refreshStoredKeys()
         startPathMonitor()
         builder.onActivity = { [weak self] in self?.sidePanelTab = .builder }
@@ -169,6 +171,36 @@ final class AppModel {
         return .object(result)
     }
 
+    /// Everything the assistant can know about Snazzy Pro's settings (no secrets).
+    func settingsJSON() -> JSONValue {
+        [
+            "active_task": .string(settings.activeTask.rawValue),
+            "models": .object(Dictionary(uniqueKeysWithValues: AssistantTask.allCases.map { task in
+                let s = settings.selection(for: task)
+                return (task.rawValue, ["provider": .string(s.provider.rawValue), "model": .string(s.model), "local": .bool(s.provider.isLocal)] as JSONValue)
+            })),
+            "anthropic": ["effort": .string(settings.anthropicEffort), "base_url": .string(settings.anthropicBaseURL),
+                          "api_key": .string(storedKeys.contains(.anthropic) ? "stored in Keychain" : "missing")],
+            "ollama": ["base_url": .string(settings.ollamaBaseURL)],
+            "max_output_tokens": .number(Double(settings.maxOutputTokens)),
+            "voice": ["auto_send": .bool(settings.voiceAutoSend), "microphone": .string(capture.setup.mic?.name ?? "system default")],
+            "session_record": ["enabled": .bool(settings.recordSessions), "folder": "~/Movies/Snazzy Pro/Sessions"],
+            "recordings_folder": "~/Movies/Snazzy Pro/Recordings",
+            "capture": capture.stateJSON(),
+            "presets": presets.listJSON(),
+            "online": .bool(isOnline),
+        ]
+    }
+
+    /// Changes app options (not models or capture; those have their own tools).
+    func updateOptions(voiceAutoSend: Bool?, recordSessions: Bool?, effort: String?, maxOutputTokens: Int?) -> JSONValue {
+        if let voiceAutoSend { settings.voiceAutoSend = voiceAutoSend }
+        if let recordSessions { settings.recordSessions = recordSessions }
+        if let effort { settings.anthropicEffort = effort }
+        if let maxOutputTokens { settings.maxOutputTokens = min(max(maxOutputTokens, 4_000), 128_000) }
+        return settingsJSON()
+    }
+
     func projectState() -> JSONValue {
         let selection = activeSelection
         return [
@@ -183,6 +215,7 @@ final class AppModel {
             "online": .bool(isOnline),
             "capture": capture.stateJSON(),
             "builder": builder.stateJSON(),
+            "active_preset": presets.activeName.map(JSONValue.string) ?? .null,
             "model_settings": .object(Dictionary(uniqueKeysWithValues: AssistantTask.allCases.map { task in
                 let s = settings.selection(for: task)
                 return (task.rawValue, ["provider": .string(s.provider.rawValue), "model": .string(s.model)] as JSONValue)

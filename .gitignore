@@ -14,3 +14,6 @@ xcuserdata/
 /secrets/
 *.secrets
 secrets.json
+
+# Local build settings (signing identity)
+Config/Local.xcconfig

@@ -229,6 +229,17 @@ struct ChatSettings: View {
                     NSWorkspace.shared.activateFileViewerSelecting([SessionLog.root])
                 }
             }
+            Section("Cloud AI") {
+                if model.settings.cloudConsent.isEmpty {
+                    Text("You haven't allowed any cloud provider yet. You'll be asked before anything is sent.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    LabeledContent("Allowed", value: model.settings.cloudConsent.compactMap { ProviderKind(rawValue: $0)?.displayName }.joined(separator: ", "))
+                    Button("Withdraw Permission") { model.settings.cloudConsent = [] }
+                    Text("You'll be asked again before the next message goes to a cloud provider.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
             Section("Limits") {
                 Stepper("Max reply length: \(model.settings.maxOutputTokens.formatted()) tokens",
                         value: $model.settings.maxOutputTokens, in: 4_000...128_000, step: 4_000)

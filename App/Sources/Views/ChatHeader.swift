@@ -49,6 +49,9 @@ struct ChatHeader: View {
                 Label("\(chat.sessionUsage.inputTokens.formatted()) in · \(chat.sessionUsage.outputTokens.formatted()) out",
                       systemImage: "number")
                     .help("Tokens used in this conversation")
+                if let preset = model.presets.activeName {
+                    Label(preset, systemImage: "slider.horizontal.3").lineLimit(1).help("Active settings preset (Presets menu)")
+                }
                 if let reason = model.unavailableReason(selection.provider) {
                     Label(reason, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.orange)
