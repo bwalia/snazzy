@@ -64,7 +64,23 @@ struct DeveloperExtraSections: View {
     }
 }
 
-/// Added by the screen-reading feature.
+/// Reading the front window and zooming during recording.
 struct DeveloperScreenSection: View {
-    var body: some View { EmptyView() }
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let dev = model.developer!
+        Section {
+            Toggle("Read the front window", isOn: Binding(get: { dev.settings.screenReadingEnabled }, set: { dev.settings.screenReadingEnabled = $0 }))
+            Text("Ask “explain what's in my terminal”. Text is recognised on this Mac. With a cloud model, likely secrets (API keys, tokens, .env values) are hidden and you approve the text first.")
+                .font(.caption).foregroundStyle(.secondary)
+            Toggle("Zoom while recording", isOn: Binding(get: { dev.settings.zoomEnabled }, set: { dev.settings.zoomEnabled = $0 }))
+            Text("Ask “zoom in on the stack trace”: the recording smoothly zooms to that text, then back out.")
+                .font(.caption).foregroundStyle(.secondary)
+            if !model.capture.catalog.screenRecordingAllowed {
+                Label("Needs Screen Recording permission (see the Sources tab).", systemImage: "lock.trianglebadge.exclamationmark")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+        } header: { Text("Screen") }
+    }
 }

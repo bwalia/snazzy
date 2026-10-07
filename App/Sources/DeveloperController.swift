@@ -247,6 +247,31 @@ final class DeveloperController {
         return out
     }
 
+    // MARK: Feature 5: what's on screen
+
+    /// Text of the frontmost window of another app (terminal, editor…).
+    func readFrontWindow() async throws -> JSONValue {
+        guard settings.screenReadingEnabled else { throw disabled("Screen reading") }
+        busy = "Reading the front window…"
+        defer { busy = nil }
+        let capture = try await ScreenReader.readFrontWindow()
+        var text = capture.text
+        if text.count > 20_000 { text = String(text.suffix(20_000)) }  // the newest output matters most
+        var result: [String: JSONValue] = ["app": .string(capture.app), "window": .string(capture.title),
+                                           "method": .string(capture.method), "text": .string(text)]
+        let provider = app.activeSelection.provider
+        if !provider.isLocal {
+            let redacted = SecretRedactor.redact(text)
+            result["text"] = .string(redacted.text)
+            if let note = SecretRedactor.summary(redacted.hidden) { result["hidden"] = .string(note) }
+            guard CloudReview.confirm(provider: provider.displayName, what: "the text of \(capture.app)'s window",
+                                      text: redacted.text, note: SecretRedactor.summary(redacted.hidden) ?? "No likely secrets were found.")
+            else { throw CaptureActionError(message: "Not sent. The user kept the window text on their Mac.") }
+        }
+        app.chat.logSession("front_window_read", ["app": .string(capture.app), "method": .string(capture.method)])
+        return .object(result)
+    }
+
     func setBusy(_ text: String?) { busy = text }
 
     func disabled(_ name: String) -> CaptureActionError {

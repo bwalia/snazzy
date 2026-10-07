@@ -9,6 +9,8 @@ public struct CompositeSpec: Equatable, Sendable {
     public var profile: DeviceProfile
     public var borderColor: CIColor
     public var background: CIColor
+    /// Part of the screen to show (top-left normalised 0…1); nil = whole screen.
+    public var screenZoom: CGRect?
 
     public init(canvas: CGSize = CGSize(width: 1920, height: 1080), layout: InsetLayout, profile: DeviceProfile,
                 borderColor: CIColor = CIColor(red: 0.13, green: 0.13, blue: 0.13), background: CIColor = .black) {
@@ -29,12 +31,20 @@ public enum Compositor {
         var output = CIImage(color: spec.background).cropped(to: canvasRect)
 
         if let screen {
-            output = fit(screen, in: canvasRect).composited(over: output)
+            output = fit(zoomed(screen, spec.screenZoom), in: canvasRect).composited(over: output)
         }
         if let camera {
             output = inset(camera, spec: spec).composited(over: output)
         }
         return output.cropped(to: canvasRect)
+    }
+
+    /// The zoomed part of the screen (Core Image is y-up).
+    static func zoomed(_ screen: CIImage, _ zoom: CGRect?) -> CIImage {
+        guard let z = zoom, z.width > 0.01, z.height > 0.01, z != CGRect(x: 0, y: 0, width: 1, height: 1) else { return screen }
+        let e = screen.extent
+        let rect = CGRect(x: e.minX + z.minX * e.width, y: e.minY + (1 - z.maxY) * e.height, width: z.width * e.width, height: z.height * e.height)
+        return screen.cropped(to: rect)
     }
 
     /// Scales an image to fit a rect (letterboxed), centred.

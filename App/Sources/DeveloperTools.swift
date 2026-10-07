@@ -97,6 +97,33 @@ enum DeveloperTools {
                 try await dev.loadGitChanges(path: args["path"]?.stringValue, base: args["base_branch"]?.stringValue ?? "main")
             })
         }
+        if s.screenReadingEnabled {
+            tools.append(RegisteredTool(
+                name: "read_front_window",
+                description: "Read the text in the user's frontmost window of another app (terminal, editor, Xcode, browser) with on-device text recognition, so you can explain errors or output. With a cloud model, likely secrets are hidden and the user approves the text first.",
+                inputSchema: AssistantTools.emptySchema
+            ) { @Sendable _ in try await dev.readFrontWindow() })
+        }
+        if s.zoomEnabled {
+            let capture = dev.app.capture
+            tools.append(RegisteredTool(
+                name: "zoom_screen",
+                description: "Zoom the recording into the part of the recorded screen that shows some text (e.g. \"error:\" or a function name), then zoom back out after hold_seconds (default 6; 0 = stay zoomed). reset: true zooms back out now.",
+                inputSchema: AssistantTools.object([
+                    "text": ["type": "string", "minLength": 1],
+                    "hold_seconds": ["type": "number", "minimum": 0, "maximum": 60],
+                    "reset": ["type": "boolean"],
+                ], required: [])
+            ) { @Sendable args in
+                if args["reset"]?.boolValue == true {
+                    await capture.animateZoom(to: nil)
+                    return ["zoom": "reset"]
+                }
+                guard let text = args["text"]?.stringValue else { throw CaptureActionError(message: "Say which text to zoom to.") }
+                let found = try await capture.zoom(toText: text, hold: args["hold_seconds"]?.doubleValue ?? 6)
+                return ["zoomed_to": .string(found)]
+            })
+        }
         return tools
     }
 }

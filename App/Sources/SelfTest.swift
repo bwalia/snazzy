@@ -66,6 +66,30 @@ enum SelfTest {
                 return false
             }
         }
+        if let word = value(after: "--zoom-test") {
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            if case .display? = app.capture.setup.source {} else { _ = try? app.capture.selectDisplay("main") }
+            app.capture.useScreen("self-test", true)
+            await app.capture.updateScreenFeed()
+            for _ in 0..<40 where app.capture.screen.receiver.latest == nil { try? await Task.sleep(for: .milliseconds(100)) }
+            do {
+                let found = try await app.capture.zoom(toText: word, hold: 0)
+                try? await Task.sleep(for: .milliseconds(600))
+                let z = app.capture.screenZoom
+                print("found: \(found.prefix(40))  zoom: \(z.map { String(format: "x %.2f y %.2f w %.2f h %.2f", $0.minX, $0.minY, $0.width, $0.height) } ?? "none")")
+                let spec = app.capture.compositeSpec
+                app.capture.animateZoom(to: nil)
+                try? await Task.sleep(for: .milliseconds(600))
+                let ok = z != nil && spec.screenZoom == z && app.capture.screenZoom == nil
+                SelfTest.report(ok, "zoom in and back out (composite spec follows)")
+                app.capture.useScreen("self-test", false)
+                return ok
+            } catch {
+                SelfTest.report(false, "zoom: \(error.localizedDescription)")
+                return false
+            }
+        }
         if arguments.contains("--probe-dev") {
             // What the sandbox allows for developer features.
             for (path, args) in [("/usr/bin/git", ["--version"]), ("/opt/homebrew/bin/gh", ["--version"])] {

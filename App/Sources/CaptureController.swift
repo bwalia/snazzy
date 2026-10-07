@@ -43,6 +43,9 @@ final class CaptureController {
     @ObservationIgnored private var compositeWindow: CompositePreviewWindowController?
     @ObservationIgnored private var screenUsers: Set<String> = []
     private(set) var compositePreviewOpen = false
+    /// Current zoom into the recorded screen (top-left normalised), animated.
+    private(set) var screenZoom: CGRect?
+    @ObservationIgnored private var zoomTask: Task<Void, Never>?
 
     init(store: CaptureSetupStore = CaptureSetupStore(), diagnostics: Diagnostics = .shared) {
         self.store = store
@@ -373,7 +376,60 @@ final class CaptureController {
 
     var compositeSpec: CompositeSpec {
         let profile = setup.insetDevice.map { setup.profile(for: $0.uniqueID, kind: $0.kind) } ?? .defaults(for: .camera)
-        return CompositeSpec(layout: setup.layout, profile: profile)
+        var spec = CompositeSpec(layout: setup.layout, profile: profile)
+        spec.screenZoom = screenZoom
+        return spec
+    }
+
+    // MARK: Zoom
+
+    /// Smoothly zooms the recording into part of the screen (nil = whole
+    /// screen). With `hold`, zooms back out after that many seconds.
+    func animateZoom(to target: CGRect?, hold: Double? = nil) {
+        zoomTask?.cancel()
+        let full = CGRect(x: 0, y: 0, width: 1, height: 1)
+        let from = screenZoom ?? full
+        let to = target ?? full
+        zoomTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.tween(from: from, to: to)
+            if let hold, target != nil {
+                try? await Task.sleep(for: .seconds(hold))
+                guard !Task.isCancelled else { return }
+                await self.tween(from: to, to: full)
+            }
+        }
+    }
+
+    private func tween(from: CGRect, to: CGRect, duration: Double = 0.35) async {
+        let steps = 21
+        for i in 1...steps {
+            guard !Task.isCancelled else { return }
+            let t = Double(i) / Double(steps)
+            let e = t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2  // ease in-out
+            let r = CGRect(x: from.minX + (to.minX - from.minX) * e, y: from.minY + (to.minY - from.minY) * e,
+                           width: from.width + (to.width - from.width) * e, height: from.height + (to.height - from.height) * e)
+            screenZoom = r.width >= 0.999 && r.height >= 0.999 ? nil : r
+            recorder.update(spec: compositeSpec)
+            try? await Task.sleep(for: .milliseconds(Int(duration * 1000) / steps))
+        }
+    }
+
+    /// Finds text on the recorded screen (on-device OCR) and zooms to it.
+    func zoom(toText text: String, hold: Double) async throws -> String {
+        guard let frame = screen.receiver.latest else {
+            throw CaptureActionError(message: "The screen isn't being captured. Open the Sources tab or start a recording first.")
+        }
+        guard let cg = CIContext().createCGImage(frame.image, from: frame.image.extent) else {
+            throw CaptureActionError(message: "Couldn't read the screen.")
+        }
+        let lines = try ScreenReader.recognize(cg)
+        guard let region = ScreenReader.zoomRegion(for: text, in: lines, imageAspect: frame.size.width / max(frame.size.height, 1)) else {
+            throw CaptureActionError(message: "Couldn't find “\(text)” on the recorded screen.")
+        }
+        animateZoom(to: region, hold: hold > 0 ? hold : nil)
+        diagnostics.log("Zoomed to “\(text)”", category: "recording")
+        return lines.first { $0.text.localizedCaseInsensitiveContains(text) }?.text ?? text
     }
 
     /// The current recorded picture: screen + inset.

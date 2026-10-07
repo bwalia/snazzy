@@ -119,8 +119,15 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("p", modifiers: [.command, .control])
             .disabled(recorder.state != .recording && recorder.state != .paused)
+            Button("Reset Zoom") { model.capture.animateZoom(to: nil) }
+                .keyboardShortcut("0", modifiers: [.command, .option])
+                .disabled(model.capture.screenZoom == nil)
         }
         CommandMenu("Assistant") {
+            Button("Explain Front Window") { model.chat.send("Explain what's in my front window.") }
+                .keyboardShortcut("e", modifiers: [.command, .option])
+                .disabled(!model.developer.settings.screenReadingEnabled || model.chat.isRunning)
+            Divider()
             Button("Stop Generating") { model.chat.stop() }
                 .keyboardShortcut(".")
                 .disabled(!model.chat.isRunning)
