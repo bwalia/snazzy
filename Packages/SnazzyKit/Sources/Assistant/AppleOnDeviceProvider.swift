@@ -278,7 +278,7 @@ enum AppleSchema {
 /// Which tools the small on-device model gets first.
 enum AppleToolPolicy {
     static let priority = [
-        "select_mic", "select_capture_source", "select_inset_device", "set_inset",
+        "select_mic", "select_capture_source", "select_inset_device", "set_inset", "set_background",
         "open_preview", "close_preview", "start_recording", "stop_recording", "pause_recording", "resume_recording",
         "load_preset", "save_preset", "list_presets", "list_devices", "get_project_state",
         "create_project", "write_file", "check_preview", "show_slide", "update_settings", "set_model",

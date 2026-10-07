@@ -28,8 +28,14 @@ public final class FrameReceiver: NSObject, AVCaptureVideoDataOutputSampleBuffer
     private var consumers: [UUID: @Sendable (CMSampleBuffer) -> Void] = [:]
 
     public let queue = DispatchQueue(label: "com.snazzy.pro.frames", qos: .userInteractive)
+    /// Background blur/replacement for this feed (inactive by default).
+    public let effect = BackgroundEffect()
 
     public var latest: Frame? { lock.withLock { _latest } }
+
+    /// The latest frame with the background effect applied: what previews, the
+    /// composite and the recorder show. Raw tracks use the unprocessed buffers.
+    public var latestImage: CIImage? { latest.map { effect.apply($0.image) } }
     public var snapshot: Stats { lock.withLock { stats } }
 
     /// Extra consumers of raw sample buffers (the recorder, from phase 4).
@@ -57,6 +63,7 @@ public final class FrameReceiver: NSObject, AVCaptureVideoDataOutputSampleBuffer
             _latest = Frame(image: image, size: size, time: time, sequence: stats.frames)
             return Array(consumers.values)
         }
+        if effect.isActive { effect.process(sampleBuffer) }
         for consumer in current { consumer(sampleBuffer) }
     }
 

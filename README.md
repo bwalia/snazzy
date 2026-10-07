@@ -73,6 +73,19 @@ Warnings are treated as errors in the app target.
   sending to a cloud provider), token use, and a warning when offline or when a
   key is missing.
 
+## Camera backgrounds
+
+- On-device person segmentation (Vision `VNGeneratePersonSegmentationRequest`,
+  balanced quality, at most 30 fps on its own queue; frames are skipped while
+  it's busy, so capture never waits).
+- Backgrounds: none, blur (adjustable), seven built-ins drawn in code (Spotlight,
+  Ink, Studio grey, Warm studio, Ocean, Sunset, Bokeh), a solid colour, or the
+  user's own images (copied into the app, at most 3840 px).
+- Applied to the camera picture before crop and compositing, so previews, the
+  recording preview and the recorded video match. Raw camera tracks stay
+  unprocessed. Stored per camera in its profile, so presets keep it. Chat
+  tools: `set_background`, `list_backgrounds`.
+
 ## Recording (phase 4)
 
 - **Screen** comes from ScreenCaptureKit (`ScreenFeed`): a display or a window,

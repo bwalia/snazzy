@@ -14,6 +14,7 @@ struct SourcesPanel: View {
             SourceSection()
             InsetDeviceSection()
             if capture.setup.insetDevice != nil {
+                BackgroundSection()
                 CropSection()
             }
             LayoutSection()

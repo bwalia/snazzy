@@ -2,8 +2,8 @@
 
 Phases are delivered and verified one at a time (see `PROMPT.md` §7 for the
 original plan). Phase 3 was added on 2026-10-07; the original phases 3–6 moved
-down by one. Phases 8–12 were added on 2026-10-07: the Mac App Store launch,
-then a companion iPhone/iPad app. The companion app is a scope change: the
+down by one. Phases 8–13 were added on 2026-10-07: the Mac App Store launch,
+then a companion iPhone/iPad app and an Apple Watch remote. The companion app is a scope change: the
 original spec listed an iOS/iPadOS app as out of scope.
 
 1. **Skeleton** ✅: XcodeGen project, app launches, settings with Keychain-stored
@@ -38,7 +38,10 @@ original spec listed an iOS/iPadOS app as out of scope.
      compiled out of Release, archive/upload script (`Scripts/archive-appstore.sh`).
    - Done: Apple on-device model provider (FoundationModels): no key, no
      network; default on first launch when Apple Intelligence is on.
-   - To do: camera backgrounds (blur, built-in and uploaded images); App Store
+   - Done: camera backgrounds: on-device person segmentation with blur, seven
+     built-ins, the user's own images and colours; per camera, in presets and from chat.
+   - Setup guide for Apple's side: `docs/launch/APP_STORE_CONNECT_SETUP.md`.
+   - To do: App Store
      screenshots; App Store Connect record; TestFlight round; swap the site's
      "Coming soon" button for Apple's official Mac App Store badge.
 
@@ -71,6 +74,17 @@ re-compositing from device files.
      app goes to the background or the device locks); battery and heat warnings;
      Wi-Fi quality warnings (they affect the preview, not the final file).
    - TestFlight, then App Store (iOS/iPadOS).
+
+13. **Apple Watch remote** (about 1–2 weeks, after phase 12):
+   - Ships inside the iPhone app (no separate App Store record); talks to the
+     iPhone app with WatchConnectivity, and the iPhone app relays to the Mac.
+   - Start, pause and stop, next and previous slide, recording timer and status.
+   - Haptic cues for "1 minute left" and "time's up".
+   - Bundle ID `<prefix>.snazzypro.watchkitapp`; App Group shared with the iPhone app.
+
+All platforms share one App Store record (Universal Purchase), so the Mac,
+iPhone and iPad apps use the same bundle ID. See
+`docs/launch/APP_STORE_CONNECT_SETUP.md`.
 
 Already available meanwhile: Continuity Camera gives the Mac an iPhone's camera
 and mic wirelessly, and Snazzy Pro lists it as a camera. It covers the iPhone

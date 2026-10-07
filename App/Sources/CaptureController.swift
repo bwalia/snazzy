@@ -20,6 +20,7 @@ final class CaptureController {
     /// Live capture of the selected display/window (for the recording preview and the recorder).
     let screen: ScreenFeed
     let recorder = Recorder()
+    let backgrounds = BackgroundLibrary()
     /// Called when a recording starts or finishes (session log).
     @ObservationIgnored var onRecordingEvent: ((String, [String: JSONValue]) -> Void)?
     /// The app's own windows that should appear in a display capture (e.g. the builder's result window).
@@ -59,6 +60,38 @@ final class CaptureController {
             ?? CaptureDeviceInfo(id: selection.uniqueID, name: selection.name, modelID: selection.kind == .camera ? "" : "iOS Device",
                                  manufacturer: "", kind: selection.kind, transport: "")
         insetFeed = feeds.acquire(info)
+        configureEffects(insetFeed)
+    }
+
+    // MARK: Backgrounds
+
+    /// Applies a device's saved background to its running feed.
+    func configureEffects(_ feed: CameraFeed?) {
+        guard let feed else { return }
+        let background = setup.profile(for: feed.device.id, kind: feed.device.kind).background
+        feed.receiver.effect.configure(background, image: backgrounds.image(for: background))
+    }
+
+    /// Sets the background for a camera (default: the inset camera).
+    func setBackground(_ background: CameraBackground, deviceID: String? = nil) throws {
+        guard let target = deviceID.flatMap({ id in (catalog.cameras + catalog.iosDevices).first { $0.id == id } })
+            .map({ InsetDeviceSelection(uniqueID: $0.id, name: $0.name, kind: $0.kind) }) ?? setup.insetDevice
+        else { throw CaptureActionError(message: "Choose an inset camera first.") }
+        var profile = setup.profile(for: target.uniqueID, kind: target.kind)
+        profile.background = background
+        setProfile(profile, for: target.uniqueID)
+        diagnostics.log("Background for \(target.name): \(backgrounds.describe(background))", category: "camera")
+    }
+
+    func backgroundsJSON() -> JSONValue {
+        let current = insetProfile?.background ?? CameraBackground.none
+        return [
+            "current": .string(backgrounds.describe(current)),
+            "options": .array(["none", "blur"] + BuiltInBackground.allCases.map { .string($0.displayName) }
+                + backgrounds.images.map { .string($0.name) }),
+            "colour": "any #RRGGBB hex colour",
+            "note": "Backgrounds use on-device person segmentation on the inset camera; they appear in previews and recordings.",
+        ]
     }
 
     // MARK: Presets
@@ -74,6 +107,7 @@ final class CaptureController {
             restoreInsetFeed()
         }
         for id in openPreviewIDs { previewWindows[id]?.contentChanged() }
+        for feed in feeds.feeds.values { configureEffects(feed) }
         recorder.update(spec: compositeSpec)
         checkMic()
         if oldSource != newSetup.source { sourceChanged() }
@@ -212,7 +246,10 @@ final class CaptureController {
             return
         }
         setup.insetDevice = InsetDeviceSelection(uniqueID: device.id, name: device.name, kind: device.kind)
-        if insetFeed?.device.id != device.id { insetFeed = feeds.acquire(device) }
+        if insetFeed?.device.id != device.id {
+            insetFeed = feeds.acquire(device)
+            configureEffects(insetFeed)
+        }
         diagnostics.log("Inset device: \(device.name)")
     }
 
@@ -231,6 +268,7 @@ final class CaptureController {
         p.crop = p.crop.normalized
         setup.profiles[deviceID] = p
         previewWindows[deviceID]?.contentChanged()
+        configureEffects(feeds.feeds[deviceID])
         recorder.update(spec: compositeSpec)
     }
 
@@ -276,6 +314,7 @@ final class CaptureController {
             ?? insetFeed.map(\.device).flatMap { $0.id == id ? $0 : nil }
         guard let info else { throw CaptureActionError(message: "Device \(id) isn't connected.") }
         let feed = feeds.acquire(info)
+        configureEffects(feed)
         let controller = PreviewWindowController(feed: feed, capture: self)
         controller.onClose = { [weak self] in self?.previewClosed(id) }
         previewWindows[id] = controller
@@ -340,7 +379,7 @@ final class CaptureController {
         let screenFrame = screen.receiver.latest
         let cameraFrame = insetFeed?.receiver.latest
         guard screenFrame != nil || cameraFrame != nil else { return nil }
-        let image = Compositor.compose(screen: screenFrame?.image, camera: cameraFrame?.image, spec: compositeSpec)
+        let image = Compositor.compose(screen: screenFrame?.image, camera: insetFeed?.receiver.latestImage, spec: compositeSpec)
         return (image, (screenFrame?.sequence ?? 0) &* 1_000_003 &+ (cameraFrame?.sequence ?? 0))
     }
 
@@ -477,6 +516,7 @@ final class CaptureController {
                 "aspect": p.crop.aspect.map { .number(($0 * 1000).rounded() / 1000) } ?? "fit",
                 "zoom": .number(p.crop.zoom), "center_x": .number(p.crop.centerX), "center_y": .number(p.crop.centerY),
                 "rotation": .string(p.rotation.rawValue), "video_delay_ms": .number(p.videoDelayMs),
+                "background": .string(backgrounds.describe(p.background)),
             ]
             if let feed = insetFeed {
                 device["status"] = .string(feed.state.description)

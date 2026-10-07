@@ -78,18 +78,63 @@ public enum DeviceKind: String, Codable, Sendable {
     }
 }
 
-/// Per-device crop, rotation and video delay.
+/// What replaces the area behind the person in a camera picture.
+public enum CameraBackground: Codable, Hashable, Sendable {
+    /// The camera picture as it is.
+    case none
+    /// Blur behind the person; strength 0…1.
+    case blur(strength: Double)
+    /// A solid colour, "#RRGGBB".
+    case color(hex: String)
+    /// One of the built-in backgrounds (see `BuiltInBackground`).
+    case builtIn(id: String)
+    /// An image the user added to the background library.
+    case image(id: String)
+
+    public var isActive: Bool { self != .none }
+}
+
+/// Backgrounds that ship with the app (drawn in code, any resolution).
+public enum BuiltInBackground: String, CaseIterable, Sendable {
+    case spotlight, ink, studioGrey, warmStudio, ocean, sunset, bokeh
+
+    public var displayName: String {
+        switch self {
+        case .spotlight: "Spotlight"
+        case .ink: "Ink"
+        case .studioGrey: "Studio grey"
+        case .warmStudio: "Warm studio"
+        case .ocean: "Ocean"
+        case .sunset: "Sunset"
+        case .bokeh: "Bokeh"
+        }
+    }
+}
+
+/// Per-device crop, rotation, background and video delay.
 public struct DeviceProfile: Codable, Hashable, Sendable {
     public var crop: InsetCrop
     public var rotation: InsetRotation
     /// Delay of this device's video relative to the mic, from clap calibration
-    /// or the manual slider (phase 4).
+    /// or the manual slider (phase 5).
     public var videoDelayMs: Double
+    /// Background replacement or blur behind the person.
+    public var background: CameraBackground
 
-    public init(crop: InsetCrop, rotation: InsetRotation = .none, videoDelayMs: Double = 0) {
+    public init(crop: InsetCrop, rotation: InsetRotation = .none, videoDelayMs: Double = 0, background: CameraBackground = .none) {
         self.crop = crop
         self.rotation = rotation
         self.videoDelayMs = videoDelayMs
+        self.background = background
+    }
+
+    // Tolerant decoding: profiles saved before backgrounds existed still load.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        crop = try c.decode(InsetCrop.self, forKey: .crop)
+        rotation = try c.decodeIfPresent(InsetRotation.self, forKey: .rotation) ?? .none
+        videoDelayMs = try c.decodeIfPresent(Double.self, forKey: .videoDelayMs) ?? 0
+        background = (try? c.decodeIfPresent(CameraBackground.self, forKey: .background)) ?? CameraBackground.none
     }
 
     /// Defaults from the prototype: they crop out the Camera app's buttons and
@@ -292,6 +337,7 @@ public struct InsetChanges: Equatable, Sendable {
     public var centerX: Double?
     public var centerY: Double?
     public var rotation: InsetRotation?
+    public var background: CameraBackground?
 
     public init() {}
 
@@ -313,6 +359,7 @@ public struct InsetChanges: Equatable, Sendable {
         if let centerX { profile.crop.centerX = centerX }
         if let centerY { profile.crop.centerY = centerY }
         if let rotation { profile.rotation = rotation }
+        if let background { profile.background = background }
         layout = layout.normalized
         profile.crop = profile.crop.normalized
     }

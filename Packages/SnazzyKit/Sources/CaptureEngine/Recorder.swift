@@ -365,7 +365,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
         var buffer: CVPixelBuffer?
         CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer)
         guard let buffer else { droppedFrames += 1; return }
-        let image = Compositor.compose(screen: screen?.latest?.image, camera: camera?.latest?.image, spec: spec)
+        let image = Compositor.compose(screen: screen?.latest?.image, camera: camera?.latestImage, spec: spec)
         ciContext.render(image, to: buffer, bounds: CGRect(origin: .zero, size: spec.canvas), colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
         if sessionStart == nil {
             writer.startSession(atSourceTime: t)

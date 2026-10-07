@@ -43,7 +43,8 @@ public final class FramePreviewView: MTKView, MTKViewDelegate {
         lastSequence = frame.sequence
         dirty = false
 
-        let content = FrameTransform.apply(frame.image, profile: profile)
+        let processed = receiver?.effect.apply(frame.image) ?? frame.image
+        let content = FrameTransform.apply(processed, profile: profile)
         let target = drawableSize
         let scale = min(target.width / max(content.extent.width, 1), target.height / max(content.extent.height, 1))
         let w = content.extent.width * scale, h = content.extent.height * scale

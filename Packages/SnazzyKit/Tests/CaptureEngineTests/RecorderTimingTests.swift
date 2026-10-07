@@ -17,6 +17,7 @@ import Testing
         CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: nil, blockLength: 2048, blockAllocator: nil,
                                            customBlockSource: nil, offsetToData: 0, dataLength: 2048, flags: kCMBlockBufferAssureMemoryNowFlag,
                                            blockBufferOut: &block)
+        CMBlockBufferFillDataBytes(with: 0, blockBuffer: block!, offsetIntoDestination: 0, dataLength: 2048)
         var buffer: CMSampleBuffer?
         CMAudioSampleBufferCreateReadyWithPacketDescriptions(
             allocator: nil, dataBuffer: block!, formatDescription: format!, sampleCount: 1024,

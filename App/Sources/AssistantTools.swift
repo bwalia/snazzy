@@ -122,6 +122,26 @@ enum AssistantTools {
                 await capture.closePreview(deviceID: id)
                 return await capture.stateJSON()
             },
+            RegisteredTool(
+                name: "set_background",
+                description: "Change what's behind the person in the inset camera (on-device person segmentation; shows in previews and recordings). background: \"none\", \"blur\" (strength 0–1), a built-in (Spotlight, Ink, Studio grey, Warm studio, Ocean, Sunset, Bokeh), the name of an image the user added, or a #RRGGBB colour.",
+                inputSchema: object([
+                    "background": ["type": "string", "minLength": 1],
+                    "strength": ["type": "number", "minimum": 0, "maximum": 1, "description": "Blur strength"],
+                ], required: ["background"])
+            ) { @Sendable args in
+                let query = args["background"]?.stringValue ?? ""
+                guard let bg = await capture.backgrounds.resolve(query, strength: args["strength"]?.doubleValue) else {
+                    throw CaptureActionError(message: "No background called “\(query)”. Options: \(await capture.backgroundsJSON()["options"]?.compactString ?? "")")
+                }
+                try await capture.setBackground(bg)
+                return await capture.backgroundsJSON()
+            },
+            RegisteredTool(
+                name: "list_backgrounds",
+                description: "List the camera backgrounds available (built-ins and the user's images) and which is active.",
+                inputSchema: emptySchema
+            ) { @Sendable _ in await capture.backgroundsJSON() },
         ] + recordingTools(capture) + builderTools(builder) + modelTools(app) + settingsTools(app))
     }
 

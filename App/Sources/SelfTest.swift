@@ -74,7 +74,8 @@ enum SelfTest {
             return await recordTest(seconds: seconds, display: value(after: "--display"), camera: value(after: "--feed"), pauseAt: value(after: "--pause-at").flatMap(Double.init))
         }
         if arguments.contains("--composite") {
-            return await compositeSnapshot(display: value(after: "--display"), camera: value(after: "--feed"), out: value(after: "--out") ?? "composite")
+            return await compositeSnapshot(display: value(after: "--display"), camera: value(after: "--feed"), out: value(after: "--out") ?? "composite",
+                                           background: value(after: "--background"))
         }
         if let name = value(after: "--builder-snapshot") {
             return await builderSnapshot(project: name, out: value(after: "--out") ?? "snapshot", slides: Int(value(after: "--slides") ?? "") ?? 1)
@@ -264,7 +265,7 @@ enum SelfTest {
 
     /// Captures a display (default: main) with ScreenCaptureKit plus a camera
     /// inset, composites one frame and saves it as `<out>.png` in the app's temp folder.
-    static func compositeSnapshot(display: String?, camera: String?, out: String) async -> Bool {
+    static func compositeSnapshot(display: String?, camera: String?, out: String, background: String? = nil) async -> Bool {
         let catalog = DeviceCatalog()
         await catalog.refresh()
         print("screen recording allowed: \(CGPreflightScreenCaptureAccess())")
@@ -281,18 +282,28 @@ enum SelfTest {
         if let device {
             feed = CameraFeed(device: device)
             feed?.start()
+            if let background {
+                let library = BackgroundLibrary()
+                if let bg = library.resolve(background, strength: nil) {
+                    feed?.receiver.effect.configure(bg, image: library.image(for: bg))
+                    print("background: \(library.describe(bg))")
+                }
+            }
         }
         for _ in 0..<40 {
             try? await Task.sleep(for: .milliseconds(250))
             if screen.receiver.frameCount > 0, feed == nil || feed?.receiver.latest != nil { break }
         }
-        try? await Task.sleep(for: .seconds(1))
-        let spec = CompositeSpec(layout: InsetLayout(), profile: device.map { DeviceProfile.defaults(for: $0.kind) } ?? .defaults(for: .camera))
-        let image = Compositor.compose(screen: screen.receiver.latest?.image, camera: feed?.receiver.latest?.image, spec: spec)
+        try? await Task.sleep(for: .seconds(background == nil ? 1 : 3))  // segmentation needs a moment
+        var inset = InsetLayout()
+        if background != nil { inset.size = 0.5 }  // big enough to judge the edges
+        let spec = CompositeSpec(layout: inset, profile: device.map { DeviceProfile.defaults(for: $0.kind) } ?? .defaults(for: .camera))
+        let image = Compositor.compose(screen: screen.receiver.latest?.image, camera: feed?.receiver.latestImage, spec: spec)
         let ok = screen.receiver.frameCount > 0
         report(ok, "composite: screen frames=\(screen.receiver.frameCount) camera=\(device?.name ?? "none") frames=\(feed?.receiver.snapshot.frames ?? 0)")
         if let cg = CIContext().createCGImage(image, from: image.extent) {
-            let url = FileManager.default.temporaryDirectory.appending(path: "\(out).png")
+            // A full path (e.g. in ~/Movies) lets tools outside the sandbox read it.
+            let url = out.hasPrefix("/") ? URL(fileURLWithPath: out) : FileManager.default.temporaryDirectory.appending(path: "\(out).png")
             if let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) {
                 CGImageDestinationAddImage(dest, cg, nil)
                 CGImageDestinationFinalize(dest)
