@@ -201,8 +201,19 @@ h2 { font-size: clamp(34px, 4.6vw, 54px); line-height: 1.05; letter-spacing: -0.
 .dev-card h3 { margin: 0 0 8px; font-size: 19px; letter-spacing: -0.02em; }
 .dev-card p { margin: 0 0 14px; color: var(--muted); font-size: 15.5px; }
 .dev-card code { display: inline-block; font: 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: #DCD6FF; background: rgba(108,92,255,.14); border: 1px solid rgba(108,92,255,.3); padding: 6px 10px; border-radius: 10px; }
-.use-card { border-top: 3px solid var(--c); }
-.use-card .sector { margin: 0 0 6px; color: var(--c); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.matrix-wrap { margin-top: 44px; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, var(--night), #10152C); }
+.matrix { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 860px; }
+.matrix th, .matrix td { padding: 14px 12px; border-bottom: 1px solid var(--line); text-align: center; }
+.matrix tbody tr:last-child th, .matrix tbody tr:last-child td { border-bottom: 0; }
+.matrix thead th { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); vertical-align: bottom; }
+.matrix thead th:first-child, .matrix thead th:nth-child(2) { text-align: left; }
+.matrix tbody th { text-align: left; font-weight: 600; border-left: 3px solid var(--c); white-space: nowrap;
+  position: sticky; left: 0; background: var(--night); }
+.matrix .sector { display: block; color: var(--c); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+.matrix td.deck { text-align: left; color: var(--muted); }
+.matrix tbody tr:hover td, .matrix tbody tr:hover th { background: rgba(108,92,255,.08); }
+.matrix .tick { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--c); color: #0B1020; font-weight: 800; font-size: 13px; }
+.matrix .dash { color: var(--muted); opacity: .35; }
 .dev-note { color: var(--muted); margin-top: 28px; }
 .dev-note a { color: #B9A9FF; }
 .privacy { background: linear-gradient(180deg, #0E1330, var(--ink)); border-top: 1px solid var(--line); }
