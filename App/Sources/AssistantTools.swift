@@ -145,6 +145,7 @@ enum AssistantTools {
                 inputSchema: emptySchema
             ) { @Sendable _ in await capture.backgroundsJSON() },
         ] + recordingTools(capture) + builderTools(builder) + modelTools(app) + settingsTools(app)
+          + DeveloperTools.tools(app.developer)
           + (includeMCP ? app.mcp.registeredTools() : []))
     }
 
@@ -360,9 +361,9 @@ enum AssistantTools {
         return device.id
     }
 
-    static let emptySchema: JSONValue = ["type": "object", "properties": [:], "additionalProperties": false]
+    nonisolated static let emptySchema: JSONValue = ["type": "object", "properties": [:], "additionalProperties": false]
 
-    static func object(_ properties: [String: JSONValue], required: [String]) -> JSONValue {
+    nonisolated static func object(_ properties: [String: JSONValue], required: [String]) -> JSONValue {
         ["type": "object", "properties": .object(properties), "required": .array(required.map { .string($0) }),
          "additionalProperties": false]
     }

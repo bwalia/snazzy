@@ -79,7 +79,7 @@ struct SidePanel: View {
         case builder = "Builder"
         case sources = "Sources & Preview"
         case slides = "Slides"
-        case timeline = "Timeline"
+        case recordings = "Recordings"
         var id: String { rawValue }
     }
 
@@ -105,10 +105,8 @@ struct SidePanel: View {
                     ContentUnavailableView(
                         "No slides yet", systemImage: "rectangle.on.rectangle",
                         description: Text("Native slides arrive in phase 6. Ask the assistant to build an HTML presentation in the Builder now."))
-                case .timeline:
-                    ContentUnavailableView(
-                        "Timeline", systemImage: "timeline.selection",
-                        description: Text("Recordings, chapters and trimming arrive in phases 4 and 7."))
+                case .recordings:
+                    RecordingsPanel()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

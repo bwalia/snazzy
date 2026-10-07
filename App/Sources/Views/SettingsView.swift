@@ -13,6 +13,8 @@ struct SettingsView: View {
                 .tabItem { Label("Chat & Voice", systemImage: "waveform") }
             MCPSettings()
                 .tabItem { Label("MCP", systemImage: "point.3.connected.trianglepath.dotted") }
+            DeveloperSettingsView()
+                .tabItem { Label("Developer", systemImage: "hammer") }
         }
         .frame(width: 680, height: 560)
     }

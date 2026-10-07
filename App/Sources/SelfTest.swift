@@ -26,6 +26,24 @@ enum SelfTest {
             arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         }
 
+        if arguments.contains("--probe-dev") {
+            // What the sandbox allows for developer features.
+            for (path, args) in [("/usr/bin/git", ["--version"]), ("/opt/homebrew/bin/gh", ["--version"])] {
+                let p = Process()
+                p.executableURL = URL(fileURLWithPath: path)
+                p.arguments = args
+                let out = Pipe(); p.standardOutput = out; p.standardError = out
+                do {
+                    try p.run(); p.waitUntilExit()
+                    let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                    print("exec \(path): status \(p.terminationStatus) \(text.prefix(120).replacingOccurrences(of: "\n", with: " "))")
+                } catch {
+                    print("exec \(path): \(error.localizedDescription)")
+                }
+            }
+            print("AXIsProcessTrusted: \(AXIsProcessTrusted())")
+            return true
+        }
         if arguments.contains("--mcp-server") {
             // Snazzy Pro's own MCP server, exercised by the MCP client over HTTP.
             let app = AppModel()

@@ -23,6 +23,8 @@ final class CaptureController {
     let backgrounds = BackgroundLibrary()
     /// Called when a recording starts or finishes (session log).
     @ObservationIgnored var onRecordingEvent: ((String, [String: JSONValue]) -> Void)?
+    /// Called after a recording is saved (refreshes the Recordings library).
+    @ObservationIgnored var onRecordingSaved: (() -> Void)?
     /// The app's own windows that should appear in a display capture (e.g. the builder's result window).
     @ObservationIgnored var ownWindowsToInclude: () -> [UInt32] = { [] }
 
@@ -440,6 +442,7 @@ final class CaptureController {
         let result = await recorder.stop()
         useScreen("recorder", false)
         if let result {
+            onRecordingSaved?()
             onRecordingEvent?("recording_saved", ["file": .string(result.composite.path), "seconds": .number(result.duration)])
         }
         return result

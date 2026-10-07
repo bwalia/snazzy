@@ -27,6 +27,7 @@ final class AppModel {
     let builder: BuilderController
     @ObservationIgnored private(set) var presets: PresetController!
     @ObservationIgnored private(set) var mcp: MCPManager!
+    @ObservationIgnored private(set) var developer: DeveloperController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// The right-hand panel's tab (the builder switches to it when it works).
@@ -50,10 +51,12 @@ final class AppModel {
         self.chat = ChatSession(app: self)
         self.presets = PresetController(app: self)
         self.mcp = MCPManager(app: self, secrets: secrets)
+        self.developer = DeveloperController(app: self)
         refreshStoredKeys()
         startPathMonitor()
         mcp.start()
         builder.onActivity = { [weak self] in self?.sidePanelTab = .builder }
+        capture.onRecordingSaved = { [weak self] in self?.developer.refresh() }
         capture.onRecordingEvent = { [weak self] type, fields in self?.chat.logSession(type, fields) }
         builder.onPopOut = { [weak self] in
             guard let self else { return }
