@@ -10,29 +10,46 @@ struct SourcesPanel: View {
     /// Panel width at which previews move into their own large column.
     static let wideWidth: CGFloat = 860
 
+    /// Hides the settings column so the previews get the whole panel.
+    @AppStorage("SnazzyPro.sourcesSettingsHidden") private var settingsHidden = false
+
     var body: some View {
         GeometryReader { geo in
-            if geo.size.width >= Self.wideWidth {
-                // Wide: big previews that grow with the window, controls on the right.
+            if settingsHidden || geo.size.width >= Self.wideWidth {
+                // Wide (or settings hidden): previews grow with the window, settings on the right.
                 HStack(spacing: 0) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 18) {
-                            PreviewHeader()
-                            RecordingPreviewBlock(maxHeight: nil)
+                            HStack(alignment: .top) {
+                                PreviewHeader()
+                                settingsToggle
+                            }
+                            RecordingPreviewBlock(maxHeight: max(240, geo.size.height - (capture.insetFeed == nil ? 140 : 380)))
                             if capture.insetFeed != nil {
                                 Text("Camera").font(.headline)
-                                CameraPreviewBlock(maxHeight: max(240, geo.size.height * 0.42))
+                                // The camera needs far less room than the screen.
+                                CameraPreviewBlock(maxHeight: min(200, max(140, geo.size.height * 0.22)))
                             }
                         }
                         .padding(20)
                     }
                     .frame(maxWidth: .infinity)
-                    Divider()
-                    controls(showsPreviews: false)
-                        .frame(width: min(460, max(380, geo.size.width * 0.34)))
+                    if !settingsHidden {
+                        Divider()
+                        controls(showsPreviews: false)
+                            .frame(width: min(460, max(380, geo.size.width * 0.34)))
+                            .transition(.move(edge: .trailing))
+                    }
                 }
             } else {
-                controls(showsPreviews: true)
+                VStack(spacing: 0) {
+                    HStack {
+                        Spacer()
+                        settingsToggle
+                    }
+                    .padding(.horizontal, 12).padding(.top, 8)
+                    controls(showsPreviews: true)
+                }
             }
         }
         .task {
@@ -41,6 +58,15 @@ struct SourcesPanel: View {
         }
         .onAppear { capture.useScreen("sources-panel", true) }
         .onDisappear { capture.useScreen("sources-panel", false) }
+    }
+
+    private var settingsToggle: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { settingsHidden.toggle() }
+        } label: {
+            Label(settingsHidden ? "Show Settings" : "Hide Settings", systemImage: "sidebar.right")
+        }
+        .help(settingsHidden ? "Show the mic, source and camera settings" : "Hide the settings to give the previews the whole panel")
     }
 
     private func controls(showsPreviews: Bool) -> some View {
