@@ -94,24 +94,74 @@ enum AssistantTools {
 
             RegisteredTool(
                 name: "open_preview",
-                description: "Open a floating live preview of a camera showing exactly the inset region, so the user can check framing. It never appears in recordings. Defaults to the inset camera.",
-                inputSchema: object(["device": ["type": "string", "description": "Device name or ID; omit for the inset camera"]], required: [])
+                description: "Open a floating live preview. view \"camera\" (default) shows a camera's inset region so the user can check framing; view \"recording\" shows exactly what will be recorded (screen + camera inset). Previews never appear in recordings.",
+                inputSchema: object([
+                    "view": ["type": "string", "enum": ["camera", "recording"]],
+                    "device": ["type": "string", "description": "Camera name or ID for view camera; omit for the inset camera"],
+                ], required: [])
             ) { @Sendable args in
-                let id = try await resolveDeviceID(args["device"]?.stringValue, capture: capture)
-                try await capture.openPreview(deviceID: id)
+                if args["view"]?.stringValue == "recording" {
+                    await capture.openCompositePreview()
+                } else {
+                    let id = try await resolveDeviceID(args["device"]?.stringValue, capture: capture)
+                    try await capture.openPreview(deviceID: id)
+                }
                 return await capture.stateJSON()
             },
 
             RegisteredTool(
                 name: "close_preview",
-                description: "Close the floating preview of a device, or all previews if no device is given.",
-                inputSchema: object(["device": ["type": "string"]], required: [])
+                description: "Close floating previews: view \"recording\" closes the recording preview; otherwise the given camera's preview, or all camera previews if no device is given.",
+                inputSchema: object(["view": ["type": "string", "enum": ["camera", "recording"]], "device": ["type": "string"]], required: [])
             ) { @Sendable args in
+                if args["view"]?.stringValue == "recording" {
+                    await capture.closeCompositePreview()
+                    return await capture.stateJSON()
+                }
                 let id = try await resolveDeviceID(args["device"]?.stringValue, capture: capture)
                 await capture.closePreview(deviceID: id)
                 return await capture.stateJSON()
             },
-        ] + builderTools(builder) + modelTools(app))
+        ] + recordingTools(capture) + builderTools(builder) + modelTools(app))
+    }
+
+    // MARK: Recording
+
+    static func recordingTools(_ capture: CaptureController) -> [RegisteredTool] {
+        [
+            RegisteredTool(
+                name: "start_recording",
+                description: "Start recording the selected display or window with the camera inset and the microphone, after a countdown (default 3 s). Saves automatically to Movies/Snazzy Pro/Recordings with a timestamped name, plus raw tracks.",
+                inputSchema: object(["countdown": ["type": "integer", "minimum": 0, "maximum": 10]], required: [])
+            ) { @Sendable args in
+                try await capture.startRecording(countdown: args["countdown"]?.intValue ?? 3)
+                return await capture.recordingJSON()
+            },
+            RegisteredTool(
+                name: "pause_recording",
+                description: "Pause the recording (the paused time is left out of the video).",
+                inputSchema: emptySchema
+            ) { @Sendable _ in
+                await capture.pauseRecording()
+                return await capture.recordingJSON()
+            },
+            RegisteredTool(
+                name: "resume_recording",
+                description: "Resume a paused recording.",
+                inputSchema: emptySchema
+            ) { @Sendable _ in
+                await capture.resumeRecording()
+                return await capture.recordingJSON()
+            },
+            RegisteredTool(
+                name: "stop_recording",
+                description: "Stop and save the recording. Returns the file paths, duration and any camera freezes.",
+                inputSchema: emptySchema
+            ) { @Sendable _ in
+                await capture.stopRecording()
+                return await capture.recordingJSON()
+            },
+        ]
     }
 
     // MARK: Builder

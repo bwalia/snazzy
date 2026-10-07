@@ -40,6 +40,14 @@ final class AppModel {
         refreshStoredKeys()
         startPathMonitor()
         builder.onActivity = { [weak self] in self?.sidePanelTab = .builder }
+        capture.onRecordingEvent = { [weak self] type, fields in self?.chat.logSession(type, fields) }
+        builder.onPopOut = { [weak self] in
+            guard let self else { return }
+            Task { await self.capture.screen.setIncludedOwnWindows(self.capture.ownWindowsToInclude()) }
+        }
+        capture.ownWindowsToInclude = { [weak self] in
+            self?.builder.popOutWindowNumber.map { [UInt32($0)] } ?? []
+        }
         builder.onStep = { [weak self] step in
             self?.chat.logSession("builder", ["text": .string(step.text)])
         }
@@ -165,7 +173,7 @@ final class AppModel {
         let selection = activeSelection
         return [
             "app": "Snazzy Pro",
-            "build_phase": 3,
+            "build_phase": 4,
             "assistant": [
                 "task": .string(settings.activeTask.rawValue),
                 "provider": .string(selection.provider.rawValue),
@@ -180,7 +188,7 @@ final class AppModel {
                 return (task.rawValue, ["provider": .string(s.provider.rawValue), "model": .string(s.model)] as JSONValue)
             })),
             "slides": [],
-            "recording": "idle (recording arrives in phase 4)",
+            "recording": capture.recordingJSON(),
         ]
     }
 }

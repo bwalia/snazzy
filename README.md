@@ -4,7 +4,7 @@ A native macOS app (Swift, SwiftUI, macOS 15+) for making video presentations,
 driven by a chat assistant that can use local (Ollama) or cloud (Anthropic) models.
 See `PROMPT.md` for the full spec and phase plan.
 
-**Status: phase 3 (builder agent & voice chat)** of the plan in `ROADMAP.md`.
+**Status: phase 4 (recording)** of the plan in `ROADMAP.md`.
 Phase 1 added the XcodeGen project, Keychain-stored keys and streaming chat
 with tool calling (Ollama, Anthropic). Phase 2 adds device discovery, live
 camera/iPad feeds with stall detection, per-device crop/rotation, floating
@@ -31,6 +31,10 @@ build/DerivedData/Build/Products/Debug/SnazzyPro.app/Contents/MacOS/SnazzyPro --
 SnazzyPro --self-test --devices [--feed "iPad"] [--seconds 5]
 # Render a builder project off-screen: console report + a PNG per slide
 SnazzyPro --self-test --builder-snapshot q3-devops --slides 3
+# Record N seconds (main display + first iPad/iPhone + default mic) and inspect the files
+SnazzyPro --self-test --record 6 [--pause-at 3] [--display LG] [--feed iPad]
+# One frame of the composite from the live screen + camera
+SnazzyPro --self-test --composite
 # One chat turn with every app tool, printing the tool calls
 SnazzyPro --self-test --chat "Put my iPad camera bottom-left and open a preview" [--provider anthropic --model claude-opus-5-5]
 ```
@@ -66,6 +70,31 @@ Warnings are treated as errors in the app target.
 - The chat header shows the task, model, local/cloud badge (it pulses while
   sending to a cloud provider), token use, and a warning when offline or when a
   key is missing.
+
+## Recording (phase 4)
+
+- **Screen** comes from ScreenCaptureKit (`ScreenFeed`): a display or a window,
+  30 fps, long side capped at 3840 px. Snazzy Pro's own windows are excluded
+  from display capture, except the Builder's result window.
+- **One clock.** Screen, camera and mic samples are all timestamped on the
+  host clock, so nothing has to be lined up afterwards.
+- **Composite** (`Compositor`): screen fitted into 1920×1080, inset rotated,
+  cropped, scaled, rounded and bordered. The live "Preview of the recording"
+  (Sources tab, or ⌥⌘P floating) uses the same code, so it shows exactly what
+  is recorded.
+- **Recorder:** composites at a steady 30 fps from the latest frames into
+  `~/Movies/Snazzy Pro/Recordings/presentation-<timestamp>.mov` (H.264 + AAC).
+  Next to it, `presentation-<timestamp> raw/` holds `screen.mov` (HEVC),
+  `camera.mov` (HEVC), `mic.mov` (24-bit PCM) and `timeline.json` (pauses,
+  camera freezes, inset settings), all on one timeline, so the inset can be
+  changed later. No save dialogs.
+- **Robustness:** a stalled or unplugged camera never stops the screen or mic.
+  The inset holds its last frame, and the freeze goes in the timeline. A silent
+  or failing mic shows a warning, and the screen keeps recording.
+- **Controls:** toolbar Record/Pause/Stop with timer and mic meter, the
+  Record menu (⇧⌘R start/stop, ⌃⌘P pause), and the chat tools
+  `start_recording`, `pause_recording`, `resume_recording` and `stop_recording`.
+  Recordings are noted in the session log.
 
 ## Chat, builder and voice (phase 3)
 

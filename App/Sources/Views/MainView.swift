@@ -17,6 +17,10 @@ struct MainView: View {
                 SidePanel()
                     .frame(minWidth: 420)
             }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) { RecordingControls() }
+            }
+            .overlay(alignment: .bottom) { RecordingSavedBanner() }
         }
     }
 }

@@ -1,4 +1,5 @@
 import AppKit
+import CoreImage
 import CaptureEngine
 import Foundation
 import Observation
@@ -16,6 +17,13 @@ final class CaptureController {
     let catalog: DeviceCatalog
     let feeds: FeedManager
     let diagnostics: Diagnostics
+    /// Live capture of the selected display/window (for the recording preview and the recorder).
+    let screen: ScreenFeed
+    let recorder = Recorder()
+    /// Called when a recording starts or finishes (session log).
+    @ObservationIgnored var onRecordingEvent: ((String, [String: JSONValue]) -> Void)?
+    /// The app's own windows that should appear in a display capture (e.g. the builder's result window).
+    @ObservationIgnored var ownWindowsToInclude: () -> [UInt32] = { [] }
 
     private(set) var setup: CaptureSetup {
         didSet { if setup != oldValue { store.save(setup) } }
@@ -29,6 +37,9 @@ final class CaptureController {
 
     @ObservationIgnored private let store: CaptureSetupStore
     @ObservationIgnored private var previewWindows: [String: PreviewWindowController] = [:]
+    @ObservationIgnored private var compositeWindow: CompositePreviewWindowController?
+    @ObservationIgnored private var screenUsers: Set<String> = []
+    private(set) var compositePreviewOpen = false
 
     init(store: CaptureSetupStore = CaptureSetupStore(), diagnostics: Diagnostics = .shared) {
         self.store = store
@@ -36,6 +47,7 @@ final class CaptureController {
         self.setup = store.load()
         self.catalog = DeviceCatalog(diagnostics: diagnostics)
         self.feeds = FeedManager(diagnostics: diagnostics)
+        self.screen = ScreenFeed(diagnostics: diagnostics)
         catalog.onDevicesChanged = { [weak self] in self?.devicesChanged() }
         checkMic()
     }
@@ -101,6 +113,7 @@ final class CaptureController {
         }
         setup.source = .display(id: display.id, name: display.name)
         diagnostics.log("Capture source: display \(display.name)")
+        sourceChanged()
         return display
     }
 
@@ -121,12 +134,14 @@ final class CaptureController {
         }
         setup.source = .window(id: window.id, app: window.app, title: window.title)
         diagnostics.log("Capture source: window \(window.app) – \(window.title)")
+        sourceChanged()
         return window
     }
 
     func selectSlidesSource() {
         setup.source = .slides
         diagnostics.log("Capture source: slides")
+        sourceChanged()
     }
 
     // MARK: Inset device
@@ -197,10 +212,12 @@ final class CaptureController {
         p.crop = p.crop.normalized
         setup.profiles[deviceID] = p
         previewWindows[deviceID]?.contentChanged()
+        recorder.update(spec: compositeSpec)
     }
 
     func setLayout(_ layout: InsetLayout) {
         setup.layout = layout.normalized
+        recorder.update(spec: compositeSpec)
     }
 
     /// Applies set_inset changes to the layout and the inset device's profile.
@@ -219,6 +236,7 @@ final class CaptureController {
         changes.apply(layout: &layout, profile: &profile)
         setup.layout = layout
         setProfile(profile, for: target.uniqueID)
+        recorder.update(spec: compositeSpec)
     }
 
     func resetProfile(for device: InsetDeviceSelection) {
@@ -261,7 +279,133 @@ final class CaptureController {
 
     /// Windows that must never appear in a recording (used by the recorder, phase 4).
     var excludedWindowNumbers: [Int] {
-        previewWindows.values.compactMap(\.windowNumber)
+        previewWindows.values.compactMap(\.windowNumber) + [compositeWindow?.windowNumber].compactMap { $0 }
+    }
+
+    // MARK: Screen and recording preview
+
+    /// The ScreenCaptureKit source for the current selection (slides come in phase 6).
+    var screenSource: ScreenFeed.Source? {
+        switch setup.source {
+        case .display(let id, _)?: .display(id)
+        case .window(let id, _, _)?: .window(id)
+        default: nil
+        }
+    }
+
+    /// Someone (the Sources panel, the floating preview, the recorder) needs the screen feed.
+    func useScreen(_ user: String, _ active: Bool) {
+        if active { screenUsers.insert(user) } else { screenUsers.remove(user) }
+        Task { await updateScreenFeed() }
+    }
+
+    private func sourceChanged() {
+        Task { await updateScreenFeed() }
+    }
+
+    func updateScreenFeed() async {
+        guard !screenUsers.isEmpty, let source = screenSource else {
+            await screen.stop()
+            return
+        }
+        await screen.start(source, includingOwnWindows: ownWindowsToInclude())
+    }
+
+    var compositeSpec: CompositeSpec {
+        let profile = setup.insetDevice.map { setup.profile(for: $0.uniqueID, kind: $0.kind) } ?? .defaults(for: .camera)
+        return CompositeSpec(layout: setup.layout, profile: profile)
+    }
+
+    /// The current recorded picture: screen + inset.
+    func compositeFrame() -> (image: CIImage, sequence: Int)? {
+        let screenFrame = screen.receiver.latest
+        let cameraFrame = insetFeed?.receiver.latest
+        guard screenFrame != nil || cameraFrame != nil else { return nil }
+        let image = Compositor.compose(screen: screenFrame?.image, camera: cameraFrame?.image, spec: compositeSpec)
+        return (image, (screenFrame?.sequence ?? 0) &* 1_000_003 &+ (cameraFrame?.sequence ?? 0))
+    }
+
+    func openCompositePreview() {
+        if compositeWindow == nil {
+            let controller = CompositePreviewWindowController(capture: self)
+            controller.onClose = { [weak self] in
+                self?.compositeWindow = nil
+                self?.compositePreviewOpen = false
+                self?.useScreen("composite-window", false)
+            }
+            compositeWindow = controller
+        }
+        compositePreviewOpen = true
+        useScreen("composite-window", true)
+        compositeWindow?.show()
+        diagnostics.log("Recording preview opened", category: "preview")
+    }
+
+    func closeCompositePreview() {
+        compositeWindow?.close()
+    }
+
+    // MARK: Recording
+
+    /// Starts recording the selected screen, the inset camera and the mic.
+    func startRecording(countdown: Int = 3) async throws {
+        guard screenSource != nil else {
+            throw CaptureActionError(message: setup.source == .slides
+                ? "Recording slides arrives in phase 6. Choose a display or window for now."
+                : "Choose a display or window to record first.")
+        }
+        restoreInsetFeed()
+        useScreen("recorder", true)
+        await updateScreenFeed()
+        // Give the first screen frame a moment to arrive.
+        for _ in 0..<20 where screen.receiver.latest == nil { try? await Task.sleep(for: .milliseconds(100)) }
+        do {
+            try await recorder.start(screen: screen, camera: insetFeed, micID: setup.mic?.uniqueID,
+                                     spec: compositeSpec, countdown: countdown)
+            if recorder.state == .recording {
+                onRecordingEvent?("recording_started", ["mic": .string(setup.mic?.name ?? "default"),
+                                                        "camera": .string(setup.insetDevice?.name ?? "none")])
+            } else {
+                useScreen("recorder", false)
+            }
+        } catch {
+            useScreen("recorder", false)
+            throw error
+        }
+    }
+
+    func pauseRecording() { recorder.pause() }
+    func resumeRecording() { recorder.resume() }
+
+    @discardableResult
+    func stopRecording() async -> RecordingResult? {
+        let result = await recorder.stop()
+        useScreen("recorder", false)
+        if let result {
+            onRecordingEvent?("recording_saved", ["file": .string(result.composite.path), "seconds": .number(result.duration)])
+        }
+        return result
+    }
+
+    func recordingJSON() -> JSONValue {
+        var state: [String: JSONValue] = ["elapsed_seconds": .number((recorder.elapsed * 10).rounded() / 10)]
+        switch recorder.state {
+        case .idle: state["state"] = "idle"
+        case .countdown(let n): state["state"] = .string("countdown \(n)")
+        case .recording: state["state"] = "recording"
+        case .paused: state["state"] = "paused"
+        case .finishing: state["state"] = "saving"
+        case .failed(let m): state["state"] = "failed"; state["error"] = .string(m)
+        }
+        if let warning = recorder.warning { state["warning"] = .string(warning) }
+        if let last = recorder.lastResult {
+            state["last_recording"] = [
+                "file": .string(last.composite.path), "raw_tracks": .string(last.rawFolder.path),
+                "seconds": .number((last.duration * 10).rounded() / 10),
+                "camera_freezes": .number(Double(last.freezes.count)), "dropped_frames": .number(Double(last.droppedFrames)),
+            ]
+        }
+        return .object(state)
     }
 
     // MARK: State for the assistant
@@ -303,6 +447,8 @@ final class CaptureController {
                 "corner_radius": .number(setup.layout.cornerRadius),
             ],
             "open_previews": .array(openPreviewIDs.sorted().map { .string($0) }),
+            "recording_preview_open": .bool(compositePreviewOpen),
+            "screen_capture": .string(screen.state.description),
         ]
         if let warning = micWarning { state["microphone_warning"] = .string(warning) }
         if let inset = setup.insetDevice {

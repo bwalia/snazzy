@@ -64,11 +64,30 @@ struct AppCommands: Commands {
             Button("Open Inset Preview") { try? model.capture.openPreview() }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
                 .disabled(model.capture.setup.insetDevice == nil)
-            Button("Close Previews") { model.capture.closePreview() }
-                .disabled(model.capture.openPreviewIDs.isEmpty)
+            Button("Open Recording Preview") { model.capture.openCompositePreview() }
+                .keyboardShortcut("p", modifiers: [.command, .option])
+            Button("Close Previews") {
+                model.capture.closePreview()
+                model.capture.closeCompositePreview()
+            }
+                .disabled(model.capture.openPreviewIDs.isEmpty && !model.capture.compositePreviewOpen)
             Divider()
             Button("Refresh Devices") { Task { await model.capture.catalog.refresh() } }
-                .keyboardShortcut("r", modifiers: [.command, .shift])
+        }
+        CommandMenu("Record") {
+            let recorder = model.capture.recorder
+            if recorder.isActive {
+                Button("Stop Recording") { Task { await model.capture.stopRecording() } }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+            } else {
+                Button("Start Recording") { Task { try? await model.capture.startRecording() } }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+            }
+            Button(recorder.state == .paused ? "Resume Recording" : "Pause Recording") {
+                if recorder.state == .paused { model.capture.resumeRecording() } else { model.capture.pauseRecording() }
+            }
+            .keyboardShortcut("p", modifiers: [.command, .control])
+            .disabled(recorder.state != .recording && recorder.state != .paused)
         }
         CommandMenu("Assistant") {
             Button("Stop Generating") { model.chat.stop() }

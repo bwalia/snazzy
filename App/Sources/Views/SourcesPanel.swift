@@ -16,6 +16,7 @@ struct SourcesPanel: View {
                 CropSection()
             }
             LayoutSection()
+            RecordingPreviewSection()
             Section {
                 Button("Show Diagnostics") { openWindow(id: "diagnostics") }
             }
@@ -25,6 +26,8 @@ struct SourcesPanel: View {
             await capture.catalog.refresh()
             capture.restoreInsetFeed()
         }
+        .onAppear { capture.useScreen("sources-panel", true) }
+        .onDisappear { capture.useScreen("sources-panel", false) }
     }
 }
 
@@ -308,6 +311,40 @@ struct LabeledSlider: View {
                 Text(String(format: format, value)).monospacedDigit().frame(width: 56, alignment: .trailing)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+}
+
+/// Exactly what will be recorded: the screen with the camera inset on top.
+private struct RecordingPreviewSection: View {
+    @Environment(CaptureController.self) private var capture
+
+    var body: some View {
+        Section("Preview of the recording") {
+            CompositePreviewContent()
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            HStack {
+                Circle().fill(capture.screen.state == .live ? Color.green : Color.orange).frame(width: 8, height: 8)
+                Text(capture.screen.state == .live ? "Screen live\(capture.screen.frameSize.map { " · \(Int($0.width))×\(Int($0.height))" } ?? "") · output 1920×1080"
+                     : capture.screen.state.description)
+                    .font(.caption)
+                Spacer()
+                if capture.screen.state == .needsPermission {
+                    Button("Allow Screen Recording…") { capture.catalog.requestScreenRecording() }
+                }
+                if capture.compositePreviewOpen {
+                    Button("Close Floating Preview") { capture.closeCompositePreview() }
+                } else {
+                    Button("Open Floating Preview") { capture.openCompositePreview() }
+                }
+            }
+            if capture.screen.state == .needsPermission {
+                Text("After allowing Snazzy Pro in System Settings › Privacy & Security › Screen & System Audio Recording, quit and reopen the app.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Text("Snazzy Pro's own windows (chat, previews, this panel) are left out of the recording; the Builder's result window is included.")
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
 }

@@ -8,7 +8,7 @@ down by one.
    keys, streaming chat against Ollama and Anthropic, tool calling.
 2. **Devices & preview** ✅: list mics/cameras/iOS devices/displays/windows;
    live floating previews with per-device crop/rotation; tools to drive them from chat.
-3. **Builder agent & voice chat** (built, in review):
+3. **Builder agent & voice chat** ✅
    - A coding agent inside the app that builds presentations and app
      prototypes on the fly, using the configured models (local or cloud).
    - Shows on screen what it is building (files, steps, live progress) and the
@@ -20,7 +20,7 @@ down by one.
    - A fully functional chat system: conversations persisted, multiple
      conversations, attachments, copy/retry/edit, agents and LLMs configurable
      from chat.
-4. **Recording**: screen + mic + one camera inset, single process, composited
+4. **Recording** (built, in review): screen + mic + one camera inset, single process, composited
    file plus raw tracks, auto-named. Stall detection.
 5. **Sync**: clap calibration, per-device delay, manual slider.
 6. **Slides**: outline → slides → script from chat, slide recording mode,

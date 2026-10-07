@@ -46,6 +46,8 @@ final class BuilderController {
 
     /// Called when the builder starts working, so the UI can show the Builder tab.
     @ObservationIgnored var onActivity: (() -> Void)?
+    /// Called when the result window opens (so screen capture can include it).
+    @ObservationIgnored var onPopOut: (() -> Void)?
     /// Session log hook.
     @ObservationIgnored var onStep: ((Step) -> Void)?
 
@@ -282,6 +284,9 @@ final class BuilderController {
         return try await report()
     }
 
+    /// The result window's number, so screen recordings include it.
+    var popOutWindowNumber: Int? { popOut?.isVisible == true ? popOut?.windowNumber : nil }
+
     /// A bigger, separate window showing the result (e.g. to present a deck).
     func openPopOut() {
         guard let current, let url = indexURL else { return }
@@ -299,6 +304,7 @@ final class BuilderController {
         popOut?.title = current.name
         popOutWeb?.loadFileURL(url, allowingReadAccessTo: workspace.projectURL(current.name))
         popOut?.makeKeyAndOrderFront(nil)
+        onPopOut?()
     }
 
     // MARK: Log
