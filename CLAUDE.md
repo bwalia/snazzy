@@ -106,6 +106,12 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
   5. This repeats for at most 12 rounds. Two invalid rounds in a row stop and ask the user.
 
   History is append-only, and Anthropic thinking blocks are stored opaquely and echoed back.
+  **Never edit or trim the history sent to Anthropic on the client.** On Opus 5.5 and Sonnet 5.5
+  that invalidates thinking blocks, and newer accounts get a 400. Long-context relief is
+  server-side instead (`context_management`, `clear_tool_uses_20250919` in
+  `AnthropicMapping.requestBody`), and prompt caching is the top-level `cache_control`.
+  Cache hits are logged as "Anthropic usage" in the `provider` log category. Ollama, which has
+  no thinking binding, trims old tool payloads in `OllamaMapping.messages`.
   A new `ToolRegistry` is built for every send by `AppModel.makeToolRegistry(for: provider)`.
   `offMac` names who receives the results: the cloud provider, an MCP agent, or nil
   for a local model. Screen text and code are redacted and reviewed based on it.

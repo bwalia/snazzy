@@ -80,7 +80,13 @@ Warnings are treated as errors in the app target.
   from settings, `eager_input_streaming` on tools, and server-side refusal
   fallbacks (`fallbacks: "default"`) on models that support them. Thinking blocks
   are stored opaquely and sent back unchanged; history is append-only.
-- Ollama: `/api/chat` NDJSON with `tools`; `num_ctx` raised to 32k.
+- Anthropic prompt caching covers the whole prefix (tools, system and history).
+  Long chats rely on server-side context editing, which clears old tool calls and
+  results past about 150k input tokens and keeps the latest six. History is never
+  trimmed on the Mac, because that would invalidate thinking blocks.
+- Ollama: `/api/chat` NDJSON with `tools`; `num_ctx` raised to 32k. Tool calls
+  and results older than the last 8 messages are cut to 1,500 characters so
+  that long chats still fit.
 - Every tool call is validated against its JSON schema. An invalid call gets the
   error back so the model can retry once; a second invalid round stops and asks
   the user. Tools marked `requiresConfirmation` show a confirmation alert first.

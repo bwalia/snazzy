@@ -69,6 +69,7 @@ public struct AnthropicProvider: ModelProvider {
 public enum AnthropicMapping {
     public static let apiVersion = "2023-06-01"
     public static let fallbackBeta = "server-side-fallback-2026-07-01"
+    public static let contextManagementBeta = "context-management-2025-06-27"
 
     /// Models that accept `fallbacks: "default"` on the Claude API.
     static func supportsDefaultFallbacks(_ model: String) -> Bool {
@@ -76,7 +77,7 @@ public enum AnthropicMapping {
     }
 
     public static func betas(for model: String) -> [String] {
-        supportsDefaultFallbacks(model) ? [fallbackBeta] : []
+        (supportsDefaultFallbacks(model) ? [fallbackBeta] : []) + [contextManagementBeta]
     }
 
     public static func requestBody(_ request: ModelRequest) -> JSONValue {
@@ -87,6 +88,20 @@ public enum AnthropicMapping {
             "messages": .array(messages(request.messages)),
             // Adaptive thinking with readable summaries, shown collapsed in the chat.
             "thinking": ["type": "adaptive", "display": "summarized"],
+            // Cache everything up to the newest turn (tools, system, history); the
+            // breakpoint moves forward by itself as the conversation grows.
+            "cache_control": ["type": "ephemeral"],
+            // Long builder chats: once the prompt is large, the API clears old tool calls
+            // and results (file bodies included), keeping the latest few. Done server-side
+            // because trimming history here would invalidate thinking blocks. Rare on
+            // purpose, since each clearing pass rewrites the cache.
+            "context_management": ["edits": [[
+                "type": "clear_tool_uses_20250919",
+                "trigger": ["type": "input_tokens", "value": 150_000],
+                "keep": ["type": "tool_uses", "value": 6],
+                "clear_at_least": ["type": "input_tokens", "value": 40_000],
+                "clear_tool_inputs": true,
+            ]]],
         ]
         if let system = request.system, !system.isEmpty { body["system"] = .string(system) }
         if let effort = request.effort { body["output_config"] = ["effort": .string(effort)] }
@@ -223,7 +238,14 @@ public struct AnthropicStreamParser {
             }
         case "message_delta":
             if let reason = event["delta"]?["stop_reason"]?.stringValue { stopReason = reason }
-            if let u = event["usage"] { applyUsage(u) }
+            if let u = event["usage"] {
+                applyUsage(u)
+                // Shows whether prompt caching works (reads should grow turn by turn).
+                Log.provider.notice("Anthropic usage: input \(u["input_tokens"]?.intValue ?? 0), cache read \(u["cache_read_input_tokens"]?.intValue ?? 0), cache write \(u["cache_creation_input_tokens"]?.intValue ?? 0)")
+            }
+            if let edits = event["context_management"]?["applied_edits"], edits.arrayValue?.isEmpty == false {
+                Log.provider.notice("Anthropic cleared old tool uses: \(edits.compactString, privacy: .public)")
+            }
             return []
         case "message_stop":
             isFinished = true

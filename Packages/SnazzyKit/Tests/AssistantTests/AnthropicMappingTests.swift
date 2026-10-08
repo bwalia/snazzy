@@ -20,7 +20,11 @@ import Testing
         #expect(body["thinking"]?["type"] == "adaptive")
         #expect(body["output_config"]?["effort"] == "medium")
         #expect(body["fallbacks"] == "default")
-        #expect(AnthropicMapping.betas(for: "claude-opus-5-5") == ["server-side-fallback-2026-07-01"])
+        #expect(AnthropicMapping.betas(for: "claude-opus-5-5") == ["server-side-fallback-2026-07-01", "context-management-2025-06-27"])
+        #expect(body["cache_control"]?["type"] == "ephemeral")
+        let clear = try #require(body["context_management"]?["edits"]?.arrayValue?.first)
+        #expect(clear["type"] == "clear_tool_uses_20250919")
+        #expect(clear["clear_tool_inputs"] == true)
         let tools = try #require(body["tools"]?.arrayValue)
         #expect(tools[0]["name"] == "set_inset")
         #expect(tools[0]["input_schema"] == tool.inputSchema)
@@ -32,7 +36,7 @@ import Testing
         let body = AnthropicMapping.requestBody(ModelRequest(model: "claude-haiku-5-5", messages: [.user("x")]))
         #expect(body["fallbacks"] == nil)
         #expect(body["tools"] == nil)
-        #expect(AnthropicMapping.betas(for: "claude-haiku-5-5").isEmpty)
+        #expect(AnthropicMapping.betas(for: "claude-haiku-5-5") == ["context-management-2025-06-27"])
     }
 
     @Test func historyWithToolsMapsAndMergesRoles() throws {
