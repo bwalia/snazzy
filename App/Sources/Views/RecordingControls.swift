@@ -11,6 +11,10 @@ struct RecordingControls: View {
         let capture = model.capture
         let recorder = capture.recorder
         HStack(spacing: 8) {
+            Button { model.prompter.toggle() } label: {
+                Image(systemName: model.prompter.isShown ? "text.below.photo.fill" : "text.below.photo")
+            }
+            .help("Camera Prompter: read your notes or a script right under the camera (⌥⌘T). It's never recorded.")
             switch recorder.state {
             case .countdown(let n):
                 Text("Recording in \(n)…").monospacedDigit().foregroundStyle(.red)
