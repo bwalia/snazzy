@@ -192,7 +192,7 @@ final class BuilderController {
         let project = try workspace.createSample(sample)
         refreshProjects()
         open(project.name, announce: false)
-        step(.info, "Sample “\(sample.title)” copied to \(project.name)")
+        step(.info, "Sample “\(sample.title)” is in \(project.name)")
         return project
     }
 
@@ -305,6 +305,12 @@ final class BuilderController {
     func liveFinished(callID: String) {
         liveBuffers[callID] = nil
         if live?.callID == callID { live = nil }
+    }
+
+    /// The run ended or was cancelled: nothing is being written any more.
+    func clearLive() {
+        liveBuffers = [:]
+        live = nil
     }
 
     // MARK: Preview

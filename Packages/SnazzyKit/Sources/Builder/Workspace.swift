@@ -132,6 +132,8 @@ public struct Workspace: Sendable {
     public func read(project: String, path: String) throws -> String {
         let url = try resolve(project: project, path: path)
         guard let data = try? Data(contentsOf: url) else { throw WorkspaceError("No file \"\(path)\" in \(project).") }
+        // Same limit as writing: a huge file (an imported one, say) would flood the assistant's context.
+        guard data.count <= Self.maxFileBytes else { throw WorkspaceError("\"\(path)\" is too large to read (over 2 MB).") }
         guard let text = String(data: data, encoding: .utf8) else { throw WorkspaceError("\"\(path)\" is not a text file.") }
         return text
     }

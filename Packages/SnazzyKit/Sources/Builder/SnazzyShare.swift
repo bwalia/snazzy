@@ -20,6 +20,8 @@ public struct SnazzyShare: Codable, Sendable, Equatable {
     public static let maxCompressedBytes = 200_000_000
     public static let maxExpandedBytes = 300_000_000
     public static let maxFiles = 2_000
+    /// Per file: decks carry images and short videos, not whole films.
+    public static let maxFileBytes = 50_000_000
     public static let maxImages = 50
     public static let maxPresets = 50
 
@@ -129,8 +131,10 @@ public struct SnazzyShare: Codable, Sendable, Equatable {
             guard p.files.count <= Self.maxFiles else { throw WorkspaceError("Too many files in this project.") }
             for f in p.files {
                 guard Self.isSafeRelativePath(f.path) else { throw WorkspaceError("Unsafe file path in share: \(f.path)") }
+                guard f.data.count <= Self.maxFileBytes else { throw WorkspaceError("\(f.path) is too large to import.") }
             }
-            guard Set(p.files.map(\.path)).count == p.files.count else { throw WorkspaceError("Duplicate files in share.") }
+            // Case-insensitively: on a Mac "A.html" and "a.html" are the same file.
+            guard Set(p.files.map { $0.path.lowercased() }).count == p.files.count else { throw WorkspaceError("Duplicate files in share.") }
         }
         guard backgrounds.count <= Self.maxImages, presets.count <= Self.maxPresets else { throw WorkspaceError("Too many items in this share file.") }
     }

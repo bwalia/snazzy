@@ -164,10 +164,10 @@ extension Workspace {
     /// Copies a sample into the workspace as a presentation project (replacing
     /// an earlier copy of the same sample).
     @discardableResult
+    /// Copies a sample into a project, or opens the copy made before (with any edits:
+    /// opening a sample again never throws work away).
     public func createSample(_ sample: SampleDeck) throws -> BuilderProject {
-        if FileManager.default.fileExists(atPath: projectURL(sample.projectName).path) {
-            try deleteProject(sample.projectName)
-        }
+        if let existing = project(sample.projectName) { return existing }
         let project = try createProject(name: sample.projectName, kind: .presentation, title: sample.title)
         for (path, content) in sample.files() {
             try write(project: project.name, path: path, content: content)

@@ -234,7 +234,7 @@ enum AssistantTools {
             },
             RegisteredTool(
                 name: "open_sample_deck",
-                description: "Open an example presentation as a builder project, to show what a deck for a sector looks like or to start from. Samples: " + SampleDeck.all.map { "\($0.id) (\($0.sector.rawValue): \($0.title))" }.joined(separator: "; ") + ". Names and figures in samples are made up; rewrite them with the user's content when asked.",
+                description: "Open an example presentation as a builder project, to show what a deck for a sector looks like or to start from. Samples: " + SampleDeck.all.map { "\($0.id) (\($0.sector.rawValue): \($0.title))" }.joined(separator: "; ") + ". Opening a sample again opens the user's copy, with their edits. Names and figures in samples are made up; rewrite them with the user's content when asked.",
                 inputSchema: object([
                     "id": ["type": "string", "enum": .array(SampleDeck.all.map { .string($0.id) })],
                 ], required: ["id"]),
