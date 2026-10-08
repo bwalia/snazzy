@@ -40,6 +40,10 @@ final class BroadcastController {
     @ObservationIgnored private var broadcasters: [BroadcastPlatform: Broadcaster] = [:]
     @ObservationIgnored private var refresher: Task<Void, Never>?
     @ObservationIgnored private var startedRecording = false
+    /// Destinations that dropped while live and are waiting to reconnect.
+    @ObservationIgnored private var retrying: [BroadcastPlatform: Task<Void, Never>] = [:]
+    @ObservationIgnored private var attempts: [BroadcastPlatform: Int] = [:]
+    static let maxReconnects = 3
 
     /// Roughly what each 1080p stream needs (video + audio + overhead).
     static let uploadNeeded: [String: Double] = ["1080p": 6, "720p": 3.5]
@@ -148,22 +152,7 @@ final class BroadcastController {
             }
         }
         await withTaskGroup(of: Void.self) { group in
-            for p in targets {
-                guard let key = (try? app.secrets.secret(for: p.keychainAccount)) ?? nil, !key.isEmpty else { continue }
-                let server = server(for: p)
-                guard server.hasPrefix("rtmp://") || server.hasPrefix("rtmps://") else {
-                    states[p] = .failed("\(p.displayName): the server address must start with rtmps:// (or rtmp://).")
-                    continue
-                }
-                let b = Broadcaster()
-                b.onState = { [weak self] s in self?.stateChanged(s, for: p) }
-                b.onNetwork = { [weak self] r in self?.network[p] = r }
-                update(b)
-                broadcasters[p] = b
-                let quality = self.quality
-                let mic = app.capture.setup.mic?.uniqueID
-                group.addTask { try? await b.start(server: server, key: key, quality: quality, micID: mic) }
-            }
+            for p in targets { group.addTask { await self.connect(p) } }
         }
         if !liveDestinations.isEmpty {
             startedAt = Date()
@@ -192,17 +181,71 @@ final class BroadcastController {
         app.chat.logSession("broadcast_stopped", [:])
     }
 
+    /// Connects one destination; failures arrive through `stateChanged`.
+    private func connect(_ p: BroadcastPlatform) async {
+        guard let key = (try? app.secrets.secret(for: p.keychainAccount)) ?? nil, !key.isEmpty else {
+            return stateChanged(.failed("\(p.displayName): no stream key."), for: p)
+        }
+        let server = server(for: p)
+        guard server.hasPrefix("rtmp://") || server.hasPrefix("rtmps://") else {
+            return stateChanged(.failed("\(p.displayName): the server address must start with rtmps:// (or rtmp://)."), for: p)
+        }
+        let b = Broadcaster()
+        b.onState = { [weak self, weak b] s in
+            // Ignore a broadcaster that was stopped or replaced meanwhile.
+            guard let self, let b, self.broadcasters[p] === b else { return }
+            self.stateChanged(s, for: p)
+        }
+        b.onNetwork = { [weak self] r in self?.network[p] = r }
+        update(b)
+        broadcasters[p] = b
+        try? await b.start(server: server, key: key, quality: quality, micID: app.capture.setup.mic?.uniqueID)
+        // Stopped while it was connecting: don't leave it streaming on its own.
+        if broadcasters[p] !== b { await b.stop() }
+    }
+
     private func stateChanged(_ s: Broadcaster.State, for p: BroadcastPlatform) {
         states[p] = s
-        if case .failed = s {
+        switch s {
+        case .live:
+            if attempts[p] != nil { attempts[p] = nil; message = nil }
+        case .failed:
             broadcasters[p] = nil
-            if broadcasters.isEmpty, startedAt != nil { Task { await stop() } }
+            // A first connect that fails (wrong key or server) isn't retried.
+            guard startedAt != nil else { return }
+            if (attempts[p] ?? 0) < Self.maxReconnects { reconnect(p); return }
+            guard broadcasters.isEmpty, retrying.isEmpty else { return }
+            // Every destination is gone for good. Keep the copy on this Mac recording:
+            // it's the safety net for exactly this.
+            message = startedRecording ? "The stream ended, but the recording on this Mac continues. Stop it when you're done." : nil
+            startedRecording = false
+            finish()
+            app.chat.logSession("broadcast_stopped", ["reason": "connection lost"])
+        default:
+            break
+        }
+    }
+
+    /// Tries a dropped destination again after 2, 4, then 6 seconds.
+    private func reconnect(_ p: BroadcastPlatform) {
+        let attempt = (attempts[p] ?? 0) + 1
+        attempts[p] = attempt
+        states[p] = .connecting
+        message = "\(p.displayName) dropped. Reconnecting (try \(attempt) of \(Self.maxReconnects))…"
+        retrying[p] = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(2 * attempt)) } catch { return }
+            guard let self else { return }
+            self.retrying[p] = nil
+            await self.connect(p)
         }
     }
 
     private func finish() {
         refresher?.cancel()
         refresher = nil
+        for task in retrying.values { task.cancel() }
+        retrying = [:]
+        attempts = [:]
         broadcasters = [:]
         startedAt = nil
         network = [:]

@@ -92,8 +92,14 @@ enum SelfTest {
             b.destinations = [.custom]
             await b.start([.custom])
             report("broadcast live", b.state == .live, "\(b.stateJSON())")
-            try? await Task.sleep(for: .seconds(Double(value(after: "--seconds") ?? "6") ?? 6))
+            // Once a second, so a server restart mid-test shows the reconnect.
+            for _ in 0..<(Int(value(after: "--seconds") ?? "6") ?? 6) {
+                try? await Task.sleep(for: .seconds(1))
+                print("  \(b.state) recorder: \(app.capture.recorder.state) \(b.message ?? "")")
+            }
             await b.stop()
+            // A recording outlives a lost stream on purpose; end it here.
+            if app.capture.recorder.isActive { await app.capture.stopRecording() }
             report("broadcast stopped", b.state == .idle, "\(b.stateJSON())")
             if !hadKey { b.deleteKey(for: .custom) }
             b.platform = savedPlatform
