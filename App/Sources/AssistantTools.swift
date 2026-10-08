@@ -355,6 +355,30 @@ enum AssistantTools {
                 inputSchema: object([:], required: [])
             ) { @Sendable _ in await MainActor.run { live.brainstormJSON() } },
             RegisteredTool(
+                name: "post_to_audience",
+                description: "Show a message from the presenter to everyone in the live room, in a banner above the board (e.g. what's happening now, instructions, a question). Replaces the previous message; an empty message clears it. Write it as the presenter would say it.",
+                inputSchema: object(["message": ["type": "string", "maxLength": 500]], required: ["message"])
+            ) { @Sendable args in
+                let text = args["message"]?.stringValue ?? ""
+                return await MainActor.run {
+                    guard live.isRunning else { return ["error": "The live room isn't open."] as JSONValue }
+                    live.announce(text)
+                    return live.brainstormJSON()
+                }
+            },
+            RegisteredTool(
+                name: "add_idea_to_board",
+                description: "Add an idea to the live brainstorm board as the presenter (shown with a Presenter badge, can be voted on). Use for seeding the board or adding the presenter's own suggestions.",
+                inputSchema: object(["text": ["type": "string", "maxLength": 280]], required: ["text"])
+            ) { @Sendable args in
+                let text = args["text"]?.stringValue ?? ""
+                return await MainActor.run {
+                    guard live.isRunning else { return ["error": "The live room isn't open."] as JSONValue }
+                    live.addIdea(text)
+                    return live.brainstormJSON()
+                }
+            },
+            RegisteredTool(
                 name: "set_brainstorm",
                 description: "Change the brainstorm board: set the topic and/or open or close it for new ideas and votes.",
                 inputSchema: object([

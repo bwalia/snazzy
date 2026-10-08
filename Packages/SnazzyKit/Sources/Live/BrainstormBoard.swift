@@ -11,6 +11,8 @@ public struct BrainstormBoard: Sendable, Equatable {
         public var created: Date
         public var voters: Set<String>
         public var hidden: Bool
+        /// Posted by the presenter (from the Mac or the assistant).
+        public var fromHost: Bool = false
         /// Who posted it (browser ID), so one person can't flood the board.
         let poster: String
 
@@ -41,6 +43,8 @@ public struct BrainstormBoard: Sendable, Equatable {
 
     public var topic: String
     public var isOpen: Bool
+    /// A message from the presenter shown to everyone above the board.
+    public private(set) var announcement = ""
     public private(set) var notes: [Note] = []
     /// Bumped on every change, so viewers can tell when to refresh.
     public private(set) var revision = 0
@@ -99,6 +103,25 @@ public struct BrainstormBoard: Sendable, Equatable {
         revision += 1
     }
 
+    /// An idea from the presenter: no rate limits, works when the board is closed.
+    @discardableResult
+    public mutating func addFromHost(_ text: String, author: String = "Presenter") -> Note? {
+        let clean = Self.clean(text, max: Self.maxTextLength)
+        guard !clean.isEmpty else { return nil }
+        var note = Note(id: UUID().uuidString.prefix(8).lowercased(), text: clean, author: author, created: Date(),
+                        voters: [], hidden: false, poster: "host")
+        note.fromHost = true
+        notes.append(note)
+        revision += 1
+        return note
+    }
+
+    /// Sets (or clears, with "") the message shown to everyone.
+    public mutating func announce(_ text: String) {
+        announcement = Self.clean(text, max: 500)
+        revision += 1
+    }
+
     public mutating func setTopic(_ topic: String) {
         self.topic = Self.clean(topic, max: 200)
         revision += 1
@@ -123,10 +146,12 @@ public struct BrainstormBoard: Sendable, Equatable {
             "revision": .number(Double(revision)),
             "topic": .string(topic),
             "open": .bool(isOpen),
+            "announcement": .string(announcement),
             "notes": .array(ranked.map { n in
                 [
                     "id": .string(n.id), "text": .string(n.text), "author": .string(n.author),
                     "votes": .number(Double(n.votes)), "voted": .bool(voter.map { n.voters.contains($0) } ?? false),
+                    "host": .bool(n.fromHost),
                 ]
             }),
         ]
@@ -134,7 +159,7 @@ public struct BrainstormBoard: Sendable, Equatable {
 
     /// For the assistant: the ideas with votes, as plain text.
     public var summaryText: String {
-        let lines = ranked.map { "- \($0.text) (\($0.votes) vote\($0.votes == 1 ? "" : "s"), \($0.author))" }
+        let lines = ranked.map { "- \($0.text) (\($0.votes) vote\($0.votes == 1 ? "" : "s"), \($0.fromHost ? "presenter" : $0.author))" }
         return (topic.isEmpty ? "" : "Topic: \(topic)\n") + (lines.isEmpty ? "No ideas yet." : lines.joined(separator: "\n"))
     }
 

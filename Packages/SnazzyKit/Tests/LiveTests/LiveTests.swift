@@ -112,3 +112,21 @@ import SnazzyCore
         await #expect(throws: (any Error).self) { try await second.start() }
     }
 }
+
+@Suite struct PresenterBoardTests {
+    @Test func presenterIdeasAndAnnouncements() throws {
+        var board = BrainstormBoard(topic: "Fair")
+        board.setOpen(false)
+        let added = board.addFromHost("  Start with a plan  ")
+        let n = try #require(added)
+        board.addFromHost("Second")  // no rate limit
+        #expect(n.fromHost && n.author == "Presenter" && board.notes.count == 2)
+        let empty = board.addFromHost("   ")
+        #expect(empty == nil)
+        board.announce("Five minutes left — vote now!")
+        let json = board.publicJSON()
+        #expect(json["announcement"] == "Five minutes left — vote now!")
+        #expect(json["notes"]?.arrayValue?.first?["host"] == true)
+        #expect(board.summaryText.contains("(0 votes, presenter)"))
+    }
+}

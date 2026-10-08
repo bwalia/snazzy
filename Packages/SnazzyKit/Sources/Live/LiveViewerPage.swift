@@ -53,6 +53,12 @@ enum LiveViewerPage {
     padding: 4px 10px; font: inherit; font-size: 14px; cursor: pointer; }
   #notes button.on { background: rgba(108,92,255,.25); border-color: var(--a); }
   .empty { color: var(--muted); font-size: 14px; }
+  #announce { margin: 0 0 12px; padding: 12px 14px; border-radius: 12px; font-weight: 600;
+    background: linear-gradient(135deg, rgba(108,92,255,.35), rgba(217,70,239,.3)); border: 1px solid rgba(217,70,239,.5); }
+  #announce small { display: block; font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .8; margin-bottom: 2px; }
+  #notes li.host { border-color: rgba(217,70,239,.55); background: rgba(217,70,239,.12); }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px;
+    background: linear-gradient(135deg, var(--a), var(--b)); color: #fff; vertical-align: 1px; }
   #join { max-width: 360px; margin: 12vh auto; padding: 24px; text-align: center; }
   #join input { text-align: center; font-size: 24px; letter-spacing: .3em; text-transform: uppercase; margin: 16px 0; }
   [hidden] { display: none !important; }
@@ -82,6 +88,7 @@ enum LiveViewerPage {
   <aside aria-labelledby="boardTitle">
     <h2 id="boardTitle">Brainstorm</h2>
     <p id="topic"></p>
+    <div id="announce" hidden role="status" aria-live="polite"><small>From the presenter</small><span id="announceText"></span></div>
     <form id="noteForm">
       <textarea id="text" maxlength="280" placeholder="Add an idea…" aria-label="Your idea"></textarea>
       <div class="row">
@@ -119,6 +126,8 @@ enum LiveViewerPage {
   let board = { notes: [], open: true, topic: '' };
   function renderBoard() {
     $('topic').textContent = board.topic || 'Share your ideas';
+    $('announce').hidden = !board.announcement;
+    $('announceText').textContent = board.announcement || '';
     $('text').disabled = $('post').disabled = !board.open;
     $('text').placeholder = board.open ? 'Add an idea…' : 'The board is closed.';
     const list = $('notes');
@@ -131,6 +140,7 @@ enum LiveViewerPage {
       const li = document.createElement('li');
       const text = document.createElement('div'); text.className = 'text'; text.textContent = n.text;
       const by = document.createElement('span'); by.className = 'by'; by.textContent = n.author; text.append(by);
+      if (n.host) { li.className = 'host'; const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'Presenter'; by.append(b); }
       const vote = document.createElement('button');
       vote.textContent = '▲ ' + n.votes; vote.className = n.voted ? 'on' : '';
       vote.setAttribute('aria-label', (n.voted ? 'Remove vote' : 'Vote') + ', ' + n.votes + ' votes');

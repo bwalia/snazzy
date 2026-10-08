@@ -13,6 +13,7 @@ let package = Package(
         .library(name: "MCP", targets: ["MCP"]),
         .library(name: "Live", targets: ["Live"]),
         .library(name: "Broadcast", targets: ["Broadcast"]),
+        .library(name: "Remote", targets: ["Remote"]),
     ],
     // Third-party (approved): HaishinKit (BSD-3-Clause) for RTMP(S) streaming to
     // YouTube, Twitch and Vimeo. It brings Logboard (BSD-3-Clause). Pinned exactly.
@@ -27,6 +28,7 @@ let package = Package(
         .target(name: "Builder", dependencies: ["SnazzyCore"]),
         .target(name: "MCP", dependencies: ["SnazzyCore"]),
         .target(name: "Live", dependencies: ["SnazzyCore"]),
+        .target(name: "Remote"),
         .target(name: "Broadcast", dependencies: [
             "SnazzyCore", "CaptureEngine",
             .product(name: "RTMPHaishinKit", package: "HaishinKit.swift"),
@@ -38,6 +40,7 @@ let package = Package(
         .testTarget(name: "MCPTests", dependencies: ["MCP", "SnazzyCore"]),
         .testTarget(name: "LiveTests", dependencies: ["Live", "SnazzyCore"]),
         .testTarget(name: "BroadcastTests", dependencies: ["Broadcast", "SnazzyCore"]),
+        .testTarget(name: "RemoteTests", dependencies: ["Remote"]),
         .testTarget(name: "CaptureEngineTests", dependencies: ["CaptureEngine", "SnazzyCore"]),
     ]
 )

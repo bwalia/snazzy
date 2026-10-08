@@ -108,6 +108,8 @@ private struct RunningRoom: View {
 private struct BoardManager: View {
     @Environment(AppModel.self) private var model
     @State private var topic = ""
+    @State private var message = ""
+    @State private var idea = ""
 
     var body: some View {
         let live = model.live!
@@ -126,6 +128,22 @@ private struct BoardManager: View {
                 Button("Set Topic") { live.setTopic(topic) }.disabled(topic == board.topic)
             }
             .onAppear { topic = board.topic }
+            HStack {
+                TextField("Message to everyone", text: $message, prompt: Text("Message to everyone, e.g. “Two minutes left to vote”"))
+                    .onSubmit { live.announce(message) }
+                Button("Send") { live.announce(message) }.disabled(message.trimmingCharacters(in: .whitespaces).isEmpty)
+                if !board.announcement.isEmpty {
+                    Button("Clear") { live.announce(""); message = "" }
+                }
+            }
+            if !board.announcement.isEmpty {
+                Label("Showing: \(board.announcement)", systemImage: "megaphone").font(.callout).foregroundStyle(.secondary)
+            }
+            HStack {
+                TextField("Add an idea as the presenter", text: $idea)
+                    .onSubmit { live.addIdea(idea); idea = "" }
+                Button("Add Idea") { live.addIdea(idea); idea = "" }.disabled(idea.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
             if board.notes.isEmpty {
                 Text("No ideas yet. They appear here as people post them.").foregroundStyle(.secondary).font(.callout)
             } else {
@@ -135,7 +153,7 @@ private struct BoardManager: View {
                             Text("▲ \(note.votes)").font(.callout.monospacedDigit()).foregroundStyle(.secondary).frame(width: 48, alignment: .leading)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(note.text).strikethrough(note.hidden)
-                                Text(note.author + (note.hidden ? " · hidden from the room" : "")).font(.caption).foregroundStyle(.secondary)
+                                Text((note.fromHost ? "You (presenter)" : note.author) + (note.hidden ? " · hidden from the room" : "")).font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
                             Button(note.hidden ? "Show" : "Hide") { live.setHidden(note.id, !note.hidden) }

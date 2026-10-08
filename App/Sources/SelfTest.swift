@@ -142,6 +142,10 @@ enum SelfTest {
                 try? await Task.sleep(for: .milliseconds(200))
             }
             await app.live.start()
+            if arguments.contains("--presenter") {
+                app.live.announce("Welcome! Add your ideas, then vote for your favourite two.")
+                app.live.addIdea("A science fair where each class runs one experiment")
+            }
             print("JOIN \(app.live.joinURL?.absoluteString ?? "none") code=\(app.live.code) error=\(app.live.error ?? "none")")
             let end = Date().addingTimeInterval(seconds)
             var lastViewers = -1, lastIdeas = -1

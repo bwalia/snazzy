@@ -180,6 +180,12 @@ final class LiveController {
     func delete(_ id: String) { server?.updateBoard { $0.delete(id) } }
     func clearBoard() { server?.updateBoard { $0.clear() } }
 
+    /// Adds an idea as the presenter (shown with a Presenter badge).
+    func addIdea(_ text: String) { server?.updateBoard { $0.addFromHost(text) } }
+
+    /// Shows a message to everyone above the board ("" clears it).
+    func announce(_ text: String) { server?.updateBoard { $0.announce(text) } }
+
     /// Asks the assistant to build a deck from the ideas.
     func turnIdeasIntoDeck() {
         app.chat.send("Turn the ideas from the live brainstorm into a slide deck. Call get_brainstorm for the ideas, group them into themes (strongest ideas by votes first), then build a presentation: a title slide with the topic, one slide per theme, and a closing slide with next steps. Add short speaker notes to every slide.")
@@ -192,6 +198,7 @@ final class LiveController {
             "live_room_open": .bool(isRunning),
             "topic": .string(board.topic),
             "board_open": .bool(board.isOpen),
+            "announcement": .string(board.announcement),
             "ideas": .array(board.ranked.map { ["text": .string($0.text), "author": .string($0.author), "votes": .number(Double($0.votes))] }),
             "hidden_count": .number(Double(board.notes.filter(\.hidden).count)),
         ]
