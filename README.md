@@ -158,6 +158,10 @@ MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
 - **Robustness:** a stalled or unplugged camera never stops the screen or mic.
   The inset holds its last frame, and the freeze goes in the timeline. A silent
   or failing mic shows a warning, and the screen keeps recording.
+- **Crash-safe:** every movie is written in 2-second fragments, so a crash,
+  force quit or power cut keeps everything but the last moments. Quitting
+  finishes the recording first. Recording won't start with under 1 GB free,
+  and stops (and saves) itself below 500 MB.
 - **Controls:** toolbar Record/Pause/Stop with timer and mic meter, the
   Record menu (⇧⌘R start/stop, ⌃⌘P pause), and the chat tools
   `start_recording`, `pause_recording`, `resume_recording` and `stop_recording`.
