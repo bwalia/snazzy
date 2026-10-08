@@ -49,6 +49,47 @@ final class DeveloperController {
         refresh()
     }
 
+    // MARK: New layout (phase 7)
+
+    /// How far a New Layout export has got (0…1), while one runs.
+    private(set) var relayoutProgress: Double?
+    @ObservationIgnored private var relayoutTask: Task<URL, Error>?
+
+    /// A recording's raw tracks and the layout it was made with.
+    func relayoutSource(_ item: RecordingItem) throws -> Relayout.Recording {
+        guard let raw = item.rawFolder else {
+            throw CaptureActionError(message: "\(item.id) has no raw tracks (trimmed copies made before this version, or exports), so it can't be laid out again.")
+        }
+        return try Relayout.Recording(rawFolder: raw)
+    }
+
+    /// Makes the recording again with a new layout, as a new file next to it.
+    func relayout(_ item: RecordingItem, options: Relayout.Options) async throws -> URL {
+        guard relayoutTask == nil else { throw CaptureActionError(message: "A new layout is already being made. Wait for it, or cancel it.") }
+        let recording = try relayoutSource(item)
+        let image = app.capture.backgrounds.image(for: options.profile.background)
+        let video = item.url
+        relayoutProgress = 0
+        busy = "Making a new layout of \(item.id)…"
+        defer {
+            relayoutTask = nil
+            relayoutProgress = nil
+            busy = nil
+        }
+        let task = Task.detached(priority: .userInitiated) { [weak self] in
+            try await Relayout.render(recording, video: video, options: options, backgroundImage: image) { p in
+                Task { @MainActor in self?.relayoutProgress = p }
+            }
+        }
+        relayoutTask = task
+        let url = try await task.value
+        refresh()
+        app.chat.logSession("recording_relayout", ["file": .string(url.lastPathComponent), "resolution": .string(options.resolution.rawValue)])
+        return url
+    }
+
+    func cancelRelayout() { relayoutTask?.cancel() }
+
     // MARK: Library
 
     func refresh() {

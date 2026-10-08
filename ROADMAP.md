@@ -38,7 +38,7 @@ original spec listed an iOS/iPadOS app as out of scope.
    - Next: speaker notes for every sample slide; outline → slides → script from
      chat as a guided flow; camera big on title slides, small on content slides
      (phase 7 re-layout using the slide markers); embed chapters in the .mov.
-7. **Post**: timeline, trim, captions, re-layout inset, exports.
+7. **Post** (in progress): ✅ trim (keeps chapters), ✅ captions, ✅ **New Layout**: re-render a recording from its raw tracks with the camera moved, resized, re-cropped, a new background or lip sync, hidden, or in 4K (`Relayout`, Recordings › New Layout…, `relayout_recording`). Next: a timeline editor, vertical (9:16) clips, layout changes over time.
 
 8. **Mac App Store launch** (in progress, see `docs/launch/APP_STORE.md`):
    - Done: brand and app icon (`docs/brand/`, Liquid Glass layers in

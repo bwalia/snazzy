@@ -9,6 +9,7 @@ import CoreImage
 import Foundation
 import ImageIO
 import SnazzyCore
+import SwiftUI
 
 /// Headless checks run inside the sandboxed app:
 ///   SnazzyPro --self-test [--ollama-model NAME] [--anthropic-model NAME]
@@ -170,6 +171,63 @@ enum SelfTest {
             for r in recordings { for u in [r.composite, Chapters.url(forMovie: r.composite), r.rawFolder] { try? FileManager.default.removeItem(at: u) } }
             app.capture.apply(savedSetup)
             report("remote tour host", true, "paired \(paired), \(recordings.count) test recording(s) deleted")
+            return ok
+        }
+        if arguments.contains("--relayout-test") {
+            // New Layout through the app: a made-up recording in a temp folder, cancelled once, then made.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let dir = FileManager.default.temporaryDirectory.appending(path: "relayout-selftest-\(UUID().uuidString.prefix(6))", directoryHint: .isDirectory)
+            let raw = dir.appending(path: "presentation-test raw", directoryHint: .isDirectory)
+            defer { try? FileManager.default.removeItem(at: dir) }
+            do {
+                try FileManager.default.createDirectory(at: raw, withIntermediateDirectories: true)
+                try await solidMovie(raw.appending(path: "screen.mov"), color: CIColor(red: 0.9, green: 0.2, blue: 0.2), seconds: 6)
+                try await solidMovie(raw.appending(path: "camera.mov"), color: CIColor(red: 0.2, green: 0.3, blue: 0.9), seconds: 6)
+                let timeline: JSONValue = ["composite_starts_at_seconds": 0.2, "duration_seconds": 5, "inset": ["corner": "bottomRight", "size": 0.3, "aspect": "fit"]]
+                try timeline.encoded().write(to: raw.appending(path: "timeline.json"))
+                let video = dir.appending(path: "presentation-test.mov")
+                try Data().write(to: video)
+                let item = RecordingItem(id: "presentation-test", url: video, date: Date(), size: 0, rawFolder: raw)
+                var options = try app.developer.relayoutSource(item).original
+                options.layout.corner = .topLeft
+
+                let cancelled = Task { try await app.developer.relayout(item, options: options) }
+                try? await Task.sleep(for: .milliseconds(300))
+                app.developer.cancelRelayout()
+                let wasCancelled = await { () async -> Bool in (try? await cancelled.value) == nil }()
+                let leftovers = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.contains("new layout") || $0.contains("partial") }
+                report("cancel", wasCancelled && leftovers.isEmpty && app.developer.relayoutProgress == nil, "leftovers: \(leftovers)")
+
+                var seen: [Double] = []
+                let watcher = Task { @MainActor in
+                    while !Task.isCancelled {
+                        if let p = app.developer.relayoutProgress, seen.last != p { seen.append(p) }
+                        try? await Task.sleep(for: .milliseconds(20))
+                    }
+                }
+                let start = Date()
+                let url = try await app.developer.relayout(item, options: options)
+                watcher.cancel()
+                let seconds = try await AVURLAsset(url: url).load(.duration).seconds
+                report("new layout", abs(seconds - 5) < 0.2 && app.developer.relayoutProgress == nil,
+                       String(format: "%@, %.1f s long, made in %.1f s, %d progress updates", url.lastPathComponent, seconds, Date().timeIntervalSince(start), seen.count))
+                report("progress", seen.count >= 3 && seen == seen.sorted(), "\(seen.prefix(6).map { String(format: "%.2f", $0) })…")
+
+                // --show-sheet: the sheet on this made-up recording, on screen for a few seconds to look at.
+                if arguments.contains("--show-sheet") {
+                    let window = NSWindow(contentRect: NSRect(x: 120, y: 120, width: 880, height: 620), styleMask: [.titled], backing: .buffered, defer: false)
+                    window.title = "New Layout"
+                    window.contentView = NSHostingView(rootView: RelayoutSheet(item: item).environment(app))
+                    window.makeKeyAndOrderFront(nil)
+                    NSApp.activate()
+                    print("WINDOW \(window.windowNumber)")
+                    try? await Task.sleep(for: .seconds(Double(value(after: "--show-sheet-seconds") ?? "8") ?? 8))
+                    window.close()
+                }
+            } catch {
+                report("new layout", false, error.localizedDescription)
+            }
             return ok
         }
         if arguments.contains("--remote-pair") {
@@ -844,5 +902,32 @@ enum SelfTest {
         result.text = finalText
         return result
     }
+}
+
+/// A movie of one colour (for self-tests that need a recording).
+func solidMovie(_ url: URL, color: CIColor, seconds: Double, size: CGSize = CGSize(width: 640, height: 360)) async throws {
+    let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+    let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+        AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: Int(size.width), AVVideoHeightKey: Int(size.height),
+    ])
+    let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+        kCVPixelBufferWidthKey as String: Int(size.width), kCVPixelBufferHeightKey as String: Int(size.height),
+    ])
+    writer.add(input)
+    writer.startWriting()
+    writer.startSession(atSourceTime: .zero)
+    let context = CIContext()
+    for i in 0..<Int(seconds * 30) {
+        while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(2)) }
+        var buffer: CVPixelBuffer?
+        guard let pool = adaptor.pixelBufferPool else { break }
+        CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer)
+        guard let buffer else { break }
+        context.render(CIImage(color: color).cropped(to: CGRect(origin: .zero, size: size)), to: buffer)
+        adaptor.append(buffer, withPresentationTime: CMTime(value: CMTimeValue(i), timescale: 30))
+    }
+    input.markAsFinished()
+    await writer.finishWriting()
 }
 #endif

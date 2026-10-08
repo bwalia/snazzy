@@ -50,6 +50,7 @@ struct RecordingRow: View {
     let item: RecordingItem
     @State private var duration: Double?
     @State private var error: String?
+    @State private var newLayout = false
 
     var body: some View {
         let dev = model.developer!
@@ -66,6 +67,10 @@ struct RecordingRow: View {
                 if dev.settings.trimEnabled {
                     Button("Trim…") { dev.openTrimmer(item) }
                 }
+                if item.rawFolder != nil {
+                    Button("New Layout…") { newLayout = true }
+                        .help("Make it again with the camera elsewhere, cropped differently, another background or lip sync, or in 4K")
+                }
                 DeveloperRowActions(item: item, error: $error)
                 Spacer()
                 Button { dev.reveal(item) } label: { Image(systemName: "magnifyingglass") }.help("Show in Finder")
@@ -75,6 +80,7 @@ struct RecordingRow: View {
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
         }
         .padding(.vertical, 4)
+        .sheet(isPresented: $newLayout) { RelayoutSheet(item: item).environment(model) }
         .task(id: item.id) {
             duration = try? await AVURLAsset(url: item.url).load(.duration).seconds
         }

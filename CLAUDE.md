@@ -35,6 +35,7 @@ $APP --self-test --chat "…" [--provider anthropic --model claude-opus-5-5] [--
 $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj> | --mcp-server
 # more: --slides-record --broadcast-test --remote-pair --live-room --live-deck
 #       --share-roundtrip --s3-test --zoom-test --preset-roundtrip --builder-errors
+#       --relayout-test [--show-sheet]   (New Layout through the app on a made-up recording)
 
 Scripts/archive-appstore.sh [--upload]             # runs the tests, then archives a Release build for the Mac App Store
 ```
@@ -144,6 +145,13 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
   - `.chapters.vtt`, written from the slide markers.
 
   Session logs go to `~/Movies/Snazzy Pro/Sessions/`.
+
+  **New Layout** (`CaptureEngine/Relayout.swift`) re-renders a recording from `raw/` and
+  `timeline.json`. Anything a re-layout needs has to be saved in `timeline.json`
+  (`Recorder.writeTimeline`): layout, profile, background, `camera_latency_ms`, markers.
+  The output is written under a hidden `.partial` name and moved into place at the end.
+  The sound is pumped with `requestMediaDataWhenReady`, because feeding it from the frame
+  loop deadlocks.
 
   Stamp composited video with `CompositeSpec.syncedVideoTime(_:hasCamera:)`, which applies
   the camera's lip-sync delay (`DeviceProfile.videoDelayMs`, positive = picture behind sound).

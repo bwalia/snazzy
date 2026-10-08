@@ -16,6 +16,50 @@ enum DeveloperTools {
                 inputSchema: AssistantTools.emptySchema
             ) { @Sendable _ in await dev.recordingsJSON() },
         ]
+        tools.append(RegisteredTool(
+            name: "relayout_recording",
+            description: "Make a recording again from its raw tracks with a new layout, as a new file next to it (the original is kept): move or resize the camera inset (corner, size), crop it (aspect, zoom, center_x/center_y), rotate it, change its background (none, blur, as_recorded), fix lip sync (video_delay_ms), hide the camera, or export in 4K. Starts from the layout it was recorded with; pass only what should change. Takes about as long as the recording with a background, less without. recording_id can be \"latest\".",
+            inputSchema: AssistantTools.object([
+                "recording_id": ["type": "string", "minLength": 1],
+                "corner": ["type": "string", "enum": .array(InsetCorner.allCases.map { .string($0.rawValue) })],
+                "size": ["type": "number", "minimum": 0.05, "maximum": 0.6],
+                "border_width": ["type": "number", "minimum": 0, "maximum": 40],
+                "corner_radius": ["type": "number", "minimum": 0, "maximum": 0.5],
+                "aspect": ["type": "string", "description": "16:9, 4:3, 1:1, 9:16 or fit"],
+                "zoom": ["type": "number", "minimum": 0.1, "maximum": 1],
+                "center_x": ["type": "number", "minimum": 0, "maximum": 1],
+                "center_y": ["type": "number", "minimum": 0, "maximum": 1],
+                "rotation": ["type": "string", "enum": .array(InsetRotation.allCases.map { .string($0.rawValue) })],
+                "video_delay_ms": ["type": "number", "minimum": -500, "maximum": 1000],
+                "background": ["type": "string", "enum": ["as_recorded", "none", "blur"]],
+                "hide_camera": ["type": "boolean"],
+                "resolution": ["type": "string", "enum": ["1080p", "4K"]],
+            ], required: ["recording_id"])
+        ) { @Sendable args in
+            let item = try await dev.recording(args["recording_id"]?.stringValue)
+            var options = try await dev.relayoutSource(item).original
+            var c = InsetChanges()
+            c.corner = args["corner"]?.stringValue.flatMap(InsetCorner.init(rawValue:))
+            c.size = args["size"]?.doubleValue
+            c.borderWidth = args["border_width"]?.doubleValue
+            c.cornerRadius = args["corner_radius"]?.doubleValue
+            c.aspect = args["aspect"]?.stringValue.flatMap(InsetChanges.parseAspect)
+            c.zoom = args["zoom"]?.doubleValue
+            c.centerX = args["center_x"]?.doubleValue
+            c.centerY = args["center_y"]?.doubleValue
+            c.rotation = args["rotation"]?.stringValue.flatMap(InsetRotation.init(rawValue:))
+            c.videoDelayMs = args["video_delay_ms"]?.doubleValue
+            switch args["background"]?.stringValue {
+            case "none": c.background = CameraBackground.none
+            case "blur": c.background = .blur(strength: 0.6)
+            default: break
+            }
+            c.apply(layout: &options.layout, profile: &options.profile)
+            if args["hide_camera"]?.boolValue == true { options.showCamera = false }
+            if args["resolution"]?.stringValue == "4K" { options.resolution = .uhd4K }
+            let url = try await dev.relayout(item, options: options)
+            return ["file": .string(url.lastPathComponent), "resolution": .string(options.resolution.rawValue)]
+        })
         if s.trimEnabled {
             tools.append(RegisteredTool(
                 name: "trim_recording",
