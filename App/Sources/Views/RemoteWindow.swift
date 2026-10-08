@@ -30,7 +30,18 @@ struct RemoteWindow: View {
                                         .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                                 }
                             }
-                            Button("Cancel") { remote.closePairing() }
+                            HStack {
+                                Button("Cancel") { remote.closePairing() }
+                                #if DEBUG
+                                // Simulators can't scan: launch the iPhone app with -debugPairURL <link>.
+                                if let url = remote.pairingURL {
+                                    Button("Copy Pairing Link") {
+                                        NSPasteboard.general.clearContents()
+                                        NSPasteboard.general.setString(url.absoluteString, forType: .string)
+                                    }
+                                }
+                                #endif
+                            }
                         }
                     }
                 } else {
