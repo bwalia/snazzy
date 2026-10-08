@@ -10,8 +10,10 @@ stays unlocked until launch.*
 - The Pro features are the split below. The list, with each feature's
   release date, is data in
   `Packages/SnazzyKit/Sources/Entitlements/Resources/pro-features.json`.
-- Direct-download licences come from OpsAPI: offline-verifiable ES256 tokens
-  (compact JWS, with key rotation through JWKS).
+- Direct-download licences come from OpsAPI: licence files in its format v1
+  (ES256 compact JWS, keys rotated through a JWKS), checked offline. The OpsAPI
+  app's feature keys must be the ids in `pro-features.json`, and the app keeps
+  the licence's `highWater` so turning the clock back doesn't extend it.
 
 ## Model: open core
 
