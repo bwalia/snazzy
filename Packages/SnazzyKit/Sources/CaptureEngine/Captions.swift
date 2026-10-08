@@ -1,4 +1,5 @@
 import Foundation
+import SnazzyCore
 
 /// A transcribed word with its time in the recording.
 public struct TimedWord: Sendable, Hashable {
@@ -126,6 +127,14 @@ public enum Chapters {
         public init(at: Double, title: String) {
             self.at = at
             self.title = title
+        }
+    }
+
+    /// Slide markers from timeline.json as chapter marks, in seconds from `start`.
+    public static func marks(fromTimeline markers: [JSONValue], start: Double) -> [Mark] {
+        markers.compactMap { m in
+            guard m["type"]?.stringValue == "slide", let at = m["at_seconds"]?.doubleValue else { return nil }
+            return Mark(at: at - start, title: m["title"]?.stringValue ?? "Slide \((m["index"]?.intValue ?? 0) + 1)")
         }
     }
 

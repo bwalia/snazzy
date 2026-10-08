@@ -268,8 +268,18 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     private var _failure: String?
     private var _recorded: Double = 0
     private var _markers: [JSONValue] = []
+    /// How late camera frames reach the app after their capture time (first ~20 s),
+    /// so a later re-layout from camera.mov knows how much of the lip-sync delay that is.
+    private var _cameraLatencies: [Double] = []
     var failure: String? { stateLock.withLock { _failure } }
     var recordedSeconds: Double { stateLock.withLock { _recorded } }
+
+    /// Runs on the capture queue as a camera frame arrives.
+    private func noteCameraArrival(_ buffer: CMSampleBuffer) {
+        let lag = CMClockGetTime(clock).seconds - CMSampleBufferGetPresentationTimeStamp(buffer).seconds
+        guard lag >= 0, lag < 2 else { return }
+        stateLock.withLock { if _cameraLatencies.count < 600 { _cameraLatencies.append(lag) } }
+    }
 
     /// Notes an event (e.g. a slide change) at the current recording time.
     func mark(_ fields: [String: JSONValue]) {
@@ -336,7 +346,12 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
 
         // Raw tracks: every complete screen frame and every camera frame.
         screenConsumer = screen.addConsumer { [weak self] buffer in self?.raw(buffer, kind: .screen) }
-        if let camera { cameraConsumer = camera.addConsumer { [weak self] buffer in self?.raw(buffer, kind: .camera) } }
+        if let camera {
+            cameraConsumer = camera.addConsumer { [weak self] buffer in
+                self?.noteCameraArrival(buffer)
+                self?.raw(buffer, kind: .camera)
+            }
+        }
 
         do {
             try startMic(micID)
@@ -569,7 +584,8 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     }
 
     private func writeTimeline(_ result: RecordingResult, recordingStart: Date) {
-        let markers = stateLock.withLock { _markers }
+        let (markers, latencies) = stateLock.withLock { (_markers, _cameraLatencies.sorted()) }
+        let background = (try? JSONEncoder().encode(spec.profile.background)).flatMap { try? JSONValue.parse($0) } ?? .null
         let freezes: [JSONValue] = result.freezes.map {
             ["at_seconds": .number(max(0, $0.start.timeIntervalSince(recordingStart))), "duration_seconds": .number($0.duration)]
         }
@@ -583,13 +599,14 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
             "dropped_frames": .number(Double(result.droppedFrames)),
             "files": ["screen": "screen.mov", "camera": "camera.mov", "mic": "mic.mov"],
             "inset": [
-                "corner": .string(spec.layout.corner.rawValue), "size": .number(spec.layout.size),
+                "corner": .string(spec.layout.corner.rawValue), "size": .number(spec.layout.size), "margin": .number(spec.layout.margin),
                 "border_width": .number(spec.layout.borderWidth), "corner_radius": .number(spec.layout.cornerRadius),
                 "rotation": .string(spec.profile.rotation.rawValue), "zoom": .number(spec.profile.crop.zoom),
                 "center_x": .number(spec.profile.crop.centerX), "center_y": .number(spec.profile.crop.centerY),
                 "aspect": spec.profile.crop.aspect.map(JSONValue.number) ?? "fit",
-                "video_delay_ms": .number(spec.profile.videoDelayMs),
+                "video_delay_ms": .number(spec.profile.videoDelayMs), "background": background,
             ],
+            "camera_latency_ms": latencies.isEmpty ? .null : .number((latencies[latencies.count / 2] * 1000).rounded()),
             "camera_freezes": .array(freezes),
             "markers": .array(markers),
             "composite_starts_at_seconds": .number(queue.sync { sessionStart?.seconds } ?? 0),
@@ -598,11 +615,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
         try? timeline.encoded().write(to: rawFolder.appending(path: "timeline.json"))
         // Slide changes become chapters (WebVTT) next to the movie.
         let start = queue.sync { sessionStart?.seconds } ?? 0
-        let slides: [Chapters.Mark] = markers.compactMap { m in
-            guard m["type"]?.stringValue == "slide", let at = m["at_seconds"]?.doubleValue else { return nil }
-            return Chapters.Mark(at: at - start, title: m["title"]?.stringValue ?? "Slide \((m["index"]?.intValue ?? 0) + 1)")
-        }
-        if let vtt = Chapters.vtt(slides, duration: result.duration) {
+        if let vtt = Chapters.vtt(Chapters.marks(fromTimeline: markers, start: start), duration: result.duration) {
             try? vtt.write(to: Chapters.url(forMovie: result.composite), atomically: true, encoding: .utf8)
         }
     }

@@ -172,6 +172,13 @@ MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
   `camera.mov` (HEVC), `mic.mov` (24-bit PCM) and `timeline.json` (pauses,
   camera freezes, inset settings), all on one timeline, so the inset can be
   changed later. No save dialogs.
+- **New Layout** (Recordings › New Layout…, or `relayout_recording`): make a
+  recording again from its raw tracks with the camera in another corner, a
+  new size, crop, rotation, background (none, blur, as recorded) or lip-sync
+  delay, the camera hidden, or in 4K (HEVC). A live preview frame shows the
+  result; the new file goes next to the original, with its captions and
+  chapters, and the original is never changed. Cancel any time: nothing
+  half-made is left.
 - **Robustness:** a stalled or unplugged camera never stops the screen or mic.
   The inset holds its last frame, and the freeze goes in the timeline. A silent
   or unplugged mic shows a warning and is reopened every few seconds, so sound

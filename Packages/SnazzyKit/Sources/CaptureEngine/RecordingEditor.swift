@@ -70,20 +70,31 @@ public enum RecordingEditor {
                 guard clipped.duration.seconds > 0 else { continue }
                 try await export(rawAsset, range: clipped, to: folder.appending(path: name), fileType: .mov)
             }
-            try trimmedTimeline(timeline, start: s, end: e, video: output).encoded().write(to: folder.appending(path: "timeline.json"))
+            let trimmed = trimmedTimeline(timeline, start: s + offset, end: e + offset, duration: e - s, video: output)
+            try trimmed.encoded().write(to: folder.appending(path: "timeline.json"))
+            // The trimmed copy keeps its slide chapters.
+            if let vtt = Chapters.vtt(Chapters.marks(fromTimeline: trimmed["markers"]?.arrayValue ?? [], start: 0), duration: e - s) {
+                try? vtt.write(to: Chapters.url(forMovie: output), atomically: true, encoding: .utf8)
+            }
             trimmedRaw = folder
         }
         return TrimResult(video: output, rawFolder: trimmedRaw, duration: e - s)
     }
 
-    /// The timeline for a trimmed copy: times shift to the new start; freezes
+    /// The timeline for a trimmed copy whose raw tracks cover `start…end` of the
+    /// original's raw time: times shift to the new start; freezes and markers
     /// outside the range are dropped.
-    static func trimmedTimeline(_ timeline: JSONValue, start: Double, end: Double, video: URL) -> JSONValue {
+    static func trimmedTimeline(_ timeline: JSONValue, start: Double, end: Double, duration: Double, video: URL) -> JSONValue {
         var t = timeline.objectValue ?? [:]
-        t["duration_seconds"] = .number(end - start)
+        t["duration_seconds"] = .number(duration)
         t["composite"] = .string(video.lastPathComponent)
         t["composite_starts_at_seconds"] = 0
         t["trimmed_from"] = ["start_seconds": .number(start), "end_seconds": .number(end)]
+        t["markers"] = .array((timeline["markers"]?.arrayValue ?? []).compactMap { m -> JSONValue? in
+            guard var o = m.objectValue, let at = m["at_seconds"]?.doubleValue, at <= end else { return nil }
+            o["at_seconds"] = .number(max(0, at - start))
+            return .object(o)
+        })
         let freezes = (timeline["camera_freezes"]?.arrayValue ?? []).compactMap { f -> JSONValue? in
             guard let at = f["at_seconds"]?.doubleValue else { return nil }
             let d = f["duration_seconds"]?.doubleValue ?? 0

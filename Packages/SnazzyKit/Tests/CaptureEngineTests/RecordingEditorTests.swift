@@ -90,7 +90,8 @@ func makeMovie(_ url: URL, seconds: Double, fps: Int32 = 30, fileType: AVFileTyp
         try await makeMovie(video, seconds: 3)
         try await makeMovie(raw.appending(path: "screen.mov"), seconds: 3.2)
         let timeline: JSONValue = ["composite_starts_at_seconds": 0.2, "duration_seconds": 3,
-                                   "camera_freezes": [["at_seconds": 1.5, "duration_seconds": 0.4], ["at_seconds": 0.1, "duration_seconds": 0.1]]]
+                                   "camera_freezes": [["at_seconds": 1.5, "duration_seconds": 0.4], ["at_seconds": 0.1, "duration_seconds": 0.1]],
+                                   "markers": [["type": "slide", "index": 2, "at_seconds": 1.2], ["type": "slide", "index": 3, "at_seconds": 2.9]]]
         try timeline.encoded().write(to: raw.appending(path: "timeline.json"))
         let originalSize = try FileManager.default.attributesOfItem(atPath: video.path)[.size] as? Int
 
@@ -102,7 +103,10 @@ func makeMovie(_ url: URL, seconds: Double, fps: Int32 = 30, fileType: AVFileTyp
         #expect(abs(rawD - 1.5) < 0.1)
         let t = try JSONValue.parse(Data(contentsOf: result.rawFolder!.appending(path: "timeline.json")))
         #expect(t["camera_freezes"]?.arrayValue?.count == 1)
-        #expect(t["camera_freezes"]?.arrayValue?.first?["at_seconds"]?.doubleValue == 1.0)
+        // Raw times shift by the trimmed copy's start in raw time: 0.5 s + the 0.2 s offset.
+        #expect(abs((t["camera_freezes"]?.arrayValue?.first?["at_seconds"]?.doubleValue ?? 0) - 0.8) < 1e-9)
+        #expect(t["markers"]?.arrayValue?.count == 1)  // the one after the range is dropped
+        #expect(abs((t["markers"]?.arrayValue?.first?["at_seconds"]?.doubleValue ?? 0) - 0.5) < 1e-9)
         #expect(t["duration_seconds"]?.doubleValue == 1.5)
         #expect(try FileManager.default.attributesOfItem(atPath: video.path)[.size] as? Int == originalSize)
     }
