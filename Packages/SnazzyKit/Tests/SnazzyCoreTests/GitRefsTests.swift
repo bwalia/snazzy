@@ -51,4 +51,25 @@ import Testing
         d.set(Legal.termsVersion - 1, forKey: Legal.acceptedKey)
         #expect(!Legal.hasAccepted(d))
     }
+
+    /// The website pages are what the apps ship and show on the welcome screen.
+    static func sitePage(_ doc: Legal.Document) throws -> String {
+        let root = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../../../site")
+        return try String(contentsOf: root.appending(path: "\(doc.resourceName).html"), encoding: .utf8)
+    }
+
+    @Test func termsPageVersionMatchesWhatTheAppAsks() throws {
+        // Bump both together: the page's "Version N" and Legal.termsVersion.
+        #expect(Legal.pageVersion(fromSiteHTML: try Self.sitePage(.terms)) == Legal.termsVersion)
+    }
+
+    @Test func readerPagesAreTextOnlyAndOffline() throws {
+        for doc in Legal.Document.allCases {
+            let page = try #require(Legal.readerPage(fromSiteHTML: try Self.sitePage(doc)))
+            #expect(page.contains("<h1>") && page.contains("default-src 'none'"))
+            #expect(!page.contains("<script") && !page.contains("<img") && !page.contains("site.css") && !page.contains("<nav"))
+        }
+        #expect(Legal.readerPage(fromSiteHTML: "<html>no main</html>") == nil)
+        #expect(Legal.readerPage(fromSiteHTML: #"<main class="doc"><h1>T</h1><script>x()</script><img src="http://a/b"></main>"#)?.contains("x()") == false)
+    }
 }
