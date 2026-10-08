@@ -143,6 +143,12 @@ import SnazzyCore
         #expect(imported.name == deck.name + "-2" && imported.kind == .presentation)
         #expect(try Data(contentsOf: ws.projectURL(imported.name).appending(path: "img/logo.png")) == bytes)
         #expect(try ws.read(project: imported.name, path: "index.html") == ws.read(project: deck.name, path: "index.html"))
+
+        // Someone else's project starts offline (no internet for its pages); yours never is.
+        #expect(ws.project(imported.name)?.shared == true)
+        #expect(ws.project(deck.name)?.shared == nil)
+        try ws.setShared(imported.name, false)
+        #expect(ws.project(imported.name)?.shared == nil)
     }
 
     @Test func findsAndRemapsBackgroundImages() {

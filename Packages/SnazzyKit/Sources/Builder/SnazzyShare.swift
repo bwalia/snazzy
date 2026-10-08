@@ -243,7 +243,7 @@ extension Workspace {
         }
         let dir = projectURL(name)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let project = BuilderProject(name: name, kind: shared.kind, created: Date())
+        let project = BuilderProject(name: name, kind: shared.kind, created: Date(), shared: true)
         try JSONEncoder.iso.encode(project).write(to: dir.appending(path: ".snazzy-project.json"))
         do {
             for file in shared.files {

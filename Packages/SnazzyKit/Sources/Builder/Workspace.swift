@@ -13,6 +13,9 @@ public struct BuilderProject: Codable, Identifiable, Hashable, Sendable {
     public var name: String
     public var kind: ProjectKind
     public var created: Date
+    /// Came from someone else (a .snazzy file). Served without internet access, so
+    /// its pages can't send anything out, until the user allows it.
+    public var shared: Bool?
 }
 
 public struct WorkspaceError: LocalizedError, Equatable {
@@ -47,6 +50,19 @@ public struct Workspace: Sendable {
     }
 
     public func projectURL(_ name: String) -> URL { root.appending(path: Self.slug(name), directoryHint: .isDirectory) }
+
+    /// The project's metadata (nil if there's no such project).
+    public func project(_ name: String) -> BuilderProject? {
+        (try? Data(contentsOf: projectURL(name).appending(path: ".snazzy-project.json")))
+            .flatMap { try? JSONDecoder.iso.decode(BuilderProject.self, from: $0) }
+    }
+
+    /// Lets a shared project reach the internet (or takes that away again).
+    public func setShared(_ name: String, _ shared: Bool) throws {
+        guard var p = project(name) else { throw WorkspaceError("No project \"\(name)\".") }
+        p.shared = shared ? true : nil
+        try JSONEncoder.iso.encode(p).write(to: projectURL(name).appending(path: ".snazzy-project.json"))
+    }
 
     public func listProjects() -> [BuilderProject] {
         let dirs = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []

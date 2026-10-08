@@ -32,11 +32,16 @@ final class ProjectSchemeHandler: NSObject, WKURLSchemeHandler {
             let data = try Data(contentsOf: file)
             let mime = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
             let textual = mime.hasPrefix("text/") || mime.contains("javascript") || mime.contains("json") || mime.contains("svg")
-            let headers = [
+            var headers = [
                 "Content-Type": textual ? "\(mime); charset=utf-8" : mime,
                 "Content-Length": String(data.count),
                 "Cache-Control": "no-store",
             ]
+            // A project from someone else may only load its own files: no requests to the
+            // internet (a page can tighten this policy, never loosen it).
+            if workspace.project(project)?.shared == true {
+                headers["Content-Security-Policy"] = "default-src 'self' \(Self.scheme)://\(project) 'unsafe-inline' 'unsafe-eval' data: blob:"
+            }
             let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!
             task.didReceive(response)
             task.didReceive(data)

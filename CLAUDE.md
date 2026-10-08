@@ -156,6 +156,10 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 
   The Present window, slide capture, remote, chapters and `check_preview` all depend on
   these. Projects are served over `snazzy-project://<slug>/` by `ProjectSchemeHandler`.
+  - Projects imported from `.snazzy` files have `BuilderProject.shared == true`. They're served
+    with a CSP that allows only their own files, so there's no internet access until the user
+    clicks "Allow Internet".
+  - `NavigationGuard` keeps every page on its project. External links open in the browser.
 - **Remote:**
   - Discovery is Bonjour `_snazzyremote._tcp`, over TLS 1.2 PSK.
   - Pairing is a QR code holding a one-time 256-bit secret. Each device then gets its own key.
