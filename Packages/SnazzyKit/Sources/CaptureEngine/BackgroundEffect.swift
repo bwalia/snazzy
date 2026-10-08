@@ -66,19 +66,23 @@ public final class BackgroundEffect: @unchecked Sendable {
         queue.async { [weak self] in self?.segment(box.buffer, time: time, quality: q) }
     }
 
-    private func segment(_ pixels: CVPixelBuffer, time: CMTime, quality: Quality) {
+    /// A person mask (white = person) scaled to `size`, from whichever Vision handler
+    /// `perform` runs the request on (live frames, recorded frames, a still).
+    static func personMask(quality: Quality, size: CGSize, perform: (VNRequest) throws -> Void) throws -> CIImage? {
         let request = VNGeneratePersonSegmentationRequest()
         request.qualityLevel = quality.vision
         request.outputPixelFormat = kCVPixelFormatType_OneComponent8
+        try perform(request)
+        guard let result = request.results?.first else { return nil }
+        let m = CIImage(cvPixelBuffer: result.pixelBuffer)
+        return m.transformed(by: CGAffineTransform(scaleX: size.width / m.extent.width, y: size.height / m.extent.height))
+    }
+
+    private func segment(_ pixels: CVPixelBuffer, time: CMTime, quality: Quality) {
         var newMask: CIImage?
         do {
-            try sequence.perform([request], on: pixels)
-            if let result = request.results?.first {
-                let m = CIImage(cvPixelBuffer: result.pixelBuffer)
-                let sx = CGFloat(CVPixelBufferGetWidth(pixels)) / m.extent.width
-                let sy = CGFloat(CVPixelBufferGetHeight(pixels)) / m.extent.height
-                newMask = m.transformed(by: CGAffineTransform(scaleX: sx, y: sy))
-            }
+            let size = CGSize(width: CVPixelBufferGetWidth(pixels), height: CVPixelBufferGetHeight(pixels))
+            newMask = try Self.personMask(quality: quality, size: size) { try sequence.perform([$0], on: pixels) }
         } catch {
             Log.capture.error("Segmentation failed: \(error.localizedDescription, privacy: .public)")
         }
