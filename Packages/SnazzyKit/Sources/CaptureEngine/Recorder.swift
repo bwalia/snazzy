@@ -434,7 +434,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
             if writer.status == .failed { fail(writer.error?.localizedDescription ?? "writer failed") }
             return
         }
-        guard let t = recordingTime(CMClockGetTime(clock)) else { return }
+        guard let t = recordingTime(spec.syncedVideoTime(CMClockGetTime(clock), hasCamera: camera != nil)) else { return }
         // Keep timestamps strictly increasing.
         if lastVideoTime.isValid, t <= lastVideoTime { return }
         guard videoInput.isReadyForMoreMediaData, let pool = adaptor.pixelBufferPool else {
@@ -593,7 +593,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
             "camera_freezes": .array(freezes),
             "markers": .array(markers),
             "composite_starts_at_seconds": .number(queue.sync { sessionStart?.seconds } ?? 0),
-            "note": "Times are seconds from the start of the recording with pauses removed. Raw tracks share this timeline; the composite movie begins at composite_starts_at_seconds.",
+            "note": "Times are seconds from the start of the recording with pauses removed. Raw tracks share this timeline; the composite movie begins at composite_starts_at_seconds. camera.mov keeps the camera's own times: shift it earlier by inset.video_delay_ms (lip sync) when laying it out again.",
         ]
         try? timeline.encoded().write(to: rawFolder.appending(path: "timeline.json"))
         // Slide changes become chapters (WebVTT) next to the movie.

@@ -292,6 +292,8 @@ struct FeedStatusLine: View {
 
 private struct CropSection: View {
     @Environment(CaptureController.self) private var capture
+    @State private var calibrating = false
+    @State private var calibration: String?
 
     private static let aspects: [(String, Double?)] = [("16:9", 16.0 / 9.0), ("4:3", 4.0 / 3.0), ("1:1", 1), ("9:16", 9.0 / 16.0), ("Whole picture", nil)]
 
@@ -313,7 +315,29 @@ private struct CropSection: View {
                     LabeledSlider("Centre X", value: binding(profile, \.crop.centerX, device), range: 0...1, format: "%.3f")
                     LabeledSlider("Centre Y", value: binding(profile, \.crop.centerY, device), range: 0...1, format: "%.3f")
                 }
+                LabeledSlider("Lip sync", value: binding(profile, \.videoDelayMs, device), range: DeviceProfile.videoDelayRange, format: "%.0f ms")
+                HStack {
+                    Button(calibrating ? "Listening: clap 3 times…" : "Calibrate with Claps") { calibrate() }
+                        .disabled(calibrating || capture.recorder.isActive)
+                    if let calibration { Text(calibration).font(.caption).foregroundStyle(.secondary) }
+                }
+                Text("If your voice comes before your lips move, move this right (an iPad by cable is often 150–250 ms late; left for a Bluetooth mic). Or calibrate: clap 3 times, a second apart, with your hands in view.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Button("Reset to \(device.kind.rawValue) defaults") { capture.resetProfile(for: device) }
+            }
+        }
+    }
+
+    private func calibrate() {
+        calibrating = true
+        calibration = nil
+        Task {
+            defer { calibrating = false }
+            do {
+                let r = try await capture.calibrateLipSync()
+                calibration = "Set to \(Int(r.delayMs)) ms (\(r.claps) claps)."
+            } catch {
+                calibration = error.localizedDescription
             }
         }
     }
