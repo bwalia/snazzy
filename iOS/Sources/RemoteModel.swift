@@ -18,8 +18,8 @@ final class RemoteModel {
     }
 
     private(set) var hosts: [PairedHost] = []
-    private(set) var connection: Connection = .idle
-    private(set) var status: RemoteStatus?
+    private(set) var connection: Connection = .idle { didSet { updateWatch() } }
+    private(set) var status: RemoteStatus? { didSet { updateWatch() } }
     private(set) var lastResult: String?
     private(set) var chat: [(id: UUID, fromMe: Bool, text: String)] = []
     private(set) var busy = false
@@ -30,6 +30,8 @@ final class RemoteModel {
     @ObservationIgnored private var found: [RemoteBrowser.Found] = []
     @ObservationIgnored private var currentHostID: String?
     @ObservationIgnored private var retry: Task<Void, Never>?
+    /// The Apple Watch app, which controls the Mac through this app.
+    @ObservationIgnored private let watch = WatchRelay()
 
     static let hostsAccount = "remote.hosts"
 
@@ -45,6 +47,11 @@ final class RemoteModel {
     init() {
         hosts = loadHosts()
         browser.onChange = { [weak self] found in Task { @MainActor in self?.found(found) } }
+        watch.perform = { [weak self] command in
+            guard let self else { return (false, "Snazzy Pro isn't running on your iPhone.") }
+            return await self.perform(command)
+        }
+        watch.current = { [weak self] in self?.watchState ?? WatchState(problem: "Open Snazzy Pro on your iPhone.", status: nil) }
     }
 
     func start() {
@@ -160,15 +167,36 @@ final class RemoteModel {
     // MARK: Commands
 
     func send(_ command: RemoteCommand) {
-        guard let client else { return }
+        guard client != nil else { return }
         busy = true
         Task {
-            let (ok, message) = await client.send(command)
+            let (ok, message) = await perform(command)
             busy = false
             lastResult = ok ? nil : (message ?? "That didn't work.")
             if ok { UIImpactFeedbackGenerator(style: .medium).impactOccurred() } else { UINotificationFeedbackGenerator().notificationOccurred(.error) }
         }
     }
+
+    /// Runs a command on the Mac and returns its answer.
+    func perform(_ command: RemoteCommand) async -> (ok: Bool, message: String?) {
+        guard let client else { return (false, "Your iPhone isn't connected to a Mac.") }
+        return await client.send(command)
+    }
+
+    // MARK: Apple Watch
+
+    private var watchState: WatchState {
+        let problem: String? = switch connection {
+        case .connected: status == nil ? "Waiting for the Mac…" : nil
+        case .connecting(let name): "Connecting to \(name)…"
+        case .searching: "Looking for your Mac…"
+        case .failed(let reason): reason
+        case .idle: hosts.isEmpty ? "Pair your iPhone with your Mac first." : "Not connected to your Mac."
+        }
+        return WatchState(problem: problem, status: status)
+    }
+
+    private func updateWatch() { watch.publish(watchState) }
 
     func ask(_ text: String) {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)

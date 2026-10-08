@@ -4,7 +4,8 @@ A presentation studio for the Mac that you run by conversation (Swift, SwiftUI,
 macOS 15+). It plans your talk, builds the slides, frames your camera and
 records the video, then takes it live: a classroom room on your Wi-Fi with a
 brainstorm board, or YouTube, Twitch and Vimeo. An iPhone/iPad app is the
-remote and teleprompter. The assistant uses local (Ollama, Apple on-device) or
+remote and teleprompter, and an Apple Watch app (inside the iPhone app)
+starts, pauses and stops recording and changes slides. The assistant uses local (Ollama, Apple on-device) or
 cloud (Anthropic) models.
 Website: https://bwalia.github.io/snazzy/ (source in `site/`, deployed by
 `.github/workflows/pages.yml`). Brand: `docs/brand/`. Launch plan: `docs/launch/APP_STORE.md`.
