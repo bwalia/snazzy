@@ -84,6 +84,30 @@ public enum Captions {
         return String(text[..<split]) + "\n" + String(text[text.index(after: split)...])
     }
 
+    /// Cues from SubRip text.
+    public static func parseSRT(_ text: String) -> [CaptionCue] {
+        text.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n\n").compactMap { block in
+            let lines = block.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+            guard lines.count >= 3, let arrow = lines[1].range(of: " --> ") else { return nil }
+            func seconds(_ s: String) -> Double? {
+                let p = s.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".").split(separator: ":").compactMap { Double($0) }
+                return p.count == 3 ? p[0] * 3600 + p[1] * 60 + p[2] : nil
+            }
+            guard let a = seconds(String(lines[1][..<arrow.lowerBound])), let b = seconds(String(lines[1][arrow.upperBound...])) else { return nil }
+            return CaptionCue(start: a, end: b, text: lines[2...].joined(separator: "\n").trimmingCharacters(in: .newlines))
+        }
+    }
+
+    /// The cues of a part (`from`, `length` seconds), timed from its start. Cues cut by the
+    /// edges are trimmed, and dropped if under 0.3 s is left.
+    public static func clip(_ cues: [CaptionCue], from start: Double, length: Double) -> [CaptionCue] {
+        func ms(_ t: Double) -> Double { (t * 1000).rounded() / 1000 }  // what SRT keeps
+        return cues.compactMap { c in
+            let s = ms(max(c.start - start, 0)), e = ms(min(c.end - start, length))
+            return e - s >= 0.3 ? CaptionCue(start: s, end: e, text: c.text) : nil  // shorter can't be read
+        }
+    }
+
     public static func srt(_ cues: [CaptionCue]) -> String {
         cues.enumerated().map { i, c in
             "\(i + 1)\n\(timestamp(c.start, separator: ",")) --> \(timestamp(c.end, separator: ","))\n\(c.text)\n"

@@ -71,4 +71,12 @@ import Testing
         #expect(Chapters.vtt([.init(at: 0, title: "Only one")], duration: 30) == nil)
         #expect(Chapters.url(forMovie: URL(fileURLWithPath: "/x/presentation-1.mov")).lastPathComponent == "presentation-1.chapters.vtt")
     }
+
+    /// A clip gets the captions of its part, timed from its start.
+    @Test func parsesAndClipsSRT() {
+        let cues = [CaptionCue(start: 0.5, end: 1.4, text: "Hello there"), CaptionCue(start: 1.5, end: 3, text: "Line one\nline two")]
+        #expect(Captions.parseSRT(Captions.srt(cues)) == cues)
+        let clip = Captions.clip(cues, from: 1.2, length: 1.0)
+        #expect(clip == [CaptionCue(start: 0.3, end: 1.0, text: "Line one\nline two")])  // the first keeps only 0.2 s: too short to read
+    }
 }

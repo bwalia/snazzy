@@ -94,7 +94,8 @@ func pixel(_ image: CGImage, x: Double, y: Double) -> (r: Int, g: Int, b: Int) {
         try timeline.encoded().write(to: raw.appending(path: "timeline.json"))
         let video = dir.appending(path: "presentation-1.mov")
         try Data("original".utf8).write(to: video)
-        try "1\n00:00:00,000 --> 00:00:01,000\nHello\n".write(to: video.deletingPathExtension().appendingPathExtension("srt"), atomically: true, encoding: .utf8)
+        try "1\n00:00:00,000 --> 00:00:01,000\nHello\n\n2\n00:00:01,200 --> 00:00:02,000\nWorld\n".write(
+            to: video.deletingPathExtension().appendingPathExtension("srt"), atomically: true, encoding: .utf8)
         return (video, raw)
     }
 
@@ -138,6 +139,30 @@ func pixel(_ image: CGImage, x: Double, y: Double) -> (r: Int, g: Int, b: Int) {
         #expect(chapters.contains("Intro") && chapters.contains("Results"))
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).allSatisfy { !$0.contains("partial") })
         #expect(try String(contentsOf: video, encoding: .utf8) == "original")
+    }
+
+    /// A 1.5 s vertical clip: screen on top, camera below, its own captions.
+    @Test func makesAVerticalClip() async throws {
+        let (video, raw) = try await recording()
+        defer { try? FileManager.default.removeItem(at: video.deletingLastPathComponent()) }
+        let rec = try Relayout.Recording(rawFolder: raw)
+        var options = rec.original
+        options.resolution = .vertical
+        options.range = 1.0...2.5
+        let output = try await Relayout.render(rec, video: video, options: options)
+        #expect(output.lastPathComponent == "presentation-1 (vertical clip).mp4")
+        let asset = AVURLAsset(url: output)
+        #expect(abs(try await asset.load(.duration).seconds - 1.5) < 0.15)
+        #expect(try await asset.loadTracks(withMediaType: .video).first?.load(.naturalSize) == CGSize(width: 1080, height: 1920))
+        let generator = AVAssetImageGenerator(asset: asset)
+        let (frame, _) = try await generator.image(at: CMTime(seconds: 0.7, preferredTimescale: 600))
+        #expect(pixel(frame, x: 0.5, y: 0.1).r > 150 && pixel(frame, x: 0.5, y: 0.8).b > 150)
+        // Only the caption inside the clip, from its start: 1.2–2.0 s → 0.2–1.0 s.
+        let srt = try String(contentsOf: output.deletingPathExtension().appendingPathExtension("srt"), encoding: .utf8)
+        #expect(Captions.parseSRT(srt) == [CaptionCue(start: 0.2, end: 1.0, text: "World")])
+        // Too short to be a clip.
+        options.range = 1.0...1.5
+        await #expect(throws: CaptureError.self) { try await Relayout.render(rec, video: video, options: options) }
     }
 
     @Test func previewShowsTheLayoutAndCanHideTheCamera() async throws {

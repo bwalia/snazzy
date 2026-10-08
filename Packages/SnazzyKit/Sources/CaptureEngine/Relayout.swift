@@ -13,8 +13,18 @@ public enum Relayout {
     public enum Resolution: String, CaseIterable, Codable, Sendable {
         case hd1080 = "1080p"
         case uhd4K = "4K"
+        /// 9:16 for Shorts, Reels, TikTok: the screen on top, the camera below.
+        case vertical = "Vertical"
 
-        public var canvas: CGSize { self == .uhd4K ? CGSize(width: 3840, height: 2160) : CGSize(width: 1920, height: 1080) }
+        public var canvas: CGSize {
+            switch self {
+            case .hd1080: CGSize(width: 1920, height: 1080)
+            case .uhd4K: CGSize(width: 3840, height: 2160)
+            case .vertical: CGSize(width: 1080, height: 1920)
+            }
+        }
+
+        var arrangement: CompositeSpec.Arrangement { self == .vertical ? .stacked : .inset }
     }
 
     public struct Options: Equatable, Sendable {
@@ -22,12 +32,26 @@ public enum Relayout {
         public var profile: DeviceProfile
         public var showCamera: Bool
         public var resolution: Resolution
+        /// Only this part of the recording (seconds from its start); nil = all of it.
+        public var range: ClosedRange<Double>?
 
-        public init(layout: InsetLayout, profile: DeviceProfile, showCamera: Bool = true, resolution: Resolution = .hd1080) {
+        public init(layout: InsetLayout, profile: DeviceProfile, showCamera: Bool = true, resolution: Resolution = .hd1080,
+                    range: ClosedRange<Double>? = nil) {
             self.layout = layout
             self.profile = profile
             self.showCamera = showCamera
             self.resolution = resolution
+            self.range = range
+        }
+
+        /// "new layout", "clip 4K", "vertical clip"…: what the new file is called after.
+        var suffix: String {
+            switch (resolution, range != nil) {
+            case (.vertical, true): "vertical clip"
+            case (.vertical, false): "vertical"
+            case (_, true): resolution == .uhd4K ? "clip 4K" : "clip"
+            case (_, false): resolution == .uhd4K ? "new layout 4K" : "new layout"
+            }
         }
     }
 
@@ -89,6 +113,14 @@ public enum Relayout {
             return p
         }
 
+        /// The part to make, in seconds from the recording's start, and its length.
+        public func part(_ options: Options) throws -> (start: Double, length: Double) {
+            guard let range = options.range else { return (0, duration) }
+            let start = max(0, range.lowerBound), end = min(range.upperBound, duration)
+            guard end - start >= 1 else { throw CaptureError("A clip has to be at least a second long.") }
+            return (start, end - start)
+        }
+
         /// Where to look in camera.mov for the picture that goes with sound at `time`.
         func cameraTime(_ time: Double, options: Options) -> Double {
             time + options.profile.videoDelayMs / 1000 - cameraLatency
@@ -102,7 +134,8 @@ public enum Relayout {
     /// leaves no file behind.
     public static func render(_ recording: Recording, video: URL, options: Options, backgroundImage: CIImage? = nil,
                               progress: @Sendable (Double) -> Void = { _ in }) async throws -> URL {
-        let output = RecordingEditor.sibling(of: video, suffix: options.resolution == .uhd4K ? "new layout 4K" : "new layout", ext: "mp4")
+        let part = try recording.part(options)
+        let output = RecordingEditor.sibling(of: video, suffix: options.suffix, ext: "mp4")
         // Written under a hidden name and moved into place only when complete.
         let partial = output.deletingLastPathComponent().appending(path: ".\(output.deletingPathExtension().lastPathComponent).partial.mp4")
         try? FileManager.default.removeItem(at: partial)
@@ -113,14 +146,16 @@ public enum Relayout {
             try? FileManager.default.removeItem(at: partial)
             throw error
         }
-        // Same timing as the original's composite, so its captions still fit.
-        for ext in ["srt", "vtt"] {
-            let caption = video.deletingPathExtension().appendingPathExtension(ext)
-            if FileManager.default.fileExists(atPath: caption.path) {
-                try? FileManager.default.copyItem(at: caption, to: output.deletingPathExtension().appendingPathExtension(ext))
+        // The original's captions, cut and retimed to the part that was made.
+        if let srt = try? String(contentsOf: video.deletingPathExtension().appendingPathExtension("srt"), encoding: .utf8) {
+            let cues = Captions.clip(Captions.parseSRT(srt), from: part.start, length: part.length)
+            if !cues.isEmpty {
+                try? Captions.srt(cues).write(to: output.deletingPathExtension().appendingPathExtension("srt"), atomically: true, encoding: .utf8)
+                try? Captions.vtt(cues).write(to: output.deletingPathExtension().appendingPathExtension("vtt"), atomically: true, encoding: .utf8)
             }
         }
-        if let vtt = Chapters.vtt(Chapters.marks(fromTimeline: recording.markers, start: recording.start), duration: recording.duration) {
+        let marks = Chapters.marks(fromTimeline: recording.markers, start: recording.start + part.start)
+        if let vtt = Chapters.vtt(marks, duration: part.length) {
             try? vtt.write(to: Chapters.url(forMovie: output), atomically: true, encoding: .utf8)
         }
         return output
@@ -129,12 +164,13 @@ public enum Relayout {
     static func write(_ recording: Recording, to url: URL, options: Options, backgroundImage: CIImage?,
                       progress: @Sendable (Double) -> Void) async throws {
         let canvas = options.resolution.canvas
-        let audio = try? await AudioSource(recording.rawFolder.appending(path: "mic.mov"), start: recording.start, duration: recording.duration)
+        let part = try recording.part(options)
+        let audio = try? await AudioSource(recording.rawFolder.appending(path: "mic.mov"), start: recording.start + part.start, duration: part.length)
 
         let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
         let hevc = options.resolution == .uhd4K
         var compression: [String: Any] = [
-            AVVideoAverageBitRateKey: hevc ? 40_000_000 : 12_000_000,
+            AVVideoAverageBitRateKey: hevc ? 40_000_000 : options.resolution == .vertical ? 10_000_000 : 12_000_000,
             AVVideoExpectedSourceFrameRateKey: fps,
             AVVideoMaxKeyFrameIntervalKey: 2 * fps,
         ]
@@ -195,13 +231,15 @@ public enum Relayout {
         let camera = options.showCamera && recording.hasCamera ? try await FrameSource(raw.appending(path: "camera.mov")) : nil
 
         let context = MTLCreateSystemDefaultDevice().map { CIContext(mtlDevice: $0) } ?? CIContext()
-        let spec = CompositeSpec(canvas: canvas, layout: options.layout, profile: options.profile)
+        var spec = CompositeSpec(canvas: canvas, layout: options.layout, profile: options.profile)
+        spec.arrangement = options.resolution.arrangement
+        let part = try recording.part(options)
         let segmenter = options.profile.background.isActive && options.showCamera ? PersonSegmenter() : nil
-        let frames = max(1, Int((recording.duration * Double(fps)).rounded()))
+        let frames = max(1, Int((part.length * Double(fps)).rounded()))
         for i in 0..<frames {
             try Task.checkCancellation()
             let time = CMTime(value: CMTimeValue(i), timescale: fps)
-            let t = recording.start + time.seconds
+            let t = recording.start + part.start + time.seconds
             let screenImage = screen.frame(at: t)?.image
             var cameraImage: CIImage?
             if let frame = camera?.frame(at: recording.cameraTime(t, options: options)) {
@@ -221,7 +259,7 @@ public enum Relayout {
         }
     }
 
-    /// One frame of a layout, `seconds` into the recording, for previews (960×540).
+    /// One frame of a layout, `seconds` into the recording, for previews (960×540, or 540×960 vertical).
     public static func preview(_ recording: Recording, at seconds: Double, options: Options, backgroundImage: CIImage? = nil) async throws -> CGImage {
         let t = recording.start + min(max(seconds, 0), recording.duration)
         let screen = try? await still(recording.rawFolder.appending(path: "screen.mov"), at: t)
@@ -236,9 +274,9 @@ public enum Relayout {
                 camera = BackgroundRenderer.render(camera: picture, mask: mask, background: options.profile.background, image: backgroundImage)
             }
         }
-        let canvas = CGSize(width: 960, height: 540)
+        let canvas = options.resolution == .vertical ? CGSize(width: 540, height: 960) : CGSize(width: 960, height: 540)
         var spec = CompositeSpec(canvas: canvas, layout: options.layout, profile: options.profile)
-        spec.canvas = canvas
+        spec.arrangement = options.resolution.arrangement
         let image = Compositor.compose(screen: screen, camera: camera, spec: spec)
         guard let cg = CIContext().createCGImage(image, from: CGRect(origin: .zero, size: canvas)) else {
             throw CaptureError("Couldn't draw the preview.")
