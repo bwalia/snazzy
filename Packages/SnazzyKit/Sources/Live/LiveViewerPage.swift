@@ -229,13 +229,16 @@ enum LiveViewerPage {
             await append(await (await fetch('/live/init.mp4?' + q(), { cache: 'no-store' })).arrayBuffer());
           }
           const seqs = st.segments.map(s => s.seq);
-          if (next < 0 || next < seqs[0]) next = Math.max(seqs[0], seqs[seqs.length - 1] - 1);
-          while (seqs.includes(next)) {
-            const r = await fetch('/live/seg-' + next + '.m4s?' + q());
-            if (!r.ok) break;
-            await append(await r.arrayBuffer());
-            next++;
-          }
+          const newest = seqs[seqs.length - 1];
+          // Far behind (a slow link, or the tab was asleep): skip to near live
+          // rather than downloading the backlog and never catching up.
+          if (next < 0 || next < seqs[0] || newest - next > 3) next = Math.max(seqs[0], newest - 1);
+          // Download the missing segments side by side (one connection at a time
+          // is slow over a distant link), then add them in order.
+          const wanted = seqs.filter(n => n >= next).slice(0, 4);
+          const parts = await Promise.all(wanted.map(n =>
+            fetch('/live/seg-' + n + '.m4s?' + q()).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null)));
+          for (let i = 0; i < parts.length && parts[i]; i++) { await append(parts[i]); next = wanted[i] + 1; }
           // Stay close to live, and get past gaps (a missed segment leaves a
           // hole the video would wait at forever).
           if (video.buffered.length) {

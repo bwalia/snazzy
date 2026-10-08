@@ -26,7 +26,8 @@ public final class LiveServer: @unchecked Sendable {
     // choose, unlike anything it sends), so one device can't tie up or flood the room.
     static let maxConnectionsPerDevice = 24
     static let maxStreamsPerDevice = 3
-    /// A request must arrive (and its answer go out) within this; event streams are exempt.
+    /// A request must arrive (and its answer go out) within this, and a kept-alive
+    /// connection closes after this long without one; event streams are exempt.
     static let requestTimeout: TimeInterval = 10
     static let postInterval: TimeInterval = 0.25
     /// Wrong room codes allowed per device per minute before it has to wait.
@@ -145,12 +146,24 @@ public final class LiveServer: @unchecked Sendable {
             }
         }
         connection.start(queue: queue)
-        // Slow or idle connections (a request trickling in) are dropped.
+        let requests = RequestCount()
+        armTimeout(connection, requests: requests)
+        receive(connection, buffer: Data(), device: device, requests: requests)
+    }
+
+    /// Requests answered on one connection. Only touched on `queue`.
+    private final class RequestCount: @unchecked Sendable { var value = 0 }
+
+    /// Slow or idle connections (a request trickling in, or a kept-alive one nobody
+    /// uses) are dropped if no new request finishes within `requestTimeout`.
+    private func armTimeout(_ connection: NWConnection, requests: RequestCount) {
+        let id = ObjectIdentifier(connection)
+        let seen = requests.value
         queue.asyncAfter(deadline: .now() + Self.requestTimeout) { [weak self, weak connection] in
-            guard let self, let connection, !self.lock.withLock({ self.subscribers[id] != nil }) else { return }
+            guard let self, let connection, requests.value == seen,
+                  !self.lock.withLock({ self.subscribers[id] != nil }) else { return }
             connection.cancel()
         }
-        receive(connection, buffer: Data(), device: device)
     }
 
     private func closed(_ id: ObjectIdentifier, device: String) {
@@ -168,28 +181,44 @@ public final class LiveServer: @unchecked Sendable {
         return "unknown"
     }
 
-    private func receive(_ connection: NWConnection, buffer: Data, device: String) {
+    private func receive(_ connection: NWConnection, buffer: Data, device: String, requests: RequestCount) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { [weak self] data, _, isComplete, error in
             guard let self else { return }
             var buffer = buffer
             if let data { buffer.append(data) }
             switch HTTPRequest.parse(buffer, maxBody: Self.maxBody) {
             case .complete(let request):
-                self.respond(to: request, on: connection, device: device)
+                requests.value += 1
+                self.respond(to: request, on: connection, device: device, requests: requests)
             case .incomplete where !isComplete && error == nil && buffer.count < Self.maxBody + 8_192:
-                self.receive(connection, buffer: buffer, device: device)
+                self.receive(connection, buffer: buffer, device: device, requests: requests)
             default:
                 self.send(HTTPResponse(status: 400, body: Data("Bad request".utf8), contentType: "text/plain"), on: connection)
             }
         }
     }
 
-    private func respond(to request: HTTPRequest, on connection: NWConnection, device: String) {
+    private func respond(to request: HTTPRequest, on connection: NWConnection, device: String, requests: RequestCount) {
         if request.method == "GET", request.route == "/api/events", codeProblem(request, from: device) == nil {
             subscribe(connection, device: device)
             return
         }
-        send(handle(request, from: device), on: connection)
+        var response = handle(request, from: device)
+        // Keep the connection for the next request: over a slow or distant link
+        // (a VPN), a new connection per video segment costs more than the segment's
+        // own length, and the picture freezes.
+        response.keepAlive = Self.keepsAlive(request, response)
+        guard response.keepAlive else { return send(response, on: connection) }
+        connection.send(content: response.serialized, completion: .contentProcessed { [weak self] error in
+            guard let self, error == nil else { return connection.cancel() }
+            self.armTimeout(connection, requests: requests)
+            self.receive(connection, buffer: Data(), device: device, requests: requests)
+        })
+    }
+
+    /// Whether to keep the connection open after answering (internal for tests).
+    static func keepsAlive(_ request: HTTPRequest, _ response: HTTPResponse) -> Bool {
+        request.headers["connection"]?.lowercased() != "close" && response.status != 400 && response.status != 503
     }
 
     /// Routing (internal for tests); `device` is the caller's IP address. SSE is handled separately.

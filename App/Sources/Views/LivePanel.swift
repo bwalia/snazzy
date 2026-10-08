@@ -75,7 +75,7 @@ private struct RunningRoom: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        let live = model.live!
+        @Bindable var live = model.live!
         HStack(alignment: .top, spacing: 24) {
             if let qr = live.qrCode {
                 Image(nsImage: qr)
@@ -111,6 +111,14 @@ private struct RunningRoom: View {
                     }
                     .frame(maxWidth: 380)
                     .help("Pick the network your audience is on: Wi-Fi, or a VPN such as WireGuard")
+                }
+                Picker("Video quality", selection: $live.quality) {
+                    ForEach(LiveController.Quality.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .frame(maxWidth: 380)
+                if live.joinsOverVPN && live.quality != .remote && live.quality != .low {
+                    Label("Viewers over a VPN often have under 1 Mbps. If their picture freezes, choose Remote.", systemImage: "exclamationmark.triangle")
+                        .font(.caption).foregroundStyle(.orange)
                 }
                 HStack {
                     Text("Scan the QR code, or open the link on the same network.").font(.caption).foregroundStyle(.secondary)

@@ -230,6 +230,7 @@ enum SelfTest {
             app.sessionLoggingSuspended = true
             let seconds = Double(value(after: "--seconds") ?? "60") ?? 60
             app.live.pendingTopic = value(after: "--topic") ?? "Self-test ideas"
+            if let q = value(after: "--quality") { app.live.quality = LiveController.Quality.allCases.first { "\($0)" == q } ?? .standard }
             for _ in 0..<30 where app.capture.screen.state != .live {
                 app.capture.useScreen("selftest", true)
                 try? await Task.sleep(for: .milliseconds(200))
