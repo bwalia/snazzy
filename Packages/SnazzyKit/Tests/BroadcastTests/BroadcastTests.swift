@@ -6,7 +6,7 @@ import Testing
 
 @Suite struct BroadcastTests {
     @Test func platformsHaveSecureIngest() {
-        for p in BroadcastPlatform.allCases where p != .custom {
+        for p in BroadcastPlatform.allCases where p != .custom && p != .linkedin {
             #expect(p.defaultServer.hasPrefix("rtmps://"), "\(p)")
             #expect(p.keychainAccount == "broadcast.\(p.rawValue)")
         }

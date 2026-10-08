@@ -30,6 +30,7 @@
       <a href="#developers">Developers</a>
       <a href="#privacy">Privacy</a>
       <a href="#faq">FAQ</a>
+      <a href="blog/">Blog</a>
     </nav>
     <a class="btn small primary" href="#get">Get Snazzy Pro</a>
   </div>
@@ -264,19 +265,40 @@
       <div class="feature reveal">
         <div>
           <p class="eyebrow">Go live online</p>
-          <h3>Stream to YouTube, Twitch or Vimeo.</h3>
-          <p>Send the same picture and sound to YouTube, Twitch, Vimeo, Facebook or your own RTMP server, while you record and run the live room at the same time. Your stream key stays in your Mac's Keychain, and Snazzy Pro asks before every stream.</p>
+          <h3>Go live on YouTube, or LinkedIn, or both.</h3>
+          <p>For a big public audience, stream your slides, camera and voice to YouTube: free, searchable, and it keeps the replay. Business audience? Add LinkedIn Live. Twitch, Vimeo, Facebook and your own RTMP server work too.</p>
+          <ul>
+            <li>“Go live on YouTube with my slides and camera bottom-right.”</li>
+            <li>A full-quality copy is recorded to your Mac at the same time</li>
+            <li>Stream to several places at once</li>
+            <li>Slow upload? Quality drops automatically, and you're told</li>
+            <li>Stream keys stay in your Keychain; it asks before every stream</li>
+          </ul>
         </div>
         <div class="art centered" aria-hidden="true">
           <div class="chips stream-chips">
-            <span class="chip live">● Live on YouTube · 12:04</span>
+            <span class="chip live">● Live on YouTube + LinkedIn · 12:04</span>
             <span class="chip">Twitch</span>
             <span class="chip">Vimeo</span>
             <span class="chip">Facebook</span>
             <span class="chip">Your RTMP server</span>
           </div>
-          <p class="timeline-note">1080p · 4.5 Mbps · RTMPS</p>
+          <p class="timeline-note">1080p · about 6 Mbps upload each · viewers 2–5 s behind · recording a copy</p>
         </div>
+      </div>
+      <div class="golive-guide reveal">
+        <h3>Where should you go live?</h3>
+        <table class="guide-table">
+          <thead><tr><th>Audience</th><th>Best place</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>The public: learners, customers, developers</td><td>YouTube Live</td><td>Free, huge reach, found in search later, keeps the replay</td></tr>
+            <tr><td>Business buyers, IT and security teams</td><td>LinkedIn Live</td><td>Where enterprise buyers already are</td></tr>
+            <tr><td>Developer community, casual streams</td><td>Twitch or X</td><td>Smaller, niche audiences</td></tr>
+            <tr><td>A class or team in the same building</td><td>Snazzy Pro live room</td><td>QR code, any browser, nothing leaves your Wi-Fi</td></tr>
+            <tr><td>Private company talks</td><td>Not YouTube</td><td>“Unlisted” isn't private. Use a live room or your company's own server</td></tr>
+          </tbody>
+        </table>
+        <p class="dev-note">Read the guide: <a href="blog/where-to-go-live.html">Where to go live</a> · <a href="blog/go-live-youtube.html">How to go live on YouTube</a></p>
       </div>
       <div class="feature reveal">
         <div>
@@ -306,6 +328,15 @@
           </div>
           <p class="timeline-note">Deck · 2 presets · 1 background. Nothing secret inside.</p>
         </div>
+      </div>
+      <div class="soon reveal">
+        <p class="eyebrow">Coming soon</p>
+        <ul>
+          <li><strong>Sign in with YouTube</strong>: Snazzy Pro creates the live event for you, with title, description and a thumbnail from your first slide.</li>
+          <li><strong>Live chat on screen</strong>: see YouTube chat in Snazzy Pro, and let the assistant pick out questions for you to answer.</li>
+          <li><strong>Snazzy Pro Camera</strong>: your slides and camera as a camera in Zoom, Teams and Meet.</li>
+          <li><strong>iPhone and iPad as the camera</strong>: record the device's camera in full quality, synced with your Mac.</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -376,9 +407,9 @@
         <details><summary>Which Macs does it run on?</summary><p>Macs running macOS 15 or later. Apple silicon is recommended, especially for local AI models.</p></details>
         <details><summary>Do I need an AI subscription?</summary><p>No. Run a free local model with Ollama, or use Claude from Anthropic with your own API key. You can mix them: a local model for quick commands, Claude for writing.</p></details>
         <details><summary>Can I use my iPhone or iPad as the camera?</summary><p>Yes. Connect it by cable and point it at yourself, or use Continuity Camera wirelessly. Snazzy Pro crops out the Camera app's buttons and remembers the framing for each device. The Snazzy Pro app for iPhone and iPad (now in testing) is a remote and teleprompter; recording its own camera in full quality comes next.</p></details>
-        <details><summary>Do students need an app or an account to join a live room?</summary><p>No. They scan the QR code (or open the link and type the room code) in any browser on the same Wi-Fi. No sign-up, no install.</p></details>
+        <details><summary>Do students need the Snazzy Pro app to take part?</summary><p>No. Only the presenter needs Snazzy Pro. Students scan the QR code (or open the link and type the room code) in any browser on the same Wi-Fi, on a phone, tablet or laptop. No download, no account, no sign-up. <a href="blog/live-classroom.html">How a live lesson works</a>.</p></details>
         <details><summary>Does the live classroom need Zoom, Teams or the internet?</summary><p>No. The live room runs directly from your Mac to your students' browsers over your local network. If students are remote, you can stream to YouTube, Twitch or Vimeo instead, or use Zoom or Teams as you do today.</p></details>
-        <details><summary>Can I stream to YouTube or Twitch?</summary><p>Yes. Paste your stream key once (it's kept in your Mac's Keychain) and click Go Live. Snazzy Pro asks before every stream, and you can record and run a live room at the same time.</p></details>
+        <details><summary>Can I stream to YouTube, LinkedIn or Twitch?</summary><p>Yes, to one or several at once. Paste each stream key once (they're kept in your Mac's Keychain) and click Go Live. Snazzy Pro asks before every stream, records a copy to your Mac, and lowers the quality automatically if your upload can't keep up. Viewers see you about 2–5 seconds late. <a href="blog/go-live-youtube.html">Step-by-step guide</a>.</p></details>
         <details><summary>Does my code leave my Mac?</summary><p>Not with a local model. With a cloud model, Snazzy Pro shows you the exact text (a diff, a transcript or your terminal's text, with likely secrets hidden) and only sends it if you approve. Audio and video are never sent. Share links upload only to storage you own, after you confirm.</p></details>
         <details><summary>Is there a Windows version?</summary><p>Not at the moment. Snazzy Pro is a native Mac app built on Apple's capture and AI frameworks.</p></details>
         <details><summary>What do recordings look like?</summary><p>A 1080p video (H.264 with AAC audio) that opens anywhere, plus the raw screen, camera and microphone tracks in a folder next to it, so the camera layout can be changed later.</p></details>
@@ -404,7 +435,7 @@
   <div class="wrap">
     <img src="assets/lockup-on-dark.svg" alt="Snazzy Pro" width="100" height="26">
     <span>© 2026 Snazzy Pro</span>
-    <nav aria-label="Footer">
+    <nav aria-label="Footer"><a href="blog/">Blog</a>
       <a href="privacy.html">Privacy</a>
       <a href="support.html">Support</a>
       <a href="https://github.com/bwalia/snazzy">GitHub</a>

@@ -224,7 +224,7 @@ final class RemoteController {
             if builder.deckSlides.indices.contains(i + 1) { s.nextSlideTitle = builder.deckSlides[i + 1].displayTitle }
         }
         if app.live.isRunning { s.liveRoomViewers = app.live.viewers }
-        if app.broadcast.state == .live { s.broadcast = app.broadcast.platform.displayName }
+        if !app.broadcast.liveDestinations.isEmpty { s.broadcast = app.broadcast.liveDestinations.map(\.displayName).joined(separator: " + ") }
         if let w = recorder.warning { s.warnings.append(w) }
         return s
     }

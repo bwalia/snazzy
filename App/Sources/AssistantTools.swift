@@ -401,10 +401,19 @@ enum AssistantTools {
         [
             RegisteredTool(
                 name: "start_broadcast",
-                description: "Go live on YouTube, Twitch, Vimeo, Facebook or a custom RTMP server, streaming the live picture (slides or screen + camera) and mic. Uses the stream key saved in the Live tab (never ask for or accept a stream key in chat: tell the user to paste it in the Live tab). The user confirms before anything is sent.",
-                inputSchema: object(["platform": ["type": "string", "enum": .array(BroadcastPlatform.allCases.map { .string($0.rawValue) })]], required: [])
+                description: "Go live on YouTube, LinkedIn, Twitch, Vimeo, Facebook or a custom RTMP server (one or several at once), streaming the live picture (slides or screen + camera) and mic, and by default recording a copy to the Mac. Uses stream keys saved in the Live tab (never ask for or accept a stream key in chat: tell the user to paste it in the Live tab). The user confirms before anything is sent. For a private group, suggest the local live room instead (YouTube 'unlisted' isn't private).",
+                inputSchema: object([
+                    "platforms": ["type": "array", "items": ["type": "string", "enum": .array(BroadcastPlatform.allCases.map { .string($0.rawValue) })],
+                                  "description": "Where to stream; default: the destinations chosen in the Live tab"],
+                    "record": ["type": "boolean", "description": "Also record to the Mac (default true)"],
+                ], required: [])
             ) { @Sendable args in
-                await MainActor.run { if let p = args["platform"]?.stringValue.flatMap(BroadcastPlatform.init(rawValue:)) { b.platform = p } }
+                let platforms = args["platforms"]?.arrayValue?.compactMap { $0.stringValue.flatMap(BroadcastPlatform.init(rawValue:)) } ?? []
+                let record = args["record"].flatMap { if case .bool(let v) = $0 { v } else { nil } }
+                await MainActor.run {
+                    if !platforms.isEmpty { b.destinations = Set(platforms) }
+                    if let record { b.recordWhileLive = record }
+                }
                 await b.confirmAndStart()
                 return await MainActor.run { b.stateJSON() }
             },

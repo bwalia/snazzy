@@ -92,6 +92,13 @@ original spec listed an iOS/iPadOS app as out of scope.
   every stream, runs alongside recording and the local room. Was: an RTMP(S) push using the platform's
   stream key (stored in the Keychain). Needs a third-party streaming package;
   HaishinKit (BSD-3) approved for this.
+  Done since: LinkedIn Live, several destinations at once, a copy recorded to
+  the Mac while live, adaptive bitrate with an upload warning, delay and
+  "unlisted isn't private" notes in the confirm dialog.
+  Next (needs a Google Cloud OAuth client for YouTube Data API v3):
+  Sign in with YouTube to create the live event (title, description, thumbnail
+  from the first slide), and YouTube live chat on screen with the assistant
+  picking out questions.
 - *Hosted rooms* (later, paid Pro): join from anywhere with a link, with live
   video and the board over the internet. Needs servers, accounts and a clear
   privacy policy, because data leaves the Mac; off by default, with consent.

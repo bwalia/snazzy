@@ -48,10 +48,11 @@ Settings › Chat & Voice.
   memory only while the room is open, plus anything you then ask the assistant
   to do with them.
 - **Going live online.** If you choose Go Live, your live picture and
-  microphone are sent to the service you pick (YouTube, Twitch, Vimeo, Facebook
-  or your own server) using your stream key, which is stored in your Mac's
-  Keychain. That service handles the stream under its own terms. Snazzy Pro
-  asks before every stream.
+  microphone are sent to the service you pick (YouTube, LinkedIn, Twitch,
+  Vimeo, Facebook or your own server) using your stream key, which is stored in
+  your Mac's Keychain. That service handles the stream under its own terms.
+  Snazzy Pro asks before every stream; this is the one time video leaves your
+  Mac. A copy can also be recorded to your Mac.
 - **Sharing (.snazzy files).** You choose what goes in the file and who you
   send it to. Snazzy Pro doesn't send it anywhere itself.
 

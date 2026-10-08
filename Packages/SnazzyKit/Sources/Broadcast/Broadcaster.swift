@@ -10,13 +10,14 @@ import VideoToolbox
 /// Where a broadcast goes. The stream key is the secret part; it lives in
 /// the Keychain (account `keychainAccount`), never in settings or logs.
 public enum BroadcastPlatform: String, CaseIterable, Codable, Identifiable, Sendable {
-    case youtube, twitch, vimeo, facebook, custom
+    case youtube, linkedin, twitch, vimeo, facebook, custom
 
     public var id: String { rawValue }
 
     public var displayName: String {
         switch self {
         case .youtube: "YouTube"
+        case .linkedin: "LinkedIn"
         case .twitch: "Twitch"
         case .vimeo: "Vimeo"
         case .facebook: "Facebook"
@@ -28,6 +29,8 @@ public enum BroadcastPlatform: String, CaseIterable, Codable, Identifiable, Send
     public var defaultServer: String {
         switch self {
         case .youtube: "rtmps://a.rtmps.youtube.com/live2"
+        // LinkedIn gives a stream URL per event; paste it as the server.
+        case .linkedin: ""
         case .twitch: "rtmps://live.twitch.tv:443/app"
         case .vimeo: "rtmps://rtmp-global.cloud.vimeo.com:443/live"
         case .facebook: "rtmps://live-api-s.facebook.com:443/rtmp/"
@@ -39,6 +42,7 @@ public enum BroadcastPlatform: String, CaseIterable, Codable, Identifiable, Send
     public var keyHelp: String {
         switch self {
         case .youtube: "YouTube Studio › Create › Go live › Stream › Stream key"
+        case .linkedin: "LinkedIn › Create an event › Live › Streaming tool: paste the Stream URL as the server and the Stream key here"
         case .twitch: "Twitch › Creator Dashboard › Settings › Stream › Primary Stream key"
         case .vimeo: "Vimeo › Live events › your event › Configure › RTMP › Stream key"
         case .facebook: "Facebook › Live Producer › Streaming software › Stream key"
@@ -76,6 +80,16 @@ public final class Broadcaster: @unchecked Sendable {
 
     /// Called on the main actor.
     public var onState: (@MainActor @Sendable (State) -> Void)?
+
+    /// About once a second while live: measured upload and the current video bitrate.
+    public struct NetworkReport: Sendable, Equatable {
+        public var uploadBitsPerSecond: Int
+        public var videoBitrate: Int
+        /// The connection couldn't keep up; the bitrate was lowered.
+        public var insufficient: Bool
+    }
+
+    public var onNetwork: (@MainActor @Sendable (NetworkReport) -> Void)?
 
     private let lock = NSLock()
     private var screen: ScreenReceiver?
@@ -126,6 +140,17 @@ public final class Broadcaster: @unchecked Sendable {
                 allowFrameReordering: false,
                 expectedFrameRate: Double(quality.fps)))
             try await stream.setAudioSettings(AudioCodecSettings(bitRate: 128_000))
+            // Lower the bitrate automatically when the upload can't keep up, and tell the app.
+            let report = onNetwork
+            await stream.setBitRateStrategy(ReportingBitRateStrategy(maximum: quality.videoBitrate) { event, bitrate in
+                guard let report else { return }
+                let r: NetworkReport? = switch event {
+                case .status(let s): NetworkReport(uploadBitsPerSecond: s.currentBytesOutPerSecond * 8, videoBitrate: bitrate, insufficient: false)
+                case .publishInsufficientBWOccured(let s): NetworkReport(uploadBitsPerSecond: s.currentBytesOutPerSecond * 8, videoBitrate: bitrate, insufficient: true)
+                case .reset: nil
+                }
+                if let r { await report(r) }
+            })
             _ = try await connection.connect(server)
             _ = try await stream.publish(key)
         } catch {
@@ -312,5 +337,25 @@ private final class BroadcastMicDelegate: NSObject, AVCaptureAudioDataOutputSamp
     init(_ handler: @escaping @Sendable (CMSampleBuffer) -> Void) { self.handler = handler }
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         handler(sampleBuffer)
+    }
+}
+
+/// HaishinKit's adaptive bitrate (drops quality when the upload can't keep
+/// up, recovers slowly), plus a report to the app after each measurement.
+actor ReportingBitRateStrategy: StreamBitRateStrategy {
+    nonisolated let mamimumVideoBitRate: Int
+    nonisolated let mamimumAudioBitRate = 0
+    private let inner: StreamVideoAdaptiveBitRateStrategy
+    private let report: @Sendable (NetworkMonitorEvent, Int) async -> Void
+
+    init(maximum: Int, report: @escaping @Sendable (NetworkMonitorEvent, Int) async -> Void) {
+        mamimumVideoBitRate = maximum
+        inner = StreamVideoAdaptiveBitRateStrategy(mamimumVideoBitrate: maximum)
+        self.report = report
+    }
+
+    func adjustBitrate(_ event: NetworkMonitorEvent, stream: some StreamConvertible) async {
+        await inner.adjustBitrate(event, stream: stream)
+        await report(event, await stream.videoSettings.bitRate)
     }
 }

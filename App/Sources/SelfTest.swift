@@ -82,12 +82,15 @@ enum SelfTest {
             app.sessionLoggingSuspended = true
             let b = app.broadcast!
             let savedPlatform = b.platform, savedServers = b.servers
+            let savedDestinations = b.destinations, savedRecord = b.recordWhileLive
+            b.recordWhileLive = arguments.contains("--record")
             let hadKey = b.savedKeys.contains(.custom)
             b.platform = .custom
             b.servers[.custom] = server
             if !hadKey { b.saveKey("testkey", for: .custom) }
             b.quality = .hd720
-            await b.start()
+            b.destinations = [.custom]
+            await b.start([.custom])
             report("broadcast live", b.state == .live, "\(b.stateJSON())")
             try? await Task.sleep(for: .seconds(Double(value(after: "--seconds") ?? "6") ?? 6))
             await b.stop()
@@ -95,6 +98,8 @@ enum SelfTest {
             if !hadKey { b.deleteKey(for: .custom) }
             b.platform = savedPlatform
             b.servers = savedServers
+            b.destinations = savedDestinations
+            b.recordWhileLive = savedRecord
             return ok
         }
         if arguments.contains("--remote-pair") {

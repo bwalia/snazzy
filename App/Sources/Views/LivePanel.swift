@@ -180,7 +180,7 @@ private struct BoardManager: View {
     }
 }
 
-/// Going live on YouTube, Twitch, Vimeo, Facebook or a custom RTMP server.
+/// Going live on YouTube, LinkedIn, Twitch, Vimeo, Facebook or a custom RTMP server.
 struct BroadcastSection: View {
     @Environment(AppModel.self) private var model
     @State private var keyDraft = ""
@@ -195,72 +195,126 @@ struct BroadcastSection: View {
                 Spacer()
                 status
             }
-            Text("Stream the same picture and sound to YouTube, Twitch, Vimeo, Facebook or your own RTMP server. This one goes over the internet, so it asks each time.")
+            Text("For a big public audience, stream to YouTube (free, searchable, keeps the replay) or LinkedIn for business viewers; for a private group, use the live room above instead. This is the one time video leaves your Mac, so it asks each time.")
                 .font(.callout).foregroundStyle(.secondary)
-            Form {
-                Picker("Platform", selection: $b.platform) {
-                    ForEach(BroadcastPlatform.allCases) { Text($0.displayName).tag($0) }
-                }
-                .disabled(b.isActive)
-                LabeledContent("Stream key") {
-                    if b.savedKeys.contains(b.platform) {
-                        HStack {
-                            Label("Saved in Keychain", systemImage: "key.fill").foregroundStyle(.secondary)
-                            Button("Remove") { b.deleteKey(for: b.platform) }.disabled(b.isActive)
-                        }
-                    } else {
-                        HStack {
-                            SecureField("Stream key", text: $keyDraft, prompt: Text("Paste your stream key"))
-                                .labelsHidden()
-                                .frame(minWidth: 240)
-                            Button("Save") { b.saveKey(keyDraft, for: b.platform); keyDraft = "" }
-                                .disabled(keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
-                        }
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Where to stream
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Stream to").font(.headline)
+                ForEach(BroadcastPlatform.allCases) { p in
+                    HStack {
+                        Toggle(p.displayName, isOn: Binding(
+                            get: { b.destinations.contains(p) },
+                            set: { on in if on { b.destinations.insert(p) } else { b.destinations.remove(p) } }))
+                            .disabled(b.isActive || !b.savedKeys.contains(p))
+                        Spacer()
+                        destinationStatus(p)
                     }
                 }
-                Text(b.platform.keyHelp).font(.caption).foregroundStyle(.secondary)
-                TextField("Server", text: $serverDraft, prompt: Text(b.platform.defaultServer.isEmpty ? "rtmps://your-server/app" : b.platform.defaultServer))
-                    .onSubmit { b.servers[b.platform] = serverDraft }
-                    .onChange(of: serverDraft) { _, v in b.servers[b.platform] = v }
-                    .disabled(b.isActive)
-                Picker("Quality", selection: $b.quality) {
-                    ForEach(BroadcastQuality.all) { q in Text("\(q.name) · \(String(format: "%.1f", Double(q.videoBitrate) / 1_000_000)) Mbps").tag(q) }
+                if b.ready.count > 1 {
+                    Label("Streaming to \(b.ready.count) places at once needs about \(Int(((BroadcastController.uploadNeeded[b.quality.name] ?? 6) * Double(b.ready.count)).rounded())) Mbps of upload.", systemImage: "info.circle")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                .disabled(b.isActive)
+            }
+            .padding(12)
+            .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
+            .frame(maxWidth: 560)
+
+            // Set up a destination
+            Form {
+                Section("Set up") {
+                    Picker("Destination", selection: $b.platform) {
+                        ForEach(BroadcastPlatform.allCases) { Text($0.displayName).tag($0) }
+                    }
+                    LabeledContent("Stream key") {
+                        if b.savedKeys.contains(b.platform) {
+                            HStack {
+                                Label("Saved in Keychain", systemImage: "key.fill").foregroundStyle(.secondary)
+                                Button("Remove") { b.deleteKey(for: b.platform) }.disabled(b.isActive)
+                            }
+                        } else {
+                            HStack {
+                                SecureField("Stream key", text: $keyDraft, prompt: Text("Paste your stream key"))
+                                    .labelsHidden()
+                                    .frame(minWidth: 240)
+                                Button("Save") { b.saveKey(keyDraft, for: b.platform); keyDraft = "" }
+                                    .disabled(keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                            }
+                        }
+                    }
+                    Text(b.platform.keyHelp).font(.caption).foregroundStyle(.secondary)
+                    TextField("Server", text: $serverDraft, prompt: Text(b.platform.defaultServer.isEmpty ? "rtmps://… (from the platform)" : b.platform.defaultServer))
+                        .onChange(of: serverDraft) { _, v in b.servers[b.platform] = v }
+                        .disabled(b.isActive)
+                }
+                Section("Options") {
+                    Picker("Quality", selection: $b.quality) {
+                        ForEach(BroadcastQuality.all) { q in Text("\(q.name) · needs about \(Int(BroadcastController.uploadNeeded[q.name] ?? 6)) Mbps upload").tag(q) }
+                    }
+                    .disabled(b.isActive)
+                    Toggle("Also record to this Mac", isOn: $b.recordWhileLive).disabled(b.isActive)
+                }
             }
             .formStyle(.grouped)
             .frame(maxWidth: 560)
             .onAppear { serverDraft = b.servers[b.platform] ?? "" }
             .onChange(of: b.platform) { _, p in serverDraft = b.servers[p] ?? "" }
+
+            Text("Viewers see you about 2–5 seconds late (YouTube's low-latency mode): fine for talks and classes. If your upload can't keep up, Snazzy Pro lowers the quality automatically and tells you.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: 560, alignment: .leading)
+
             HStack {
                 if b.isActive {
                     Button(role: .destructive) { Task { await b.stop() } } label: { Label("End Stream", systemImage: "stop.circle") }
                         .controlSize(.large)
                 } else {
-                    Button { Task { await b.confirmAndStart() } } label: { Label("Go Live on \(b.platform.displayName)", systemImage: "antenna.radiowaves.left.and.right") }
-                        .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
-                        .disabled(!b.savedKeys.contains(b.platform))
+                    Button { Task { await b.confirmAndStart() } } label: {
+                        Label(b.ready.isEmpty ? "Go Live" : "Go Live on \(b.ready.map(\.displayName).joined(separator: " + "))", systemImage: "antenna.radiowaves.left.and.right")
+                    }
+                    .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
+                    .disabled(b.ready.isEmpty)
                 }
             }
-            if case .failed(let message) = b.state {
-                Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.callout)
+            if let w = b.uploadWarning {
+                Label(w, systemImage: "wifi.exclamationmark").foregroundStyle(.orange).font(.callout)
             }
+            if let m = b.message {
+                Label(m, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.callout)
+            }
+            ForEach(BroadcastPlatform.allCases) { p in
+                if case .failed(let m) = b.states[p] {
+                    Label("\(p.displayName): \(m)", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.callout)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func destinationStatus(_ p: BroadcastPlatform) -> some View {
+        let b = model.broadcast!
+        switch b.states[p] {
+        case .live?: Label("Live", systemImage: "dot.radiowaves.left.and.right").foregroundStyle(.red).font(.caption)
+        case .connecting?: Text("Connecting…").foregroundStyle(.secondary).font(.caption)
+        default:
+            Text(b.savedKeys.contains(p) ? "Key saved" : "No key yet").foregroundStyle(.secondary).font(.caption)
         }
     }
 
     @ViewBuilder private var status: some View {
         let b = model.broadcast!
-        switch b.state {
-        case .connecting:
-            HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Connecting…") }.foregroundStyle(.secondary)
-        case .live:
+        if b.isActive, let started = b.startedAt {
             TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                let s = Int(ctx.date.timeIntervalSince(b.startedAt ?? ctx.date))
-                Label("Live on \(b.platform.displayName) · \(s / 60):\(String(format: "%02d", s % 60))", systemImage: "dot.radiowaves.left.and.right")
-                    .foregroundStyle(.red).monospacedDigit()
+                let s = Int(ctx.date.timeIntervalSince(started))
+                VStack(alignment: .trailing, spacing: 2) {
+                    Label("Live on \(b.liveDestinations.map(\.displayName).joined(separator: " + ")) · \(s / 60):\(String(format: "%02d", s % 60))", systemImage: "dot.radiowaves.left.and.right")
+                        .foregroundStyle(.red).monospacedDigit()
+                    if let up = b.uploadSummary { Text(up).font(.caption).foregroundStyle(.secondary) }
+                }
             }
-        default:
-            EmptyView()
+        } else if b.isActive {
+            HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Connecting…") }.foregroundStyle(.secondary)
         }
     }
 }
