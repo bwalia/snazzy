@@ -1,12 +1,17 @@
 # Snazzy Pro
 
-A native macOS app (Swift, SwiftUI, macOS 15+) for making video presentations,
-driven by a chat assistant that can use local (Ollama) or cloud (Anthropic) models.
+A presentation studio for the Mac that you run by conversation (Swift, SwiftUI,
+macOS 15+). It plans your talk, builds the slides, frames your camera and
+records the video, then takes it live: a classroom room on your Wi-Fi with a
+brainstorm board, or YouTube, Twitch and Vimeo. An iPhone/iPad app is the
+remote and teleprompter. The assistant uses local (Ollama, Apple on-device) or
+cloud (Anthropic) models.
 Website: https://bwalia.github.io/snazzy/ (source in `site/`, deployed by
 `.github/workflows/pages.yml`). Brand: `docs/brand/`. Launch plan: `docs/launch/APP_STORE.md`.
 Phase plan: `ROADMAP.md`.
 
-**Status: phase 4 (recording) done; preparing the Mac App Store launch (phase 8).**
+**Status: recording, slides, sharing, live classroom, live streaming and the
+iPhone/iPad remote (phase 9 core) done; preparing the Mac App Store launch.**
 Phase 1 added the XcodeGen project, Keychain-stored keys and streaming chat
 with tool calling (Ollama, Anthropic). Phase 2 adds device discovery, live
 camera/iPad feeds with stall detection, per-device crop/rotation, floating

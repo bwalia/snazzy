@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Snazzy Pro: presentations, just by talking</title>
-<meta name="description" content="Snazzy Pro is a Mac presentation studio you run by conversation. It plans your talk, builds the slides or a prototype, frames your camera and records the video.">
+<title>Snazzy Pro: plan, build, present and go live, by talking</title>
+<meta name="description" content="Snazzy Pro is a Mac presentation studio you run by conversation. It plans your talk, builds the slides, frames your camera and records the video, then takes it live: a classroom on your Wi-Fi with a brainstorm board, or YouTube, Twitch and Vimeo.">
 <meta name="theme-color" content="#0B1020">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Snazzy Pro: just say it.">
-<meta property="og:description" content="A Mac presentation studio you run by conversation. Plan, build, frame and record, by talking.">
+<meta property="og:description" content="A Mac presentation studio you run by conversation. Plan, build, present, record and go live, by talking.">
 <meta property="og:image" content="https://bwalia.github.io/snazzy/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="fonts/Manrope-Variable.woff2" as="font" type="font/woff2" crossorigin>
@@ -25,6 +25,7 @@
     <nav class="links" aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
+      <a href="#live">Live classroom</a>
       <a href="#use-cases">Use cases</a>
       <a href="#developers">Developers</a>
       <a href="#privacy">Privacy</a>
@@ -39,13 +40,13 @@
     <div class="wrap">
       <img class="icon" src="assets/icon-512.png" alt="" width="112" height="112">
       <h1 id="hero-title">Just <span class="grad">say it.</span></h1>
-      <p class="lede">Snazzy Pro is a presentation studio you run by conversation. It plans your talk, builds the slides, frames your camera and records the video.</p>
+      <p class="lede">Snazzy Pro is a presentation studio you run by conversation. It plans your talk, builds the slides, frames your camera and records the video. Then it takes you live: to a classroom on your Wi-Fi, or to YouTube, Twitch and Vimeo.</p>
       <div class="ctas" id="get">
         <!-- At launch, replace with Apple's official "Download on the Mac App Store" badge and the app's App Store URL. -->
         <a class="btn primary" href="https://github.com/bwalia/snazzy/releases" aria-label="Coming soon to the Mac App Store: follow releases on GitHub">Coming soon to the Mac App Store</a>
         <a class="btn secondary" href="#how">See how it works</a>
       </div>
-      <p class="fine">For Mac · macOS 15 or later · Works with local or cloud AI</p>
+      <p class="fine">For Mac · macOS 15 or later · Local or cloud AI · iPhone and iPad remote</p>
 
       <div class="stage" aria-hidden="true">
         <div class="window">
@@ -79,8 +80,8 @@
   <section id="how" aria-labelledby="how-title">
     <div class="wrap center">
       <p class="eyebrow">How it works</p>
-      <h2 id="how-title">Talk. Build. Record.</h2>
-      <p class="section-lede">One conversation takes you from an idea to a finished video. Every step also has buttons, if you prefer clicking.</p>
+      <h2 id="how-title">Talk. Build. Present. Go live.</h2>
+      <p class="section-lede">One conversation takes you from an idea to a finished video or a live class. Every step also has buttons, if you prefer clicking.</p>
       <div class="steps" style="text-align:left">
         <div class="step reveal">
           <span class="n">1</span>
@@ -96,9 +97,15 @@
         </div>
         <div class="step reveal">
           <span class="n">3</span>
-          <h3>Record</h3>
-          <p>Screen or slides, your camera in the corner and your mic, all in one take. Saved automatically, ready to share.</p>
-          <q>Put my iPad camera bottom-right and start recording.</q>
+          <h3>Present &amp; record</h3>
+          <p>Present the deck with your speaker notes in front of you, your camera in the corner and your mic, all in one take. Each slide becomes a chapter.</p>
+          <q>Put my iPad camera bottom-right and record this deck.</q>
+        </div>
+        <div class="step reveal">
+          <span class="n">4</span>
+          <h3>Go live</h3>
+          <p>Open a live room your class joins from a QR code, with a brainstorm board, or stream to YouTube, Twitch or Vimeo.</p>
+          <q>Start a live room for brainstorming the school fair.</q>
         </div>
       </div>
     </div>
@@ -109,7 +116,8 @@
       <div class="fact reveal" role="listitem"><b>1 take</b><span>Screen, camera and mic on one clock</span></div>
       <div class="fact reveal" role="listitem"><b>Local or cloud</b><span>Ollama on your Mac, or Claude</span></div>
       <div class="fact reveal" role="listitem"><b>Raw tracks</b><span>Change the layout after recording</span></div>
-      <div class="fact reveal" role="listitem"><b>0 save dialogs</b><span>Every take named and saved for you</span></div>
+      <div class="fact reveal" role="listitem"><b>Remote</b><span>Run it all from your iPhone or iPad</span></div>
+      <div class="fact reveal" role="listitem"><b>Live rooms</b><span>Students join from a QR code, no app or account</span></div>
     </div>
   </div>
 
@@ -134,6 +142,32 @@
     <span class="k">&lt;rect</span> <span class="t">class</span>=<span class="s">"stage test"</span> …<span class="k">/&gt;</span>
     <span class="k">&lt;rect</span> <span class="t">class</span>=<span class="s">"stage deploy"</span><span class="cursor"></span></div>
           <span class="badge">● No console errors</span>
+        </div>
+      </div>
+
+      <div class="feature reveal">
+        <div>
+          <p class="eyebrow">Present</p>
+          <h3>Your notes in front of you, slides in the video.</h3>
+          <p>The Builder makes the deck; the Slides tab presents it. Record This Deck captures the slides straight from their own window, so no menu bar, notifications or other windows ever appear in your video.</p>
+          <ul>
+            <li>Speaker notes as a teleprompter, with the next slide shown</li>
+            <li>Next slide from the keyboard, your voice, or your iPhone</li>
+            <li>Every slide change becomes a chapter in the recording</li>
+          </ul>
+        </div>
+        <div class="art" aria-hidden="true">
+          <div class="present-mock">
+            <ol>
+              <li>Hi Fabrikam Freight</li>
+              <li class="on">What you told us</li>
+              <li>Before and after</li>
+              <li>What similar teams saw</li>
+              <li>Next step: a pilot</li>
+            </ol>
+            <div class="notes"><small>Speaker notes</small>Name the person you spoke to. Pause after the second point.<span>Next: Before and after</span></div>
+          </div>
+          <span class="badge">● Chapter 2 · 0:42</span>
         </div>
       </div>
 
@@ -195,6 +229,82 @@
             <span class="chip">Preset: Desk setup</span>
             <span class="chip">Preset: Demo day</span>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="live" aria-labelledby="live-title">
+    <div class="wrap">
+      <p class="eyebrow">Live classroom</p>
+      <h2 id="live-title">Teach live. Brainstorm together.</h2>
+      <p class="section-lede">Start a live room and your class scans a QR code. They watch your slides and camera and hear you in their browser, then add ideas to a shared board and vote. It goes straight from your Mac over your Wi-Fi: no Zoom, no accounts, no servers.</p>
+      <div class="feature reveal">
+        <div>
+          <h3>From a room full of ideas to a deck.</h3>
+          <ul>
+            <li>Join from any phone, tablet or laptop with the QR code and room code</li>
+            <li>Live video of your slides or screen with your camera, and your voice</li>
+            <li>A brainstorm board: everyone posts and votes, you hide or remove ideas</li>
+            <li>Post messages and your own ideas to everyone, or ask the assistant to</li>
+            <li>“Turn ideas into a deck”: the assistant groups them into themes, with speaker notes</li>
+          </ul>
+        </div>
+        <div class="art" aria-hidden="true">
+          <div class="phone-mock">
+            <div class="screen-live"><span class="pip-mini"></span><span class="live-pill">● Live</span></div>
+            <div class="announce">From the presenter: two minutes left to vote!</div>
+            <div class="idea"><span>A school garden we look after all year</span><b>▲ 12</b></div>
+            <div class="idea"><span>Build a weather station on the roof</span><b>▲ 9</b></div>
+            <div class="idea host"><span>A science fair, one experiment per class <em>Presenter</em></span><b>▲ 7</b></div>
+          </div>
+          <div class="qr-mock"></div>
+        </div>
+      </div>
+      <div class="feature reveal">
+        <div>
+          <p class="eyebrow">Go live online</p>
+          <h3>Stream to YouTube, Twitch or Vimeo.</h3>
+          <p>Send the same picture and sound to YouTube, Twitch, Vimeo, Facebook or your own RTMP server, while you record and run the live room at the same time. Your stream key stays in your Mac's Keychain, and Snazzy Pro asks before every stream.</p>
+        </div>
+        <div class="art centered" aria-hidden="true">
+          <div class="chips stream-chips">
+            <span class="chip live">● Live on YouTube · 12:04</span>
+            <span class="chip">Twitch</span>
+            <span class="chip">Vimeo</span>
+            <span class="chip">Facebook</span>
+            <span class="chip">Your RTMP server</span>
+          </div>
+          <p class="timeline-note">1080p · 4.5 Mbps · RTMPS</p>
+        </div>
+      </div>
+      <div class="feature reveal">
+        <div>
+          <p class="eyebrow">iPhone &amp; iPad</p>
+          <h3>A remote and a teleprompter in your hand.</h3>
+          <p>Pair your iPhone or iPad by scanning a code on your Mac. Then start and stop recording, change slides and read your speaker notes from across the room, or ask the assistant for something. The link is encrypted, and only devices you pair can connect.</p>
+        </div>
+        <div class="art" aria-hidden="true">
+          <div class="tablet-mock">
+            <div class="ctl"><b>0:42</b><span class="rec-btn"></span><div class="arrows"><i>‹</i><i>›</i></div><small>Slide 2 of 6</small></div>
+            <div class="prompt">Name the person you spoke to. Pause after the second point, then show the chart.</div>
+          </div>
+        </div>
+      </div>
+      <div class="feature reveal">
+        <div>
+          <p class="eyebrow">Share</p>
+          <h3>Send your deck to another Snazzy Pro user.</h3>
+          <p>Share a deck or prototype, with presets and backgrounds if you like, as one .snazzy file by AirDrop, Messages or Mail. They double-click it and it opens in their Builder. API keys, conversations and recordings are never included.</p>
+        </div>
+        <div class="art centered" aria-hidden="true">
+          <div class="chips">
+            <span class="chip">Q3 results.snazzy · 48 KB</span>
+            <span class="chip">AirDrop</span>
+            <span class="chip">Messages</span>
+            <span class="chip">Mail</span>
+          </div>
+          <p class="timeline-note">Deck · 2 presets · 1 background. Nothing secret inside.</p>
         </div>
       </div>
     </div>
@@ -265,7 +375,10 @@
       <div class="faq" style="text-align:left">
         <details><summary>Which Macs does it run on?</summary><p>Macs running macOS 15 or later. Apple silicon is recommended, especially for local AI models.</p></details>
         <details><summary>Do I need an AI subscription?</summary><p>No. Run a free local model with Ollama, or use Claude from Anthropic with your own API key. You can mix them: a local model for quick commands, Claude for writing.</p></details>
-        <details><summary>Can I use my iPhone or iPad as the camera?</summary><p>Yes. Connect it by cable and point it at yourself, or use Continuity Camera wirelessly. Snazzy Pro crops out the Camera app's buttons and remembers the framing for each device. A dedicated iPhone and iPad companion app is planned.</p></details>
+        <details><summary>Can I use my iPhone or iPad as the camera?</summary><p>Yes. Connect it by cable and point it at yourself, or use Continuity Camera wirelessly. Snazzy Pro crops out the Camera app's buttons and remembers the framing for each device. The Snazzy Pro app for iPhone and iPad (now in testing) is a remote and teleprompter; recording its own camera in full quality comes next.</p></details>
+        <details><summary>Do students need an app or an account to join a live room?</summary><p>No. They scan the QR code (or open the link and type the room code) in any browser on the same Wi-Fi. No sign-up, no install.</p></details>
+        <details><summary>Does the live classroom need Zoom, Teams or the internet?</summary><p>No. The live room runs directly from your Mac to your students' browsers over your local network. If students are remote, you can stream to YouTube, Twitch or Vimeo instead, or use Zoom or Teams as you do today.</p></details>
+        <details><summary>Can I stream to YouTube or Twitch?</summary><p>Yes. Paste your stream key once (it's kept in your Mac's Keychain) and click Go Live. Snazzy Pro asks before every stream, and you can record and run a live room at the same time.</p></details>
         <details><summary>Does my code leave my Mac?</summary><p>Not with a local model. With a cloud model, Snazzy Pro shows you the exact text (a diff, a transcript or your terminal's text, with likely secrets hidden) and only sends it if you approve. Audio and video are never sent. Share links upload only to storage you own, after you confirm.</p></details>
         <details><summary>Is there a Windows version?</summary><p>Not at the moment. Snazzy Pro is a native Mac app built on Apple's capture and AI frameworks.</p></details>
         <details><summary>What do recordings look like?</summary><p>A 1080p video (H.264 with AAC audio) that opens anywhere, plus the raw screen, camera and microphone tracks in a folder next to it, so the camera layout can be changed later.</p></details>
