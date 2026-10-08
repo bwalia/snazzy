@@ -55,8 +55,13 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
   run everything.
 - **There is no app-target test target.** Code in `App/`, `iOS/` and `watchOS/` is covered
   only by the self-tests.
-- **CI doesn't build or test.** `.github/workflows` only covers auto-tagging on main,
-  GitHub Pages for `site/`, and Cloudflare DNS plus WSL Proxy for snazzy.pro.
+- **CI** (`.github/workflows/ci.yml`, `macos-26`, Xcode 26.5) runs on every PR and push to
+  main:
+  - the package tests and the Mac app build;
+  - an unsigned build of the iPhone app with the Watch app inside.
+
+  The other workflows handle auto-tagging on main, GitHub Pages for `site/`, and
+  Cloudflare DNS plus WSL Proxy for snazzy.pro.
 - **The self-tests use the real user's UserDefaults and Keychain**, and some change settings.
 - **The app is sandboxed.** It can't run `git` or other subprocesses. PR demos go through
   the GitHub API instead.
