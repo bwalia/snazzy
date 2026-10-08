@@ -166,7 +166,11 @@ MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
   changed later. No save dialogs.
 - **Robustness:** a stalled or unplugged camera never stops the screen or mic.
   The inset holds its last frame, and the freeze goes in the timeline. A silent
-  or failing mic shows a warning, and the screen keeps recording.
+  or unplugged mic shows a warning and is reopened every few seconds, so sound
+  comes back when it's plugged in again; the screen keeps recording meanwhile.
+  A camera that failed is retried every 20 s. The inset camera can't be switched
+  while recording (a preset loaded then keeps it), and a lost screen source (a
+  window closed, a display unplugged) shows a warning.
 - **Crash-safe:** every movie is written in 2-second fragments, so a crash,
   force quit or power cut keeps everything but the last moments. Quitting
   finishes the recording first. Recording won't start with under 1 GB free,

@@ -203,6 +203,8 @@ private struct InsetDeviceSection: View {
                     Text("\(inset.name) (not connected)").tag(inset.uniqueID)
                 }
             }
+            .disabled(capture.recorder.isActive)
+            .help(capture.recorder.isActive ? "The camera can't change while recording." : "")
 
             HStack {
                 Button("Find iPad / iPhone") {
