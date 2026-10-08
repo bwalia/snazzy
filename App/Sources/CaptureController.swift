@@ -312,6 +312,20 @@ final class CaptureController {
         recorder.update(spec: compositeSpec)
     }
 
+    /// Measures the inset camera's lip-sync delay while the user claps, and saves it.
+    func calibrateLipSync(seconds: Double = 6) async throws -> SyncCalibration.Result {
+        guard !recorder.isActive else { throw CaptureActionError(message: "Stop the recording first.") }
+        guard let device = setup.insetDevice, let feed = insetFeed, feed.state == .live else {
+            throw CaptureActionError(message: "Choose an inset camera and wait for its picture first.")
+        }
+        let result = try await SyncCalibrator().run(camera: feed.receiver, micID: setup.mic?.uniqueID, seconds: seconds)
+        var changes = InsetChanges()
+        changes.videoDelayMs = result.delayMs
+        try updateInset(changes, deviceID: device.uniqueID)
+        diagnostics.log("Lip sync for \(device.name): \(Int(result.delayMs)) ms, from \(result.claps) claps")
+        return result
+    }
+
     func resetProfile(for device: InsetDeviceSelection) {
         setProfile(.defaults(for: device.kind), for: device.uniqueID)
     }

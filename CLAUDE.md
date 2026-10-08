@@ -145,6 +145,10 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 
   Session logs go to `~/Movies/Snazzy Pro/Sessions/`.
 
+  Stamp composited video with `CompositeSpec.syncedVideoTime(_:hasCamera:)`, which applies
+  the camera's lip-sync delay (`DeviceProfile.videoDelayMs`, positive = picture behind sound).
+  Clap calibration is in `CaptureEngine/SyncCalibration.swift`.
+
   Create recording writers with `AVAssetWriter.crashSafeMovie(_:)` (fragmented `.mov`),
   never a plain `AVAssetWriter`. The required-reason APIs used (disk space, boot time,
   UserDefaults, file timestamps) must be declared in `App/Resources/PrivacyInfo.xcprivacy`,

@@ -24,7 +24,7 @@ original spec listed an iOS/iPadOS app as out of scope.
      from chat.
 4. **Recording** ✅ (screen preview, recorder, raw tracks; presets added): screen + mic + one camera inset, single process, composited
    file plus raw tracks, auto-named. Stall detection.
-5. **Sync**: clap calibration, per-device delay, manual slider.
+5. **Sync** ✅ (2026-10-08; clap detection still to be tuned on real hardware): per-camera delay applied to recordings, the live room and streams; Lip sync slider; clap calibration (`SyncCalibration`).
 6. **Slides** (core done ✅): the Builder makes the deck, the Slides tab presents
    it, recording captures it.
    - Done: "slides" capture source records the deck's 16:9 Present window

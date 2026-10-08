@@ -101,6 +101,14 @@ enum AssistantTools {
                 try await capture.updateInset(c)
                 return await capture.stateJSON()
             },
+            RegisteredTool(
+                name: "calibrate_lip_sync",
+                description: "Measure how far the inset camera's picture runs behind the sound, and save it as its lip-sync delay. Listens for 6 seconds from the moment it's called: first tell the user to clap 3 times, a second apart, with their hands in view of the camera.",
+                inputSchema: object([:], required: [])
+            ) { @Sendable _ in
+                let r = try await capture.calibrateLipSync()
+                return ["video_delay_ms": .number(r.delayMs), "claps_heard": .number(Double(r.claps))]
+            },
 
             RegisteredTool(
                 name: "open_preview",
