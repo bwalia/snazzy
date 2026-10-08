@@ -28,6 +28,8 @@ public final class MCPHTTPServer: @unchecked Sendable {
     }
 
     public var endpoint: String { "http://127.0.0.1:\(port)\(Self.path)" }
+    /// The listener stopped working after `start` (e.g. the port was taken).
+    public var onFailed: (@Sendable (String) -> Void)?
 
     public func start() throws {
         let params = NWParameters.tcp
@@ -35,9 +37,10 @@ public final class MCPHTTPServer: @unchecked Sendable {
         params.allowLocalEndpointReuse = true
         let listener = try NWListener(using: params)
         listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
-        listener.stateUpdateHandler = { state in
+        listener.stateUpdateHandler = { [weak self] state in
             if case .failed(let error) = state {
                 Log.app.error("MCP server failed: \(error.localizedDescription, privacy: .public)")
+                self?.onFailed?("The server stopped: \(error.localizedDescription)")
             }
         }
         listener.start(queue: queue)
@@ -88,7 +91,7 @@ public final class MCPHTTPServer: @unchecked Sendable {
         guard request.path.split(separator: "?").first.map(String.init) == Self.path else {
             return HTTPResponse(status: 404, body: Data("Not found".utf8), contentType: "text/plain")
         }
-        guard h["authorization"] == "Bearer \(token)" else {
+        guard !token.isEmpty, h["authorization"] == "Bearer \(token)" else {
             return HTTPResponse(status: 401, body: Data(#"{"jsonrpc":"2.0","error":{"code":-32600,"message":"Unauthorized: missing or wrong bearer token"}}"#.utf8),
                                 extraHeaders: ["WWW-Authenticate": "Bearer"])
         }

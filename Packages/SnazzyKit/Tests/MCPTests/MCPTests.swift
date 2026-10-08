@@ -130,6 +130,10 @@ func request(_ method: String, _ params: JSONValue = [:], modern: Bool = true) -
         #expect(await server.handle(req(auth: "Bearer wrong")).status == 401)
         #expect(await server.handle(req("GET")).status == 405)
         #expect(await server.handle(req(origin: "http://localhost:3000")).status != 403)
+        // No token (the Keychain couldn't be read) must never mean "anyone may connect".
+        let tokenless = MCPHTTPServer(port: 50_002, token: "", core: core())
+        #expect(await tokenless.handle(HTTPRequest(method: "POST", path: "/mcp", headers: ["host": "127.0.0.1:50002", "authorization": "Bearer "],
+                                                   body: request("ping"))).status == 401)
     }
 
     @Test func httpParsing() {
