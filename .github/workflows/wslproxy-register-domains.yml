@@ -1,0 +1,192 @@
+name: Register WSL Proxy Domains
+
+# Pushes the WSL Proxy rule + server (vhost) definitions for ONE profile from this
+# repo's declarative data dir to ONE gateway API (cp.pop0.uk or lon1.pop0.uk).
+# Called twice by domains.yml (control plane first, then the lon1 POP); can also be
+# run by hand against either gateway.
+#
+# Source of truth — committed JSON, edited by hand:
+#   .github/wslproxy/data/rules/<env>/<rule-id>.json
+#   .github/wslproxy/data/servers/<env>/host:<domain>.json
+# To add a domain: drop a new host:<domain>.json under servers/<env>/ pointing its
+# "rules" at a rule id under rules/<env>/, add the id to that rule's "servers"
+# array, and merge to main. domains.yml does DNS + both gateways.
+#
+# Push method: /api/projects/import, which writes each record verbatim under
+# data/<type>/<profile_id>/<id>.json, so the committed slug ids are PRESERVED and
+# the server->rule link (server.rules == rule.id) stays intact. A plain
+# POST /api/rules would mint a fresh UUID and break that link.
+#
+# Auth, per gateway (POP_KEY is CP or LON1):
+#   • Secret WSLPROXY_TOKEN_<POP_KEY>, else WSLPROXY_TOKEN -> used as the JWT bearer.
+#   • Otherwise -> POST /api/user/login with WSLPROXY_ADMIN_EMAIL (repo var) and
+#     ADMIN_PASSWORD_<POP_KEY>, else ADMIN_PASSWORD (secret).
+#
+# Runner: ubuntu-latest unless the WSLPROXY_RUNNER repo variable says otherwise
+# (set it to "self-hosted" if a gateway stops answering hosted runners).
+
+on:
+  workflow_call:
+    inputs:
+      GATEWAY_DOMAIN:
+        description: "Gateway API base URL, e.g. https://cp.pop0.uk"
+        required: true
+        type: string
+      POP_KEY:
+        description: "Secret-name suffix for per-gateway credentials (CP, LON1)."
+        required: true
+        type: string
+      TARGET_ENV:
+        required: false
+        default: prod
+        type: string
+      ACTIVATE_CONFIG:
+        required: false
+        default: false
+        type: boolean
+      DRY_RUN:
+        required: false
+        default: false
+        type: boolean
+
+  workflow_dispatch:
+    inputs:
+      GATEWAY_DOMAIN:
+        description: "Gateway API base URL"
+        required: true
+        default: https://cp.pop0.uk
+        type: choice
+        options:
+          - https://cp.pop0.uk
+          - https://lon1.pop0.uk
+      TARGET_ENV:
+        description: "Profile dir to push"
+        required: true
+        default: prod
+        type: string
+      ACTIVATE_CONFIG:
+        description: "Push servers with config_status=true so the gateway writes the vhost and goes live"
+        required: false
+        default: false
+        type: boolean
+      DRY_RUN:
+        description: "Print the import payloads without calling the API"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  push-domains:
+    name: "Push ${{ inputs.TARGET_ENV }} domains to ${{ inputs.GATEWAY_DOMAIN }}"
+    runs-on: ${{ vars.WSLPROXY_RUNNER || 'ubuntu-latest' }}
+    env:
+      GATEWAY_DOMAIN: ${{ inputs.GATEWAY_DOMAIN }}
+      TARGET_ENV: ${{ inputs.TARGET_ENV || 'prod' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Resolve POP key
+        id: pop
+        # A manual run picks a gateway URL, not a key, so derive it from the host.
+        env:
+          POP_KEY_INPUT: ${{ inputs.POP_KEY }}
+        run: |
+          set -euo pipefail
+          KEY="$POP_KEY_INPUT"
+          if [ -z "$KEY" ]; then
+            KEY=$(echo "$GATEWAY_DOMAIN" | sed -E 's#^https?://##; s#\..*##' | tr '[:lower:]' '[:upper:]')
+          fi
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+          echo "Gateway $GATEWAY_DOMAIN (credentials suffix _$KEY)"
+
+      - name: Validate data dir
+        run: |
+          set -euo pipefail
+          for t in jq curl; do command -v "$t" >/dev/null || { echo "::error::$t is not installed on the runner"; exit 1; }; done
+          RULES_DIR=".github/wslproxy/data/rules/${TARGET_ENV}"
+          SERVERS_DIR=".github/wslproxy/data/servers/${TARGET_ENV}"
+          [ -d "$SERVERS_DIR" ] || { echo "::error::No server data dir for env '$TARGET_ENV' ($SERVERS_DIR)"; exit 1; }
+
+          # Every server must reference a rule that exists in this env.
+          MISSING=0
+          for f in "$SERVERS_DIR"/*.json; do
+            RID=$(jq -r '.rules // empty' "$f")
+            if [ -n "$RID" ] && [ ! -f "$RULES_DIR/$RID.json" ]; then
+              echo "::error::$(basename "$f") references rule '$RID' but $RULES_DIR/$RID.json is missing"; MISSING=$((MISSING+1))
+            fi
+          done
+          [ "$MISSING" -eq 0 ] || exit 1
+          echo "Env '$TARGET_ENV':"
+          jq -r '.server_name' "$SERVERS_DIR"/*.json | sed 's/^/  - /'
+
+      - name: Resolve bearer token
+        id: auth
+        env:
+          WSLPROXY_TOKEN: ${{ secrets[format('WSLPROXY_TOKEN_{0}', steps.pop.outputs.key)] || secrets.WSLPROXY_TOKEN }}
+          ADMIN_EMAIL: ${{ vars.WSLPROXY_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets[format('ADMIN_PASSWORD_{0}', steps.pop.outputs.key)] || secrets.ADMIN_PASSWORD }}
+          DRY_RUN: ${{ inputs.DRY_RUN }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY_RUN" = "true" ]; then echo "DRY_RUN — skipping auth."; exit 0; fi
+          if [ -n "$WSLPROXY_TOKEN" ]; then
+            echo "Using WSLPROXY_TOKEN secret as bearer."
+            TOKEN="$WSLPROXY_TOKEN"
+          else
+            [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ] || {
+              echo "::error::No credentials — set WSLPROXY_TOKEN(_<POP>) secret, or WSLPROXY_ADMIN_EMAIL var + ADMIN_PASSWORD(_<POP>) secret."; exit 1; }
+            echo "Logging in to $GATEWAY_DOMAIN as $ADMIN_EMAIL ..."
+            BODY=$(jq -cn --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email: $e, password: $p}')
+            RESPONSE=$(curl -sS --max-time 30 --connect-timeout 10 -X POST "${GATEWAY_DOMAIN%/}/api/user/login" \
+              -H "Content-Type: application/json" --data-raw "$BODY") || {
+                echo "::error::Could not reach $GATEWAY_DOMAIN (curl failed). Set WSLPROXY_RUNNER=self-hosted if hosted runners are blocked."; exit 1; }
+            TOKEN=$(echo "$RESPONSE" | jq -r '.data.accessToken // empty')
+            [ -n "$TOKEN" ] || { echo "::error::Login failed"; echo "$RESPONSE" | jq '.' 2>/dev/null || echo "$RESPONSE"; exit 1; }
+            echo "Login successful."
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "TOKEN=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Import rules then servers
+        env:
+          TOKEN: ${{ steps.auth.outputs.TOKEN }}
+          ACTIVATE_CONFIG: ${{ inputs.ACTIVATE_CONFIG }}
+          DRY_RUN: ${{ inputs.DRY_RUN }}
+        run: |
+          set -euo pipefail
+          RULES_DIR=".github/wslproxy/data/rules/${TARGET_ENV}"
+          SERVERS_DIR=".github/wslproxy/data/servers/${TARGET_ENV}"
+
+          RULES_ARR=$(jq -s '.' "$RULES_DIR"/*.json 2>/dev/null || echo '[]')
+          # config_status is a workflow toggle, not a commit — override it here.
+          SERVERS_ARR=$(jq -s --argjson active "${ACTIVATE_CONFIG:-false}" 'map(.config_status = $active)' "$SERVERS_DIR"/*.json)
+
+          import() {
+            local dtype="$1" arr="$2" body resp code
+            body=$(jq -cn --argjson data "$arr" --arg dt "$dtype" '{data: $data, dataType: $dt}')
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "── DRY_RUN import dataType=$dtype -> $GATEWAY_DOMAIN ($(echo "$arr" | jq 'length') records) ──"
+              echo "$arr" | jq '[.[] | {id, name: (.name // .server_name), profile_id, config_status}]'
+              return 0
+            fi
+            resp=$(curl -sS --max-time 60 --connect-timeout 10 -w "\n%{http_code}" -X POST "${GATEWAY_DOMAIN%/}/api/projects/import?_format=json" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "x-platform: react-admin" \
+              -H "Content-Type: application/json" \
+              --data-raw "$body")
+            code=$(echo "$resp" | tail -n1); echo "$resp" | sed '$d'
+            echo "  dataType=$dtype -> HTTP $code"
+            [ "$code" = "200" ] || [ "$code" = "201" ] || { echo "::error::Import of $dtype to $GATEWAY_DOMAIN failed (HTTP $code)"; return 1; }
+          }
+
+          # Rules first so the servers' rule references resolve. dataType must be
+          # plural ("servers") — the gateway builds the write path from it and reads
+          # vhosts from data/servers/<profile>/host:<host>.json.
+          if [ "$(echo "$RULES_ARR" | jq 'length')" -gt 0 ]; then import rules "$RULES_ARR"; fi
+          import servers "$SERVERS_ARR"
+
+          echo "WSL Proxy import — ${GATEWAY_DOMAIN} / ${TARGET_ENV}: $(echo "$RULES_ARR" | jq 'length') rule(s), $(echo "$SERVERS_ARR" | jq 'length') server(s) (config_status=${ACTIVATE_CONFIG})"
+          if [ "$DRY_RUN" != "true" ] && [ "$ACTIVATE_CONFIG" != "true" ]; then
+            echo "::notice::config_status=false — servers are staged. Re-run with ACTIVATE_CONFIG=true (or activate in the admin UI) to go live."
+          fi

@@ -1,0 +1,28 @@
+{
+  "id": "host:snazzy.pro",
+  "server_name": "snazzy.pro",
+  "proxy_server_name": "bwalia.github.io",
+  "root": "/var/www/html",
+  "index": "index.html",
+  "access_log": "logs/snazzy.pro.access.log",
+  "error_log": "logs/snazzy.pro.error.log",
+  "config_status": false,
+  "profile_id": "prod",
+  "pop_ids": [
+    "lon1"
+  ],
+  "rules": "snazzy-prod-gh-pages",
+  "listens": [
+    {
+      "listen": "80"
+    }
+  ],
+  "ssl_enabled": true,
+  "ssl_force_https": true,
+  "ssl_staging": false,
+  "ssl_auto_renew": true,
+  "ssl_email": "admin@snazzy.pro",
+  "cache_enabled": false,
+  "match_cases": {},
+  "custom_headers": []
+}

@@ -1,0 +1,109 @@
+name: Auto Tag on Merge to Main
+
+# Creates an incremental semantic version tag (and a GitHub Release) whenever code
+# lands on main, via PR merge or direct push. Ported from bwalia/wslproxy.
+#
+# Version scheme: v<MAJOR>.<MINOR>.<PATCH>
+# - PATCH increments automatically on every merge to main
+# - MINOR/MAJOR bumps and custom versions are manual (workflow_dispatch)
+# - With no tags yet, the first tag is v0.1.0 (MARKETING_VERSION in project.yml)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version_type:
+        type: choice
+        description: "Version bump type (for manual major/minor bumps)"
+        required: false
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        type: string
+        description: "Custom version (e.g. v1.2.0). Overrides version_type."
+        required: false
+
+permissions:
+  contents: write # push tags + create releases
+
+concurrency:
+  # Serialize tagging so two quick merges can't race to the same version.
+  # cancel-in-progress: false so every merge gets its own bump.
+  group: auto-tag-main
+  cancel-in-progress: false
+
+jobs:
+  auto-tag:
+    name: Create Incremental Tag
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculate next version
+        id: calc
+        env:
+          VERSION_TYPE: ${{ github.event.inputs.version_type }}
+          CUSTOM_VERSION: ${{ github.event.inputs.custom_version }}
+        run: |
+          set -euo pipefail
+          # Strict vMAJOR.MINOR.PATCH only — a tag like v1.0.3-build.2 would sort
+          # above v1.0.3 and break the $((PATCH+1)) arithmetic below.
+          LATEST=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+
+          if [ -n "$CUSTOM_VERSION" ]; then
+            NEXT="v${CUSTOM_VERSION#v}"
+            echo "Custom version: $NEXT"
+          elif [ -z "$LATEST" ]; then
+            NEXT="v0.1.0"
+            echo "No existing tags, starting at $NEXT"
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST"
+            # On push events VERSION_TYPE is empty, which means patch.
+            case "${VERSION_TYPE:-patch}" in
+              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+              patch) PATCH=$((PATCH + 1)) ;;
+              *) echo "::error::Unknown version_type '$VERSION_TYPE'"; exit 1 ;;
+            esac
+            NEXT="v${MAJOR}.${MINOR}.${PATCH}"
+            echo "${VERSION_TYPE:-patch} bump: v$LATEST -> $NEXT"
+          fi
+
+          [[ "$NEXT" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Computed version '$NEXT' is invalid"; exit 1; }
+          echo "next_version=$NEXT" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        id: tag
+        env:
+          NEXT: ${{ steps.calc.outputs.next_version }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/$NEXT" >/dev/null; then
+            echo "Tag $NEXT already exists, skipping"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            git tag -a "$NEXT" -m "Release $NEXT"
+            git push origin "$NEXT"
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.tag.outputs.created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT: ${{ steps.calc.outputs.next_version }}
+        run: gh release create "$NEXT" --title "Release $NEXT" --generate-notes --verify-tag
