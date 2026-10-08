@@ -25,6 +25,11 @@ targets:
       - path: App/Sources
       - path: App/Resources
       - path: Shared
+      # The terms and privacy policy shown on the welcome screen (the website's pages).
+      - path: site/terms.html
+        buildPhase: resources
+      - path: site/privacy.html
+        buildPhase: resources
     dependencies:
       - package: SnazzyKit
         product: SnazzyCore
@@ -118,6 +123,10 @@ targets:
       # and the slide editor.
       - path: App/Sources/ProjectSchemeHandler.swift
       - path: Shared
+      - path: site/terms.html
+        buildPhase: resources
+      - path: site/privacy.html
+        buildPhase: resources
     dependencies:
       - package: SnazzyKit
         product: Remote

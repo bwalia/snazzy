@@ -9,10 +9,10 @@ struct WelcomeView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 18) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
-                .frame(width: 96, height: 96)
+                .frame(width: 80, height: 80)
                 .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
             VStack(spacing: 6) {
                 Text("Welcome to Snazzy Pro")
@@ -29,6 +29,9 @@ struct WelcomeView: View {
                 row("lock.shield", "Your Mac, your work", "Everything stays on your Mac. It asks before anything goes to a cloud AI or the internet.")
             }
             .frame(maxWidth: 440, alignment: .leading)
+
+            LegalDocumentsView()
+                .frame(height: 210)
 
             VStack(spacing: 12) {
                 Toggle(isOn: $agreed) {
@@ -52,8 +55,8 @@ struct WelcomeView: View {
             Text("Recording or streaming people? Tell them first: the law may require it.")
                 .font(.caption).foregroundStyle(.secondary)
         }
-        .padding(36)
-        .frame(width: 560)
+        .padding(32)
+        .frame(width: 580)
     }
 
     private func row(_ symbol: String, _ title: String, _ detail: String) -> some View {

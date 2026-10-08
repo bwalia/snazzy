@@ -17,15 +17,19 @@ struct WelcomeView: View {
                     .overlay(Image(systemName: "sparkles").font(.system(size: 36, weight: .semibold)).foregroundStyle(.white))
                     .padding(.top, 30)
                 Text("Welcome to Snazzy Pro").font(.largeTitle.bold()).multilineTextAlignment(.center)
-                Text("The remote and teleprompter for Snazzy Pro on your Mac.")
+                Text("Make slides on your iPad or iPhone, and control Snazzy Pro on your Mac.")
                     .font(.title3).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 VStack(alignment: .leading, spacing: 16) {
+                    row("rectangle.stack", "Make slides here", "Chat to build a deck, or make one yourself in the slide editor, then present.")
                     row("record.circle", "Record from anywhere", "Start, pause and stop the recording on your Mac.")
                     row("rectangle.on.rectangle", "Slides and notes", "Change slides and read your speaker notes, large.")
                     row("bubble.left.and.text.bubble.right", "Ask the assistant", "Type or dictate, and the assistant on your Mac does it.")
-                    row("lock.shield", "Private by design", "It talks only to your own Mac, encrypted, over your Wi-Fi.")
+                    row("lock.shield", "Private by design", "It talks only to your own Mac, encrypted, over your Wi-Fi, and to the AI you choose.")
                 }
                 .frame(maxWidth: 480, alignment: .leading)
+                LegalDocumentsView()
+                    .frame(maxWidth: 480)
+                    .frame(height: 260)
                 Toggle(isOn: $agreed) {
                     Text("I agree to the [Terms of Use](\(Legal.termsURL.absoluteString)) and [Privacy Policy](\(Legal.privacyURL.absoluteString))")
                 }
