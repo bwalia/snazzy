@@ -120,7 +120,7 @@ struct ShareImportSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(4)
             }
-            Text("Projects are added alongside yours (nothing is replaced). Slide decks and prototypes are web pages, so only import files from people you know.")
+            Text("Projects are added alongside yours (nothing is replaced). Slide decks and prototypes are web pages: an imported one opens without internet access until you allow it, and only import files from people you know.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack {

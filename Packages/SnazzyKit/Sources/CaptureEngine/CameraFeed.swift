@@ -172,6 +172,14 @@ public final class CameraFeed {
         droppedFrames = stats.dropped
         if let size = stats.size, size != frameSize { frameSize = size }
 
+        // A feed that failed (an iPad that didn't appear in time, a camera error) is tried
+        // again now and then, unless camera access itself is off.
+        if case .failed = state, AVCaptureDevice.authorizationStatus(for: .video) == .authorized,
+           Date().timeIntervalSince(lastRestart) > 20 {
+            restart(reason: "trying again after a failure")
+            return
+        }
+
         let elapsed = now - lastCountTime
         if elapsed >= 1 {
             framesPerSecond = Double(stats.frames - lastCount) / elapsed

@@ -88,7 +88,12 @@ final class BroadcastController {
     func saveKey(_ key: String, for p: BroadcastPlatform) {
         let k = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !k.isEmpty else { return }
-        try? app.secrets.setSecret(k, for: p.keychainAccount)
+        do {
+            try app.secrets.setSecret(k, for: p.keychainAccount)
+        } catch {
+            message = "Couldn't save the \(p.displayName) stream key in the Keychain: \(error.localizedDescription)"
+            return
+        }
         destinations.insert(p)
         refreshKeys()
     }

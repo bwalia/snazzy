@@ -46,6 +46,7 @@ public final class Recorder {
     @ObservationIgnored private var ticker: Task<Void, Never>?
     @ObservationIgnored private var countdownTask: Task<Void, Never>?
     @ObservationIgnored private var cameraFeed: CameraFeed?
+    @ObservationIgnored private weak var screenFeed: ScreenFeed?
     @ObservationIgnored private var startDate = Date()
     @ObservationIgnored private let diagnostics: Diagnostics
 
@@ -92,12 +93,14 @@ public final class Recorder {
             session.onWarning = { [weak self] message in
                 Task { @MainActor in
                     self?.warning = message
-                    self?.diagnostics.log(message, category: "recording", level: .warning)
+                    self?.diagnostics.log(message ?? "The microphone is working again", category: "recording",
+                                          level: message == nil ? .info : .warning)
                 }
             }
             try session.start(screen: screen.receiver, camera: camera?.receiver, micID: micID)
             self.session = session
             cameraFeed = camera
+            screenFeed = screen
             startDate = Date()
             elapsed = 0
             state = .recording
@@ -109,6 +112,12 @@ public final class Recorder {
                     guard let self, let session = self.session else { return }
                     self.elapsed = session.recordedSeconds
                     ticks += 1
+                    // The window closed or the display went away: the recording can only repeat the
+                    // last picture, so say so (once).
+                    if case .failed = self.screenFeed?.state, !(self.warning ?? "").hasPrefix("Screen capture stopped") {
+                        self.warning = "Screen capture stopped (the window closed or the display was unplugged). The recording shows the last picture; stop it and choose another source."
+                        self.diagnostics.log(self.warning!, category: "recording", level: .warning)
+                    }
                     let diskFull = ticks % 20 == 0 && (Self.freeSpace(folder) ?? .max) < Self.minFreeWhileRecording
                     if let error = session.failure ?? (diskFull ? "The disk is almost full, so recording stopped. Everything up to now is saved." : nil) {
                         self.diagnostics.log("Recording failed: \(error)", category: "recording", level: .error)
@@ -232,6 +241,9 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     private var screenConsumer: UUID?
     private var cameraConsumer: UUID?
     private var micSession: AVCaptureSession?
+    private var micID: String?
+    private var lastMicAttempt = Date.distantPast
+    private var micReopening = false
     private let micQueue = DispatchQueue(label: "com.snazzy.pro.recorder.mic")
 
     // Timing (host clock)
@@ -249,7 +261,8 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     private var micWarned = false
 
     var onMicLevel: (@Sendable (Double) -> Void)?
-    var onWarning: (@Sendable (String) -> Void)?
+    /// A problem to show while recording; nil when it has cleared (the mic came back).
+    var onWarning: (@Sendable (String?) -> Void)?
 
     private let stateLock = NSLock()
     private var _failure: String?
@@ -344,10 +357,17 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     }
 
     private func startMic(_ micID: String?) throws {
-        guard let mic = micID.flatMap(AVCaptureDevice.init(uniqueID:)) ?? AVCaptureDevice.default(for: .audio) else {
+        self.micID = micID
+        guard let session = try makeMicSession(micID) else {
             onWarning?("No microphone: recording without sound.")
             return
         }
+        queue.sync { micSession = session }
+    }
+
+    /// A running capture session for the mic (the default one if `micID` is gone), or nil if there's none.
+    private func makeMicSession(_ micID: String?) throws -> AVCaptureSession? {
+        guard let mic = micID.flatMap(AVCaptureDevice.init(uniqueID:)) ?? AVCaptureDevice.default(for: .audio) else { return nil }
         let session = AVCaptureSession()
         session.beginConfiguration()
         let input = try AVCaptureDeviceInput(device: mic)
@@ -359,10 +379,26 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
         session.addOutput(output)
         session.commitConfiguration()
         session.startRunning()
-        micSession = session
-        NotificationCenter.default.addObserver(forName: AVCaptureSession.runtimeErrorNotification, object: session, queue: nil) { [weak self] note in
-            let message = (note.userInfo?[AVCaptureSessionErrorKey] as? Error)?.localizedDescription ?? "unknown"
-            self?.onWarning?("Microphone error: \(message). The screen keeps recording.")
+        return session
+    }
+
+    /// Runs on `queue`: the mic went quiet (unplugged, or it stopped), so open it again,
+    /// every few seconds until it answers. Done on the mic's queue so frames keep coming.
+    private func reopenMicIfDue() {
+        guard !micReopening, Date().timeIntervalSince(lastMicAttempt) > 3 else { return }
+        lastMicAttempt = Date()
+        micReopening = true
+        let old = micSession, id = micID
+        micQueue.async { [weak self] in
+            old?.stopRunning()
+            guard let self else { return }
+            let fresh = try? self.makeMicSession(id)
+            self.queue.async {
+                self.micReopening = false
+                // Finished meanwhile: don't leave a mic running.
+                guard self.micSession === old else { fresh?.stopRunning(); return }
+                self.micSession = fresh ?? old  // still nothing: try again later
+            }
         }
     }
 
@@ -421,9 +457,12 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
             droppedFrames += 1
         }
         // Mic silent for too long → probably disconnected.
-        if micSession != nil, Date().timeIntervalSince(lastMicSample) > 2, !micWarned {
-            micWarned = true
-            onWarning?("No audio from the microphone for 2 s. Is it still connected? The screen keeps recording.")
+        if micSession != nil, Date().timeIntervalSince(lastMicSample) > 2 {
+            if !micWarned {
+                micWarned = true
+                onWarning?("No audio from the microphone. Trying to reconnect it; the screen keeps recording.")
+            }
+            reopenMicIfDue()
         }
     }
 
@@ -436,7 +475,10 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
 
     private func audio(_ buffer: CMSampleBuffer) {
         lastMicSample = Date()
-        micWarned = false
+        if micWarned {
+            micWarned = false
+            onWarning?(nil)
+        }
         if Date().timeIntervalSince(lastLevel) > 0.05 {
             lastLevel = Date()
             onMicLevel?(AudioLevel.rms(buffer))
@@ -495,8 +537,11 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     func finish(freezes: [CameraFeed.Freeze], recordingStart: Date) async -> Result<RecordingResult, Error> {
         if let id = screenConsumer { screen?.removeConsumer(id) }
         if let id = cameraConsumer { camera?.removeConsumer(id) }
-        micSession?.stopRunning()
-        micSession = nil
+        let mic: AVCaptureSession? = queue.sync {
+            defer { micSession = nil }
+            return micSession
+        }
+        mic?.stopRunning()
         let (end, dropped, raws): (CMTime, Int, [RawTrack]) = queue.sync {
             timer?.cancel()
             timer = nil

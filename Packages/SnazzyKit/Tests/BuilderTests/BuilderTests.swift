@@ -96,10 +96,11 @@ import SnazzyCore
         let sample = SampleDeck.all[0]
         let p = try ws.createSample(sample)
         try ws.write(project: p.name, path: "index.html", content: "edited")
+        // Opening the sample again keeps the edits.
         let again = try ws.createSample(sample)
         #expect(again.kind == .presentation)
         #expect(ws.files(project: again.name) == ["deck.css", "deck.js", "index.html"])
-        #expect(try ws.read(project: again.name, path: "index.html").contains(sample.title))
+        #expect(try ws.read(project: again.name, path: "index.html") == "edited")
     }
 }
 
@@ -143,6 +144,19 @@ import SnazzyCore
         #expect(imported.name == deck.name + "-2" && imported.kind == .presentation)
         #expect(try Data(contentsOf: ws.projectURL(imported.name).appending(path: "img/logo.png")) == bytes)
         #expect(try ws.read(project: imported.name, path: "index.html") == ws.read(project: deck.name, path: "index.html"))
+
+        // Someone else's project starts offline (no internet for its pages); yours never is.
+        #expect(ws.project(imported.name)?.shared == true)
+        #expect(ws.project(deck.name)?.shared == nil)
+        try ws.setShared(imported.name, false)
+        #expect(ws.project(imported.name)?.shared == nil)
+    }
+
+    /// On a Mac "A.html" and "a.html" are one file: a share with both would overwrite one.
+    @Test func rejectsFilesDifferingOnlyByCase() {
+        let files = ["Index.html", "index.html"].map { SnazzyShare.File(path: $0, data: Data("x".utf8)) }
+        let share = SnazzyShare(title: "t", project: SnazzyShare.Project(name: "p", kind: .prototype, files: files))
+        #expect(throws: WorkspaceError.self) { try share.validate() }
     }
 
     @Test func findsAndRemapsBackgroundImages() {

@@ -110,7 +110,7 @@ final class BuilderController {
             config.userContentController.add(bridge, name: "snazzy")
         }
         let view = WKWebView(frame: .zero, configuration: config)
-        view.navigationDelegate = bridge
+        view.navigationDelegate = bridge ?? NavigationGuard.shared
         #if DEBUG
         view.isInspectable = true
         #endif
@@ -192,7 +192,7 @@ final class BuilderController {
         let project = try workspace.createSample(sample)
         refreshProjects()
         open(project.name, announce: false)
-        step(.info, "Sample “\(sample.title)” copied to \(project.name)")
+        step(.info, "Sample “\(sample.title)” is in \(project.name)")
         return project
     }
 
@@ -208,6 +208,18 @@ final class BuilderController {
         console.removeAll()
         reload()
         if announce { step(.info, "Opened \(project.name)") }
+    }
+
+    /// Lets the open project from someone else reach the internet (fonts, libraries, data).
+    func allowInternet() {
+        guard let name = current?.name else { return }
+        do {
+            try workspace.setShared(name, false)
+            open(name, announce: false)
+            step(.info, "\(name) can now reach the internet")
+        } catch {
+            step(.error, error.localizedDescription)
+        }
     }
 
     func requireProject(_ name: String?) throws -> BuilderProject {
@@ -293,6 +305,12 @@ final class BuilderController {
     func liveFinished(callID: String) {
         liveBuffers[callID] = nil
         if live?.callID == callID { live = nil }
+    }
+
+    /// The run ended or was cancelled: nothing is being written any more.
+    func clearLive() {
+        liveBuffers = [:]
+        live = nil
     }
 
     // MARK: Preview
@@ -491,7 +509,26 @@ final class BuilderController {
 }
 
 /// WebKit delegates (NSObject) that forward to the controller.
-final class WebBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+/// Keeps a page on its project: a clicked link to a website opens in the browser,
+/// and nothing can take the preview or the (recorded) Present window to another site.
+class NavigationGuard: NSObject, WKNavigationDelegate {
+    static let shared = NavigationGuard()
+
+    func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+                 decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
+        MainActor.assumeIsolated {
+            guard let url = action.request.url, let scheme = url.scheme?.lowercased() else { return decisionHandler(.cancel) }
+            // Frames inside a page (a video embed) are the page's business; shared projects can't load them.
+            if action.targetFrame?.isMainFrame == false || [ProjectSchemeHandler.scheme, "about", "data", "blob"].contains(scheme) {
+                return decisionHandler(.allow)
+            }
+            if action.navigationType == .linkActivated, ["http", "https", "mailto"].contains(scheme) { NSWorkspace.shared.open(url) }
+            decisionHandler(.cancel)
+        }
+    }
+}
+
+final class WebBridge: NavigationGuard, WKScriptMessageHandler {
     var onConsole: ((String, String) -> Void)?
     var onLoad: ((Bool) -> Void)?
 

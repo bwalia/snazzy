@@ -83,6 +83,15 @@ struct BuilderPanel: View {
                 Label(builder.current?.name ?? "Projects", systemImage: builder.current?.kind == .presentation ? "play.rectangle" : "app.dashed")
             }
             .fixedSize()
+            if builder.current?.shared == true {
+                Menu {
+                    Button("Allow Internet for This Project") { builder.allowInternet() }
+                } label: {
+                    Label("Offline", systemImage: "wifi.slash")
+                }
+                .fixedSize()
+                .help("This project came from someone else, so its pages can't reach the internet or send anything out.")
+            }
             if let live = builder.live {
                 HStack(spacing: 4) {
                     ProgressView().controlSize(.mini)

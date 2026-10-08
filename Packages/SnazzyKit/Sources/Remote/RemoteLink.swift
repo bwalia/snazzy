@@ -80,7 +80,10 @@ public final class RemoteLink: @unchecked Sendable {
             defer { closed = true }
             return !closed
         }
-        if first { onState?(.closed(reason)) }
+        guard first else { return }
+        // A connection left waiting or failed would otherwise linger (one per retry).
+        connection.cancel()
+        onState?(.closed(reason))
     }
 
     static func describe(_ error: NWError) -> String {

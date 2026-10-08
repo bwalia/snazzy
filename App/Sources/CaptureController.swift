@@ -103,6 +103,12 @@ final class CaptureController {
 
     /// Replaces the whole capture setup (from a preset) and brings feeds in line.
     func apply(_ newSetup: CaptureSetup) {
+        var newSetup = newSetup
+        // The recorder keeps the camera it started with: switching now would freeze the inset.
+        if recorder.isActive, newSetup.insetDevice?.uniqueID != setup.insetDevice?.uniqueID {
+            newSetup.insetDevice = setup.insetDevice
+            diagnostics.log("Kept the inset camera: it can't change while recording", level: .warning)
+        }
         let oldSource = setup.source
         setup = newSetup
         // Inset camera: swap feeds if it changed.
@@ -208,6 +214,9 @@ final class CaptureController {
     /// can take up to ~30 s to appear, so this waits for them.
     @discardableResult
     func selectInsetDevice(_ query: String) async throws -> CaptureDeviceInfo? {
+        guard !recorder.isActive else {
+            throw CaptureActionError(message: "Stop the recording first: the inset camera can't change while recording.")
+        }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if q.isEmpty || ["none", "off", "no inset"].contains(q.lowercased()) {
             setInsetDevice(nil)
@@ -240,6 +249,8 @@ final class CaptureController {
     }
 
     func setInsetDevice(_ device: CaptureDeviceInfo?) {
+        // The recorder keeps the camera it started with (switching would freeze the inset).
+        guard !recorder.isActive || insetFeed?.device.id == device?.id else { return }
         // The inset holds its own reference to the feed; previews hold theirs.
         if let feed = insetFeed, feed.device.id != device?.id {
             feeds.release(feed.device.id)

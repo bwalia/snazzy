@@ -120,12 +120,24 @@ final class RemoteController {
 
     // MARK: Keychain
 
+    /// The stored list couldn't be read: saving now would replace it with only the new devices.
+    @ObservationIgnored private var devicesUnreadable = false
+
     private func loadDevices() -> [TrustedDevice] {
-        guard let s = (try? app.secrets.secret(for: Self.devicesAccount)) ?? nil, let data = Data(base64Encoded: s) else { return [] }
+        let stored: String?
+        do {
+            stored = try app.secrets.secret(for: Self.devicesAccount)
+        } catch {
+            devicesUnreadable = true
+            self.error = "Couldn't read your paired devices from the Keychain (\(error.localizedDescription)). Pairing changes won't be saved until Snazzy Pro can read them."
+            return []
+        }
+        guard let stored, let data = Data(base64Encoded: stored) else { return [] }
         return (try? JSONDecoder().decode([TrustedDevice].self, from: data)) ?? []
     }
 
     private func saveDevices() {
+        guard !devicesUnreadable else { return }
         if devices.isEmpty {
             try? app.secrets.deleteSecret(for: Self.devicesAccount)
         } else if let data = try? JSONEncoder().encode(devices) {
@@ -157,6 +169,10 @@ final class RemoteController {
             return (true, nil)
         case .stopRecording:
             guard capture.recorder.isActive else { return (false, "Not recording.") }
+            if case .countdown = capture.recorder.state {
+                capture.recorder.cancelCountdown()
+                return (true, "Recording cancelled.")
+            }
             let result = await capture.stopRecording()
             return (result != nil, result.map { "Saved \($0.composite.lastPathComponent)" } ?? "Nothing was saved.")
         case .nextSlide:
@@ -178,7 +194,10 @@ final class RemoteController {
         case .chat(let text):
             let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !clean.isEmpty else { return (false, "Empty message.") }
-            guard app.chat.send(clean) else { return (false, "The assistant is busy.") }
+            let before = app.chat.conversation.messages.count
+            guard app.chat.send(clean) else {
+                return (false, app.chat.isRunning ? "The assistant is busy." : "The assistant couldn't start: see the Mac.")
+            }
             let host = self.host
             Task { @MainActor [weak self] in
                 // Wait for the reply, then send its final text to the device.
@@ -187,7 +206,8 @@ final class RemoteController {
                     if self?.app.chat.isRunning == false { break }
                 }
                 guard let self else { return }
-                let reply = self.app.chat.conversation.messages.last { $0.role == .assistant }?.text ?? ""
+                // Only this turn's answer, never an older one.
+                let reply = self.app.chat.conversation.messages.dropFirst(before).last { $0.role == .assistant }?.text ?? ""
                 host?.sendChatReply(reply.isEmpty ? "Done." : reply, to: deviceID)
             }
             return (true, nil)

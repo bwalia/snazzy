@@ -67,7 +67,7 @@ Warnings are treated as errors in the app target.
 | ↳ `CaptureEngine` | Device catalog (mics, cameras, USB iPad/iPhone, displays, windows), camera feeds with stall detection and restart, inset transform (rotate → crop), Metal preview view, diagnostics |
 | ↳ `Builder` | Builder workspace (projects, safe file access, starter templates), partial-JSON reader for streamed tool input |
 | ↳ `Slides` | Present the open Builder deck (slide list, speaker notes, Record This Deck): the "slides" source records its Present window directly, and slide changes become chapters. Plus sample decks for 12 sectors. |
-| ↳ Sharing | `.snazzy` files: send a deck or prototype, presets and their background images to another Snazzy Pro user with AirDrop, Messages, Mail or Save As (File › Share…, ⇧⌘S); double-click to import. No API keys, conversations or recordings. |
+| ↳ Sharing | `.snazzy` files: send a deck or prototype, presets and their background images to another Snazzy Pro user with AirDrop, Messages, Mail or Save As (File › Share…, ⇧⌘S); double-click to import. No API keys, conversations or recordings. An imported project opens offline: its pages can't reach the internet (Content-Security-Policy) until you allow it, and no page can navigate the preview to another site. |
 | ↳ Live classroom | Live tab: a room on your Wi-Fi. People scan a QR code and watch the live picture (slides or screen + camera, with your mic) in their browser, and post and vote on ideas on a brainstorm board; the assistant turns the ideas into a deck. Peer to peer from your Mac: no servers, accounts or internet. Room code required. Limits apply per device (by IP address): posts, one vote per idea, connections and wrong-code guesses, so one device can't flood or block the room. |
 | ↳ Go live online | Stream the same picture and mic to YouTube, Twitch, Vimeo, Facebook or any RTMP(S) server (Live tab). Stream keys stay in the Keychain; it asks before every stream. A destination that drops reconnects (3 tries, 2–6 s apart); if the stream is lost for good, the copy recorded on the Mac keeps going. Uses HaishinKit (BSD-3-Clause); see THIRD_PARTY_NOTICES.md. |
 
@@ -166,7 +166,11 @@ MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
   changed later. No save dialogs.
 - **Robustness:** a stalled or unplugged camera never stops the screen or mic.
   The inset holds its last frame, and the freeze goes in the timeline. A silent
-  or failing mic shows a warning, and the screen keeps recording.
+  or unplugged mic shows a warning and is reopened every few seconds, so sound
+  comes back when it's plugged in again; the screen keeps recording meanwhile.
+  A camera that failed is retried every 20 s. The inset camera can't be switched
+  while recording (a preset loaded then keeps it), and a lost screen source (a
+  window closed, a display unplugged) shows a warning.
 - **Crash-safe:** every movie is written in 2-second fragments, so a crash,
   force quit or power cut keeps everything but the last moments. Quitting
   finishes the recording first. Recording won't start with under 1 GB free,

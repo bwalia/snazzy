@@ -436,7 +436,7 @@ final class ChatSession {
                 transcript[i].toolState = .failed
             }
         }
-        app.builder.liveFinished(callID: "")
+        app.builder.clearLive()
         isRunning = false
         activeProvider = nil
         currentAssistant = nil

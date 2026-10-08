@@ -35,6 +35,7 @@ public final class RemoteBrowser: @unchecked Sendable {
     public init() {}
 
     public func start() {
+        browser?.cancel()
         let params = NWParameters()
         params.includePeerToPeer = true
         let b = NWBrowser(for: .bonjourWithTXTRecord(type: RemoteProtocol.serviceType, domain: nil), using: params)
@@ -63,6 +64,9 @@ public final class RemoteClient: @unchecked Sendable {
         case disconnected(String?)
         case connecting
         case connected(hostName: String)
+        /// The Mac ended it on purpose (this device was removed, the versions differ):
+        /// connecting again won't help until the user does something.
+        case ended(String)
     }
 
     public let deviceID: String
@@ -79,6 +83,8 @@ public final class RemoteClient: @unchecked Sendable {
     private var link: RemoteLink?
     /// True between hello being answered and the link closing.
     private var isOpen = false
+    /// Why the Mac said goodbye, kept for when the connection closes right after.
+    private var farewell: String?
     private var nextID = 1
     private var pending: [Int: CheckedContinuation<(Bool, String?), Never>] = [:]
 
@@ -119,6 +125,7 @@ public final class RemoteClient: @unchecked Sendable {
     /// Tries each address in turn (Bonjour first, then Wi-Fi, VPN…) until one connects.
     private func connect(candidates: [NWEndpoint], identity: String, key: Data, pairing: Bool, addresses: String?) {
         disconnect()
+        lock.withLock { farewell = nil }
         onState?(.connecting)
         attempt(candidates[...], identity: identity, key: key, pairing: pairing, addresses: addresses, lastError: nil)
     }
@@ -147,15 +154,18 @@ public final class RemoteClient: @unchecked Sendable {
                     self.attempt(candidates.dropFirst(), identity: identity, key: key, pairing: pairing, addresses: addresses, lastError: reason)
                     return
                 }
-                self.lock.withLock { self.isOpen = false }
+                let farewell = self.lock.withLock { () -> String? in
+                    self.isOpen = false
+                    return self.farewell
+                }
                 self.failPending()
-                self.onState?(.disconnected(reason))
+                self.onState?(farewell.map(State.ended) ?? .disconnected(reason))
             case .connecting: break
             }
         }
-        link.onMessage = { [weak self] message in
+        link.onMessage = { [weak self, weak link] message in
             // Remember the address that worked, first.
-            let used = Self.address(of: link.connection)
+            let used = link.flatMap { Self.address(of: $0.connection) }
             self?.handle(message, address: Self.merge(used, addresses))
         }
         link.start()
@@ -178,7 +188,8 @@ public final class RemoteClient: @unchecked Sendable {
         case .chatReply(let text):
             onChatReply?(text)
         case .bye(let reason):
-            onState?(.disconnected(reason))
+            // Reported when the connection closes, which follows straight away.
+            lock.withLock { farewell = reason }
         default:
             break
         }

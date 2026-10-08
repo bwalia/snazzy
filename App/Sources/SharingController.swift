@@ -144,6 +144,14 @@ final class SharingController {
         let share = pending.share
         var done: [String] = []
         do {
+            // The project first: it removes itself if it fails, so a failed import leaves nothing.
+            if let project = share.project {
+                let imported = try app.builder.workspace.importProject(project)
+                app.builder.refreshProjects()
+                app.builder.open(imported.name)
+                app.sidePanelTab = .builder
+                done.insert("“\(imported.name)” in the Builder", at: 0)
+            }
             var idMap: [String: String] = [:]
             if !share.backgrounds.isEmpty {
                 let tmp = FileManager.default.temporaryDirectory.appending(path: "Snazzy Import/\(UUID().uuidString.prefix(8))")
@@ -165,13 +173,6 @@ final class SharingController {
                 done.append("preset “\(p.name)”")
             }
             app.presets.refresh()
-            if let project = share.project {
-                let imported = try app.builder.workspace.importProject(project)
-                app.builder.refreshProjects()
-                app.builder.open(imported.name)
-                app.sidePanelTab = .builder
-                done.insert("“\(imported.name)” in the Builder", at: 0)
-            }
             message = "Imported " + done.joined(separator: ", ") + "."
         } catch {
             message = "Import stopped: \(error.localizedDescription)"

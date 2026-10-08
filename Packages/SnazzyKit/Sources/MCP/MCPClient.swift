@@ -101,6 +101,7 @@ public actor MCPClient {
     public func listTools() async throws -> [MCPTool] {
         var tools: [MCPTool] = []
         var cursor: String?
+        var seen: Set<String> = []
         repeat {
             var params: [String: JSONValue] = [:]
             if let cursor { params["cursor"] = .string(cursor) }
@@ -114,7 +115,8 @@ public actor MCPClient {
                 }
             }
             cursor = result["nextCursor"]?.stringValue
-        } while cursor != nil && tools.count < 1000
+            // A server that repeats a cursor (or pages forever) can't keep us looping.
+        } while cursor.map({ seen.insert($0).inserted }) == true && seen.count < 100 && tools.count < 1000
         return tools
     }
 
@@ -127,6 +129,7 @@ public actor MCPClient {
     public func listResources() async throws -> [MCPResource] {
         var resources: [MCPResource] = []
         var cursor: String?
+        var seen: Set<String> = []
         repeat {
             var params: [String: JSONValue] = [:]
             if let cursor { params["cursor"] = .string(cursor) }
@@ -137,7 +140,7 @@ public actor MCPClient {
                                              description: item["description"]?.stringValue, mimeType: item["mimeType"]?.stringValue))
             }
             cursor = result["nextCursor"]?.stringValue
-        } while cursor != nil && resources.count < 2000
+        } while cursor.map({ seen.insert($0).inserted }) == true && seen.count < 100 && resources.count < 2000
         return resources
     }
 
@@ -268,7 +271,11 @@ public actor MCPClient {
     /// (notifications before it are skipped).
     static func readSSE(_ bytes: URLSession.AsyncBytes, id: Int) async throws -> JSONValue? {
         var buffer = ""
+        var total = 0
         for try await line in bytes.lines {
+            // Same limit as a plain JSON response, however the stream is split up.
+            total += line.utf8.count
+            if total > 20_000_000 { throw MCPError(message: "Response too large") }
             if line.hasPrefix(":") || line.hasPrefix("event:") || line.hasPrefix("id:") || line.hasPrefix("retry:") { continue }
             guard line.hasPrefix("data:") else { continue }
             let chunk = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)

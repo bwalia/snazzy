@@ -222,13 +222,21 @@ final class MCPManager {
                                           description: String(desc.prefix(1000)), inputSchema: Self.permissive(schema),
                                           requiresConfirmation: ask, external: "the MCP server “\(serverName)”") { @Sendable args in
                     let result = try await client.callTool(toolName, arguments: args)
-                    if result.isError { throw CaptureActionError(message: result.text) }
-                    return .string(result.text)
+                    if result.isError { throw CaptureActionError(message: String(result.text.prefix(Self.maxResultCharacters))) }
+                    return .string(Self.capped(result.text))
                 })
             }
         }
         out.append(contentsOf: genericTools())
         return out
+    }
+
+    /// What one MCP result may add to the chat (a server can return megabytes).
+    nonisolated static let maxResultCharacters = 60_000
+
+    nonisolated static func capped(_ text: String) -> String {
+        guard text.count > maxResultCharacters else { return text }
+        return String(text.prefix(maxResultCharacters)) + "\n… [cut: \(text.count - maxResultCharacters) more characters]"
     }
 
     /// Our validator rejects unknown properties only when a schema says so;
@@ -254,7 +262,7 @@ final class MCPManager {
                 external: "a connected MCP server"
             ) { @Sendable args in
                 let text = try await manager.readResource(server: args["server"]?.stringValue ?? "", uri: args["uri"]?.stringValue ?? "")
-                return .string(String(text.prefix(60_000)))
+                return .string(Self.capped(text))
             },
         ]
     }
@@ -285,21 +293,33 @@ final class MCPManager {
 
     // MARK: Server: Snazzy Pro for other agents
 
+    /// The token agents use, made once and kept. If the Keychain can't be read (an
+    /// error, not "no token yet"), this is "" rather than a new token: replacing it
+    /// would lock out every agent already set up. The server won't start with "".
     var serverToken: String {
-        if let token = (try? secrets.secret(for: "mcp.server.token")) ?? nil, !token.isEmpty { return token }
-        let token = Self.randomToken()
-        try? secrets.setSecret(token, for: "mcp.server.token")
-        return token
+        do {
+            if let token = try secrets.secret(for: "mcp.server.token"), !token.isEmpty { return token }
+            let token = Self.randomToken()
+            try secrets.setSecret(token, for: "mcp.server.token")
+            return token
+        } catch {
+            return ""
+        }
     }
 
     func regenerateToken() {
-        try? secrets.setSecret(Self.randomToken(), for: "mcp.server.token")
+        do {
+            try secrets.setSecret(Self.randomToken(), for: "mcp.server.token")
+        } catch {
+            serverError = "Couldn't save a new token in the Keychain: \(error.localizedDescription)"
+            return
+        }
         if serverRunning { stopServer(); startServer() }
     }
 
     static func randomToken() -> String {
-        var bytes = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        // The system's secure random generator.
+        let bytes = (0..<32).map { _ in UInt8.random(in: .min ... .max) }
         return Data(bytes).base64EncodedString().replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
     }
@@ -311,7 +331,19 @@ final class MCPManager {
         let backend = SnazzyMCPBackend(app: app)
         let core = MCPServerCore(name: "Snazzy Pro", version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0",
                                  instructions: Self.serverInstructions, backend: backend)
-        let server = MCPHTTPServer(port: overridePort ?? serverPort, token: serverToken, core: core)
+        let token = serverToken
+        guard !token.isEmpty else {
+            serverRunning = false
+            serverError = "Couldn't read the server's token from the Keychain. Allow Snazzy Pro to use it, then turn the server on again."
+            return
+        }
+        let server = MCPHTTPServer(port: overridePort ?? serverPort, token: token, core: core)
+        server.onFailed = { [weak self] message in
+            Task { @MainActor in
+                self?.serverRunning = false
+                self?.serverError = message
+            }
+        }
         do {
             try server.start()
             httpServer = server
