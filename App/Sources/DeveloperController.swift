@@ -229,18 +229,7 @@ final class DeveloperController {
         return try await makeCaptions(item, burnIn: false).cues
     }
 
-    static func parseSRT(_ text: String) -> [CaptionCue] {
-        text.components(separatedBy: "\n\n").compactMap { block in
-            let lines = block.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-            guard lines.count >= 3, let arrow = lines[1].range(of: " --> ") else { return nil }
-            func secs(_ s: String) -> Double? {
-                let p = s.replacingOccurrences(of: ",", with: ".").split(separator: ":").compactMap { Double($0) }
-                return p.count == 3 ? p[0] * 3600 + p[1] * 60 + p[2] : nil
-            }
-            guard let a = secs(String(lines[1][..<arrow.lowerBound])), let b = secs(String(lines[1][arrow.upperBound...])) else { return nil }
-            return CaptionCue(start: a, end: b, text: lines[2...].joined(separator: "\n"))
-        }
-    }
+    static func parseSRT(_ text: String) -> [CaptionCue] { Captions.parseSRT(text) }
 
     /// A title, 3–5 bullets and chapter times, written by the Writing model.
     /// Only the transcript text is sent, and only after review if the model is in the cloud.

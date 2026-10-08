@@ -65,4 +65,18 @@ import Testing
         let out = Compositor.compose(screen: nil, camera: nil, spec: spec())
         #expect(pixel(out, x: 10, yDown: 10) == (0, 0, 0))
     }
+
+    /// Vertical video: the screen across the top, the camera filling the rest below.
+    @Test func stackedForVerticalVideo() {
+        var s = CompositeSpec(canvas: CGSize(width: 108, height: 192), layout: InsetLayout(), profile: DeviceProfile(crop: InsetCrop(aspect: nil)))
+        s.arrangement = .stacked
+        let both = Compositor.compose(screen: screen, camera: camera, spec: s)
+        #expect(pixel(both, x: 54, yDown: 20) == (255, 0, 0))   // screen: 108 wide, 60.75 high, at the top
+        #expect(pixel(both, x: 5, yDown: 150) == (0, 0, 255))   // camera fills below, edge to edge
+        let screenOnly = Compositor.compose(screen: screen, camera: nil, spec: s)
+        #expect(pixel(screenOnly, x: 54, yDown: 96) == (255, 0, 0))  // letterboxed in the middle
+        #expect(pixel(screenOnly, x: 54, yDown: 5) == (0, 0, 0))
+        let cameraOnly = Compositor.compose(screen: nil, camera: camera, spec: s)
+        #expect(pixel(cameraOnly, x: 54, yDown: 5) == (0, 0, 255) && pixel(cameraOnly, x: 54, yDown: 186) == (0, 0, 255))
+    }
 }

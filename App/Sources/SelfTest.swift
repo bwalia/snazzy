@@ -214,6 +214,15 @@ enum SelfTest {
                        String(format: "%@, %.1f s long, made in %.1f s, %d progress updates", url.lastPathComponent, seconds, Date().timeIntervalSince(start), seen.count))
                 report("progress", seen.count >= 3 && seen == seen.sorted(), "\(seen.prefix(6).map { String(format: "%.2f", $0) })…")
 
+                var vertical = options
+                vertical.resolution = .vertical
+                vertical.range = 1...3
+                let clip = try await app.developer.relayout(item, options: vertical)
+                let clipSeconds = try await AVURLAsset(url: clip).load(.duration).seconds
+                let clipSize = try await AVURLAsset(url: clip).loadTracks(withMediaType: .video).first?.load(.naturalSize)
+                report("vertical clip", abs(clipSeconds - 2) < 0.2 && clipSize == CGSize(width: 1080, height: 1920),
+                       String(format: "%@, %.1f s, %.0f×%.0f", clip.lastPathComponent, clipSeconds, clipSize?.width ?? 0, clipSize?.height ?? 0))
+
                 // --show-sheet: the sheet on this made-up recording, on screen for a few seconds to look at.
                 if arguments.contains("--show-sheet") {
                     let window = NSWindow(contentRect: NSRect(x: 120, y: 120, width: 880, height: 620), styleMask: [.titled], backing: .buffered, defer: false)

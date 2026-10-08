@@ -22,18 +22,20 @@ struct RelayoutSheet: View {
     var body: some View {
         let dev = model.developer!
         VStack(alignment: .leading, spacing: 14) {
-            Text("New Layout: \(item.id)").font(.title3.weight(.semibold))
+            Text("New Layout or Clip: \(item.id)").font(.title3.weight(.semibold))
             if let recording, let options {
                 HStack(alignment: .top, spacing: 18) {
                     VStack(spacing: 8) {
+                        let aspect: CGFloat = options.resolution == .vertical ? 9 / 16 : 16 / 9
                         Group {
                             if let preview {
-                                Image(decorative: preview, scale: 1).resizable().aspectRatio(16 / 9, contentMode: .fit)
+                                Image(decorative: preview, scale: 1).resizable().aspectRatio(aspect, contentMode: .fit)
                             } else {
-                                Rectangle().fill(.quaternary).aspectRatio(16 / 9, contentMode: .fit).overlay(ProgressView())
+                                Rectangle().fill(.quaternary).aspectRatio(aspect, contentMode: .fit).overlay(ProgressView())
                             }
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .frame(maxWidth: 440, maxHeight: 400)
                         Slider(value: $previewTime, in: 0...max(recording.duration, 0.1)) { Text("Preview at") }
                         Text("Preview at \(RecordingControls.format(previewTime)) of \(RecordingControls.format(recording.duration))")
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
@@ -83,12 +85,15 @@ struct RelayoutSheet: View {
                 Text("This recording has no camera.").foregroundStyle(.secondary)
             }
             if options.showCamera && recording.hasCamera {
-                Picker("Corner", selection: bind(\.layout.corner)) {
-                    ForEach(InsetCorner.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                // Vertical puts the camera below the screen, so there's no corner or size to pick.
+                if options.resolution != .vertical {
+                    Picker("Corner", selection: bind(\.layout.corner)) {
+                        ForEach(InsetCorner.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    }
+                    LabeledSlider("Size", value: bind(\.layout.size), range: InsetLayout.sizeRange, format: "%.2f")
+                    LabeledSlider("Border", value: bind(\.layout.borderWidth), range: 0...12, format: "%.0f px")
+                    LabeledSlider("Rounding", value: bind(\.layout.cornerRadius), range: 0...0.5, format: "%.2f")
                 }
-                LabeledSlider("Size", value: bind(\.layout.size), range: InsetLayout.sizeRange, format: "%.2f")
-                LabeledSlider("Border", value: bind(\.layout.borderWidth), range: 0...12, format: "%.0f px")
-                LabeledSlider("Rounding", value: bind(\.layout.cornerRadius), range: 0...0.5, format: "%.2f")
                 Picker("Shape", selection: bind(\.profile.crop.aspect)) {
                     ForEach(Self.aspects, id: \.0) { Text($0.0).tag($0.1) }
                 }
@@ -115,11 +120,31 @@ struct RelayoutSheet: View {
             }
         }
         Section("Output") {
-            Picker("Size", selection: bind(\.resolution)) {
-                Text("1080p").tag(Relayout.Resolution.hd1080)
-                Text("4K").tag(Relayout.Resolution.uhd4K)
+            Picker("Format", selection: bind(\.resolution)) {
+                Text("Landscape 1080p").tag(Relayout.Resolution.hd1080)
+                Text("Landscape 4K").tag(Relayout.Resolution.uhd4K)
+                Text("Vertical 9:16 (Shorts, Reels, TikTok)").tag(Relayout.Resolution.vertical)
             }
-            .pickerStyle(.segmented)
+            Toggle("Only part of it", isOn: Binding {
+                options.range != nil
+            } set: { on in
+                self.options?.range = on ? previewTime...min(previewTime + 30, recording.duration) : nil
+                if on, let r = self.options?.range, r.upperBound - r.lowerBound < 1 {
+                    self.options?.range = max(0, recording.duration - 30)...recording.duration
+                }
+            })
+            if let range = options.range {
+                LabeledSlider("Start", value: Binding { range.lowerBound } set: { v in
+                    self.options?.range = min(v, range.upperBound - 1)...range.upperBound
+                    previewTime = min(v, range.upperBound - 1)
+                }, range: 0...max(recording.duration - 1, 0), format: "%.1f s")
+                LabeledSlider("End", value: Binding { range.upperBound } set: { v in
+                    self.options?.range = range.lowerBound...max(v, range.lowerBound + 1)
+                    previewTime = max(v, range.lowerBound + 1)
+                }, range: min(1, recording.duration)...recording.duration, format: "%.1f s")
+                Text("\(RecordingControls.format(range.lowerBound))–\(RecordingControls.format(range.upperBound)), \(Int((range.upperBound - range.lowerBound).rounded())) s")
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            }
             Button("Back to the Recorded Layout") { self.options = recording.original }
         }
     }

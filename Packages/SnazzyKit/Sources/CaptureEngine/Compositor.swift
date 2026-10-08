@@ -12,6 +12,15 @@ public struct CompositeSpec: Equatable, Sendable {
     public var background: CIColor
     /// Part of the screen to show (top-left normalised 0…1); nil = whole screen.
     public var screenZoom: CGRect?
+    public var arrangement: Arrangement = .inset
+
+    /// How the screen and the camera share the picture.
+    public enum Arrangement: Equatable, Sendable {
+        /// The screen fills the picture; the camera is an inset in a corner.
+        case inset
+        /// For vertical video: the screen across the top, the camera filling the rest below.
+        case stacked
+    }
 
     public init(canvas: CGSize = CGSize(width: 1920, height: 1080), layout: InsetLayout, profile: DeviceProfile,
                 borderColor: CIColor = CIColor(red: 0.13, green: 0.13, blue: 0.13), background: CIColor = .black) {
@@ -38,6 +47,7 @@ public extension CompositeSpec {
 /// composite preview and the recorder, so the preview is what gets recorded.
 public enum Compositor {
     public static func compose(screen: CIImage?, camera: CIImage?, spec: CompositeSpec) -> CIImage {
+        if spec.arrangement == .stacked { return stacked(screen: screen, camera: camera, spec: spec) }
         let canvasRect = CGRect(origin: .zero, size: spec.canvas)
         var output = CIImage(color: spec.background).cropped(to: canvasRect)
 
@@ -47,6 +57,27 @@ public enum Compositor {
         if let camera {
             output = inset(camera, spec: spec).composited(over: output)
         }
+        return output.cropped(to: canvasRect)
+    }
+
+    /// Vertical video: the screen across the top at full width (at most 60% of the
+    /// height), the camera (cropped, rotated) filling what's left below. Either one
+    /// alone fills the picture.
+    static func stacked(screen: CIImage?, camera: CIImage?, spec: CompositeSpec) -> CIImage {
+        let canvasRect = CGRect(origin: .zero, size: spec.canvas)
+        var output = CIImage(color: spec.background).cropped(to: canvasRect)
+        let person = camera.map { FrameTransform.apply($0, profile: spec.profile) }.flatMap { $0.extent.isEmpty ? nil : $0 }
+        guard let screen = screen.map({ zoomed($0, spec.screenZoom) }), !screen.extent.isEmpty else {
+            if let person { output = BackgroundRenderer.aspectFill(person, into: canvasRect).composited(over: output) }
+            return output
+        }
+        guard let person else { return fit(screen, in: canvasRect).composited(over: output).cropped(to: canvasRect) }
+        let height = min(canvasRect.width * screen.extent.height / screen.extent.width, canvasRect.height * 0.6)
+        // Core Image is y-up: the top of the picture is at maxY.
+        let top = CGRect(x: 0, y: canvasRect.height - height, width: canvasRect.width, height: height)
+        let below = CGRect(x: 0, y: 0, width: canvasRect.width, height: canvasRect.height - height)
+        output = fit(screen, in: top).composited(over: output)
+        output = BackgroundRenderer.aspectFill(person, into: below).composited(over: output)
         return output.cropped(to: canvasRect)
     }
 
