@@ -212,12 +212,24 @@ final class RemoteModel {
 
     // MARK: Keychain
 
+    /// The stored list couldn't be read: saving now would replace it with only the new Macs.
+    @ObservationIgnored private var hostsUnreadable = false
+
     private func loadHosts() -> [PairedHost] {
-        guard let s = (try? secrets.secret(for: Self.hostsAccount)) ?? nil, let data = Data(base64Encoded: s) else { return [] }
+        let stored: String?
+        do {
+            stored = try secrets.secret(for: Self.hostsAccount)
+        } catch {
+            hostsUnreadable = true
+            lastResult = "Couldn't read your paired Macs from the Keychain. Restart the app; new pairings won't be saved until then."
+            return []
+        }
+        guard let stored, let data = Data(base64Encoded: stored) else { return [] }
         return (try? JSONDecoder().decode([PairedHost].self, from: data)) ?? []
     }
 
     private func saveHosts() {
+        guard !hostsUnreadable else { return }
         if hosts.isEmpty {
             try? secrets.deleteSecret(for: Self.hostsAccount)
         } else if let data = try? JSONEncoder().encode(hosts) {

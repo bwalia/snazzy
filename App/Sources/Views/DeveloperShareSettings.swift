@@ -83,9 +83,14 @@ struct DeveloperShareSection: View {
         let dev = model.developer!
         dev.settings.s3 = S3Destination(endpoint: endpoint.trimmingCharacters(in: .whitespaces), region: region.trimmingCharacters(in: .whitespaces),
                                         bucket: bucket.trimmingCharacters(in: .whitespaces), prefix: prefix, pathStyle: pathStyle)
-        if !accessKey.isEmpty { try? model.secrets.setSecret(accessKey, for: ShareService.s3AccessAccount); accessKey = "" }
-        if !secretKey.isEmpty { try? model.secrets.setSecret(secretKey, for: ShareService.s3SecretAccount); secretKey = "" }
-        status = "Saved"
+        do {
+            // Fields are cleared only once the key is really in the Keychain.
+            if !accessKey.isEmpty { try model.secrets.setSecret(accessKey, for: ShareService.s3AccessAccount); accessKey = "" }
+            if !secretKey.isEmpty { try model.secrets.setSecret(secretKey, for: ShareService.s3SecretAccount); secretKey = "" }
+            status = "Saved"
+        } catch {
+            status = "Couldn't save the key in the Keychain: \(error.localizedDescription)"
+        }
     }
 
     private func testS3() async {
@@ -95,7 +100,14 @@ struct DeveloperShareSection: View {
     }
 
     private func saveGitHub() {
-        if !githubToken.isEmpty { try? model.secrets.setSecret(githubToken, for: ShareService.githubAccount); githubToken = "" }
+        if !githubToken.isEmpty {
+            do {
+                try model.secrets.setSecret(githubToken, for: ShareService.githubAccount)
+                githubToken = ""
+            } catch {
+                status = "Couldn't save the GitHub token in the Keychain: \(error.localizedDescription)"
+            }
+        }
         model.developer.settings.githubShareRepo = githubRepo.trimmingCharacters(in: .whitespaces).isEmpty ? nil : githubRepo.trimmingCharacters(in: .whitespaces)
     }
 }

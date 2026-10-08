@@ -120,12 +120,24 @@ final class RemoteController {
 
     // MARK: Keychain
 
+    /// The stored list couldn't be read: saving now would replace it with only the new devices.
+    @ObservationIgnored private var devicesUnreadable = false
+
     private func loadDevices() -> [TrustedDevice] {
-        guard let s = (try? app.secrets.secret(for: Self.devicesAccount)) ?? nil, let data = Data(base64Encoded: s) else { return [] }
+        let stored: String?
+        do {
+            stored = try app.secrets.secret(for: Self.devicesAccount)
+        } catch {
+            devicesUnreadable = true
+            self.error = "Couldn't read your paired devices from the Keychain (\(error.localizedDescription)). Pairing changes won't be saved until Snazzy Pro can read them."
+            return []
+        }
+        guard let stored, let data = Data(base64Encoded: stored) else { return [] }
         return (try? JSONDecoder().decode([TrustedDevice].self, from: data)) ?? []
     }
 
     private func saveDevices() {
+        guard !devicesUnreadable else { return }
         if devices.isEmpty {
             try? app.secrets.deleteSecret(for: Self.devicesAccount)
         } else if let data = try? JSONEncoder().encode(devices) {
