@@ -84,6 +84,9 @@ Warnings are treated as errors in the app target.
 - Every tool call is validated against its JSON schema. An invalid call gets the
   error back so the model can retry once; a second invalid round stops and asks
   the user. Tools marked `requiresConfirmation` show a confirmation alert first.
+- Text from outside the app (MCP servers, live-room ideas, web pages and
+  project files, GitHub, screen text) comes back wrapped in `<external_data>`,
+  and the model is told never to follow instructions in it.
 - The chat header shows the task, model, local/cloud badge (it pulses while
   sending to a cloud provider), token use, and a warning when offline or when a
   key is missing.
@@ -101,7 +104,7 @@ exact text is shown and approved first. Originals are never changed.
 | Captions and summary | `make_captions`, `summarize_recording` | On-device `SpeechAnalyzer` → `.srt`/`.vtt`, optional `(captioned).mp4`; summary `.md` by the Writing model; text only, never audio |
 | Share links (off by default) | `share_recording` | Own S3/R2/MinIO bucket (SigV4, time-limited link), GitHub release asset, or Gist for text; confirm before every upload; Slack/PR/Jira text; delete remote copies |
 | PR demos | `load_pull_request`, `load_git_changes` | GitHub API (token optional for public repos); diff capped; local branches compared through GitHub (the sandbox can't run `git`) |
-| What's on screen | `read_front_window`, `zoom_screen` | On-device OCR of the front window (Accessibility isn't available in the sandbox); secrets hidden for cloud models; smooth zoom to text while recording |
+| What's on screen | `read_front_window`, `zoom_screen` | On-device OCR of the front window (Accessibility isn't available in the sandbox); secrets hidden and the text shown first whenever it leaves the Mac (a cloud model, or an AI agent over MCP); smooth zoom to text while recording |
 
 Self-tests: `--s3-test <endpoint> --access … --secret …` (e.g. a local
 MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.

@@ -197,8 +197,9 @@ final class AppModel {
 
     /// The app's actions as assistant tools. Each one calls the same method the
     /// UI uses and returns the new state.
-    func makeToolRegistry() -> ToolRegistry {
-        AssistantTools.registry(app: self)
+    /// The tools for a chat turn answered by `provider`.
+    func makeToolRegistry(for provider: ProviderKind) -> ToolRegistry {
+        AssistantTools.registry(app: self, offMac: provider.isLocal ? nil : provider.displayName)
     }
 
     func modelsJSON() async -> JSONValue {

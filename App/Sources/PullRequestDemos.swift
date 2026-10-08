@@ -60,7 +60,7 @@ extension DeveloperController {
         return (data, status)
     }
 
-    func loadPullRequest(_ refText: String, number: Int?) async throws -> JSONValue {
+    func loadPullRequest(_ refText: String, number: Int?, offMac: String?) async throws -> JSONValue {
         guard settings.pullRequestDemosEnabled else { throw disabled("Pull-request demos") }
         guard let ref = GitRefs.parse(refText, number: number), let n = ref.number else {
             throw CaptureActionError(message: "Use owner/repo and a PR number, e.g. octocat/hello-world#12 or the PR's URL.")
@@ -92,13 +92,13 @@ extension DeveloperController {
             "diff_truncated": .bool(truncated),
             "next_steps": "Plan a 2–4 slide demo deck (what changed, why, how to test) with create_project (kind presentation), put a short talk script in each slide's speaker notes, then ask the user whether to record now.",
         ]
-        try reviewIfCloud(result, what: "this pull request (title, description, file list and diff)")
+        try reviewIfCloud(result, what: "this pull request (title, description, file list and diff)", offMac: offMac)
         app.chat.logSession("pull_request_loaded", ["pull_request": .string("\(ref.slug)#\(n)"), "diff_truncated": .bool(truncated)])
         return result
     }
 
     /// A local branch, compared with `base` through GitHub (the branch must be pushed).
-    func loadGitChanges(path: String?, base: String) async throws -> JSONValue {
+    func loadGitChanges(path: String?, base: String, offMac: String?) async throws -> JSONValue {
         guard settings.pullRequestDemosEnabled else { throw disabled("Pull-request demos") }
         let repos = grantedRepositories
         guard !repos.isEmpty else {
@@ -143,16 +143,15 @@ extension DeveloperController {
             "note": "Only changes pushed to GitHub are included.",
             "next_steps": "Plan a 2–4 slide demo deck (what changed, why, how to test) with create_project (kind presentation), put a short talk script in the speaker notes, then ask the user whether to record now.",
         ]
-        try reviewIfCloud(result, what: "the changes on \(branch) (commit messages, file list and diff)")
+        try reviewIfCloud(result, what: "the changes on \(branch) (commit messages, file list and diff)", offMac: offMac)
         return result
     }
 
-    /// With a cloud chat model, shows exactly what the tool result will send and asks.
-    func reviewIfCloud(_ result: JSONValue, what: String) throws {
-        let provider = app.activeSelection.provider
-        guard !provider.isLocal else { return }
-        guard CloudReview.confirm(provider: provider.displayName, what: what, text: result.compactString,
-                                  note: "Your chat uses \(app.activeSelection.model). Choose a local model to keep code on this Mac.")
+    /// When the result leaves this Mac, shows exactly what will be sent and asks.
+    func reviewIfCloud(_ result: JSONValue, what: String, offMac: String?) throws {
+        guard let offMac else { return }
+        guard CloudReview.confirm(provider: offMac, what: what, text: result.compactString,
+                                  note: "Use a local model to keep code on this Mac.")
         else { throw CaptureActionError(message: "Not sent. The user chose to keep this code on their Mac.") }
     }
 }

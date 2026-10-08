@@ -501,7 +501,7 @@ enum SelfTest {
 
         let app = AppModel()
         app.sessionLoggingSuspended = true
-        let registry = app.makeToolRegistry()
+        let registry = app.makeToolRegistry(for: app.activeSelection.provider)
         let prompt = "Call the get_project_state tool, then reply with only the value of build_phase."
         let phase = app.projectState()["build_phase"]?.intValue.map(String.init) ?? "?"
 
@@ -620,7 +620,7 @@ enum SelfTest {
         do {
             let kind: ProviderKind = provider == "anthropic" ? .anthropic : provider == "apple" ? .appleOnDevice : .ollama
             let p = try app.makeProvider(kind)
-            let runner = ConversationRunner(provider: p, registry: app.makeToolRegistry(), model: kind == .appleOnDevice ? ProviderKind.appleModelID : model,
+            let runner = ConversationRunner(provider: p, registry: app.makeToolRegistry(for: kind), model: kind == .appleOnDevice ? ProviderKind.appleModelID : model,
                                             system: kind == .appleOnDevice ? ChatSession.compactSystemPrompt : ChatSession.systemPrompt, maxTokens: 8000,
                                             effort: provider == "anthropic" ? "low" : nil)
             for try await event in runner.run(history: [.user(prompt)]) {

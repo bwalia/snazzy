@@ -106,7 +106,11 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
   5. This repeats for at most 12 rounds. Two invalid rounds in a row stop and ask the user.
 
   History is append-only, and Anthropic thinking blocks are stored opaquely and echoed back.
-  A new `ToolRegistry` is built for every send by `AppModel.makeToolRegistry()`.
+  A new `ToolRegistry` is built for every send by `AppModel.makeToolRegistry(for: provider)`.
+  `offMac` names who receives the results: the cloud provider, an MCP agent, or nil
+  for a local model. Screen text and code are redacted and reviewed based on it.
+  Tools with `external:` set get their result wrapped in `<external_data>`
+  (`ToolRegistry.untrusted`).
 - **Tools are registered in three places only:**
   - `App/Sources/AssistantTools.swift`: capture, recording, builder, live, broadcast, settings, presets, models.
   - `App/Sources/DeveloperTools.swift`: each tool is gated by its Settings › Developer toggle.
@@ -195,7 +199,9 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 - **New assistant tool:**
   1. Add a `RegisteredTool` in `AssistantTools` (or `DeveloperTools`) using
      `AssistantTools.object(...)` or `emptySchema`, which set `additionalProperties:false`.
-  2. Set `requiresConfirmation` for anything irreversible.
+  2. Set `requiresConfirmation` for anything irreversible. If the result carries text from
+     outside the app (audience, web page, files from others, GitHub, the screen), set
+     `external:` too. Anything sensitive that could leave the Mac goes through `offMac`.
   3. If the on-device model needs it, add it to `AppleToolPolicy.priority`.
   4. Remember that it is also published over MCP, and that names starting with
      `get_`/`list_`/`check_`/`read_` are advertised as read-only.
