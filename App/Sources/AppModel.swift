@@ -32,6 +32,7 @@ final class AppModel {
     @ObservationIgnored private(set) var live: LiveController!
     @ObservationIgnored private(set) var broadcast: BroadcastController!
     @ObservationIgnored private(set) var remote: RemoteController!
+    @ObservationIgnored private(set) var prompter: PrompterController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// Hides the conversation list (tours, screen sharing).
@@ -66,6 +67,7 @@ final class AppModel {
         self.live = LiveController(app: self)
         self.broadcast = BroadcastController(app: self)
         self.remote = RemoteController(app: self)
+        self.prompter = PrompterController(app: self)
         refreshStoredKeys()
         startPathMonitor()
         mcp.start()

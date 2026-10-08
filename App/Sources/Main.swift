@@ -209,6 +209,12 @@ struct AppCommands: Commands {
             Button("Open Present Window") { model.builder.openPopOut() }
                 .disabled(!model.builder.isDeckOpen)
             Divider()
+            Button(model.prompter.isShown ? "Hide Camera Prompter" : "Show Camera Prompter") { model.prompter.toggle() }
+                .keyboardShortcut("t", modifiers: [.command, .option])
+            Button(model.prompter.isScrolling ? "Pause Prompter" : "Start Prompter") { model.prompter.toggleScrolling() }
+                .keyboardShortcut("p", modifiers: [.command, .option])
+                .disabled(!model.prompter.isShown)
+            Divider()
             Button("Reset Zoom") { model.capture.animateZoom(to: nil) }
                 .keyboardShortcut("0", modifiers: [.command, .option])
                 .disabled(model.capture.screenZoom == nil)

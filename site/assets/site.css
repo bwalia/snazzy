@@ -392,3 +392,9 @@ footer a { text-decoration: none; } footer a:hover { color: var(--fg); }
 .btn.disabled { opacity: .55; pointer-events: none; }
 .dl-notes { color: #CDD2E8; padding-left: 22px; display: grid; gap: 8px; max-width: 860px; }
 @media (max-width: 900px) { .dl-grid { grid-template-columns: 1fr; } .dl-card.main { grid-row: auto; } }
+
+/* Camera Prompter art: the top of a Mac screen, camera notch, prompter under it. */
+.prompter-art { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 0; }
+.prompter-art .cam-notch { width: 34%; height: 26px; background: #000; border-radius: 0 0 14px 14px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
+.prompter-art .cam-notch span { width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #4a5a8a, #0b0f1c 70%); box-shadow: 0 0 0 2px #111; }
+.prompter-art img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
