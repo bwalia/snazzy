@@ -48,6 +48,9 @@ SnazzyPro --self-test --record 6 [--pause-at 3] [--display LG] [--feed iPad]
 SnazzyPro --self-test --composite
 # One chat turn with every app tool, printing the tool calls
 SnazzyPro --self-test --chat "Put my iPad camera bottom-left and open a preview" [--provider anthropic --model claude-opus-5-5]
+# Apple Watch remote, end to end in the simulators (Mac → iPhone → Watch);
+# see docs/testing/WATCH_REMOTE.md for the manual checklist and real devices
+Scripts/watch-sim-test.sh [seconds]
 ```
 
 Warnings are treated as errors in the app target.

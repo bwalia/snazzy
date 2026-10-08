@@ -145,6 +145,8 @@ re-compositing from device files.
      haptics when recording starts or stops and when a command fails.
    - ✅ Bundle ID `com.snazzy.pro.watchkitapp` (the iPhone app's ID plus
      `.watchkitapp`). No App Group needed: everything goes through WatchConnectivity.
+   - ✅ Testing: `Scripts/watch-sim-test.sh` (Mac → iPhone → Watch simulators,
+     verified 2026-10-08) and the checklist in `docs/testing/WATCH_REMOTE.md`.
    - Next: haptic cues for "1 minute left" and "time's up" (needs a talk-length
      target on the Mac first); test on a real iPhone and Watch; Digital Crown for slides.
    - The iPhone app must be open and connected to the Mac (it keeps the screen

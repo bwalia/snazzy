@@ -25,11 +25,13 @@ struct WatchRemoteView: View {
 
     var body: some View {
         if let status = model.status, let state = model.state {
-            TabView {
-                RecordingPage(status: status, state: state)
-                SlidesPage(status: status)
+            NavigationStack {
+                TabView {
+                    RecordingPage(status: status, state: state)
+                    SlidesPage(status: status)
+                }
+                .tabViewStyle(.verticalPage)
             }
-            .tabViewStyle(.verticalPage)
         } else {
             VStack(spacing: 10) {
                 Image(systemName: "iphone.and.arrow.forward").font(.title2).foregroundStyle(.secondary)
