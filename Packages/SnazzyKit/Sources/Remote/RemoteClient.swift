@@ -131,7 +131,8 @@ public final class RemoteClient: @unchecked Sendable {
         let params = RemoteSecurity.parameters(keys: [(identity, key)])
         let link = RemoteLink(NWConnection(to: endpoint, using: params), queue: queue)
         self.link = link
-        let hello = RemoteMessage.hello(deviceID: deviceID, deviceName: deviceName, version: RemoteProtocol.version, pairing: pairing)
+        let hello = RemoteMessage.hello(deviceID: deviceID, deviceName: deviceName, version: RemoteProtocol.version, pairing: pairing,
+                                       proof: RemoteSecurity.proof(deviceID: deviceID, key: key))
         let ready = ReadyFlag()
         link.onState = { [weak self, weak link] state in
             guard let self, let link else { return }

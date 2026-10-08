@@ -153,6 +153,9 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 - **Remote:**
   - Discovery is Bonjour `_snazzyremote._tcp`, over TLS 1.2 PSK.
   - Pairing is a QR code holding a one-time 256-bit secret. Each device then gets its own key.
+  - The TLS handshake only proves the device holds *some* accepted key. So every `hello`
+    carries `RemoteSecurity.proof`: an HMAC of the device ID, keyed with the pairing secret
+    or that device's own key. The host verifies it.
   - The Mac polls `status()` every 250 ms and pushes it when it changes.
   - The watch talks only to the iPhone app, which relays to the Mac.
 
