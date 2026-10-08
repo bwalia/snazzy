@@ -39,7 +39,7 @@ struct LegalDocumentsView: View {
 
 /// One local page: a web view on iPhone and iPad, rich text on the Mac.
 /// Links open in the browser.
-private struct LegalPageView {
+@MainActor private struct LegalPageView {
     let html: String
 
     final class Coordinator: NSObject, WKNavigationDelegate {
