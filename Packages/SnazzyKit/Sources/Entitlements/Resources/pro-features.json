@@ -1,0 +1,18 @@
+{
+  "store_products": {
+    "lifetime": "com.snazzy.pro.pro.lifetime",
+    "updates_year": "com.snazzy.pro.pro.updates"
+  },
+  "features": [
+    { "id": "camera_backgrounds_images", "name": "Background images and built-in backgrounds (blur stays free)", "released": "2026-10-08T00:00:00Z" },
+    { "id": "relayout", "name": "New Layout: re-make a recording with another layout", "released": "2026-10-08T00:00:00Z" },
+    { "id": "export_4k", "name": "4K exports", "released": "2026-10-08T00:00:00Z" },
+    { "id": "vertical_clips", "name": "Vertical clips", "released": "2026-10-08T00:00:00Z" },
+    { "id": "burned_in_captions", "name": "Captions burned into the video", "released": "2026-10-08T00:00:00Z" },
+    { "id": "teleprompter", "name": "Teleprompter", "released": "2026-10-08T00:00:00Z" },
+    { "id": "present_and_record", "name": "Present and record a deck", "released": "2026-10-08T00:00:00Z" },
+    { "id": "presets", "name": "Unlimited presets", "released": "2026-10-08T00:00:00Z", "free_limit": 3 },
+    { "id": "mcp_server", "name": "Let AI agents use Snazzy Pro (MCP server)", "released": "2026-10-08T00:00:00Z" },
+    { "id": "lip_sync_calibration", "name": "Clap-calibrated lip sync", "released": "2026-10-08T00:00:00Z" }
+  ]
+}
