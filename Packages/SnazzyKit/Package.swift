@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "SnazzyKit",
-    platforms: [.macOS(.v15), .iOS(.v18)],
+    platforms: [.macOS(.v15), .iOS(.v18), .watchOS(.v11)],
     products: [
         .library(name: "SnazzyCore", targets: ["SnazzyCore"]),
         .library(name: "Assistant", targets: ["Assistant"]),

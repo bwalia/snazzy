@@ -137,12 +137,18 @@ re-compositing from device files.
      Wi-Fi quality warnings (they affect the preview, not the final file).
    - TestFlight, then App Store (iOS/iPadOS).
 
-13. **Apple Watch remote** (about 1–2 weeks, after phase 12):
-   - Ships inside the iPhone app (no separate App Store record); talks to the
-     iPhone app with WatchConnectivity, and the iPhone app relays to the Mac.
-   - Start, pause and stop, next and previous slide, recording timer and status.
-   - Haptic cues for "1 minute left" and "time's up".
-   - Bundle ID `<prefix>.snazzypro.watchkitapp`; App Group shared with the iPhone app.
+13. **Apple Watch remote** (core done 2026-10-08, ahead of phases 10–12):
+   - ✅ Ships inside the iPhone app (no separate App Store record); talks to the
+     iPhone app with WatchConnectivity (`iOS/Sources/WatchRelay.swift`), and the
+     iPhone app relays to the Mac. Watch app in `watchOS/`, target `SnazzyProWatch`.
+   - ✅ Start, pause and stop, next and previous slide, recording timer and status;
+     haptics when recording starts or stops and when a command fails.
+   - ✅ Bundle ID `com.snazzy.pro.watchkitapp` (the iPhone app's ID plus
+     `.watchkitapp`). No App Group needed: everything goes through WatchConnectivity.
+   - Next: haptic cues for "1 minute left" and "time's up" (needs a talk-length
+     target on the Mac first); test on a real iPhone and Watch; Digital Crown for slides.
+   - The iPhone app must be open and connected to the Mac (it keeps the screen
+     on while connected); the watch says so when it isn't.
 
 All platforms share one App Store record (Universal Purchase), so the Mac,
 iPhone and iPad apps use the same bundle ID. See

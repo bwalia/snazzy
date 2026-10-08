@@ -122,3 +122,39 @@ final class Box<T: Sendable>: @unchecked Sendable {
         host.stop()
     }
 }
+
+@Suite struct WatchLinkTests {
+    @Test func stateIsTrimmedAndRoundTrips() throws {
+        let status = RemoteStatus(hostName: "Mac", recording: "recording", elapsed: 30, micLevel: 0.7, slideIndex: 1, slideCount: 5, notes: "Long notes")
+        let state = WatchState(problem: nil, status: status, sentAt: Date(timeIntervalSince1970: 1000))
+        #expect(state.status?.notes == nil)
+        #expect(state.status?.micLevel == 0)
+        let back = try #require(WatchLink.decode(WatchState.self, WatchLink.encode(state)))
+        #expect(back == state)
+        #expect(WatchLink.decode(WatchState.self, "not data") == nil)
+    }
+
+    @Test func timerKeepsRunningOnlyWhileRecording() {
+        let start = Date(timeIntervalSince1970: 1000)
+        var recording = WatchState(problem: nil, status: RemoteStatus(recording: "recording", elapsed: 30), sentAt: start)
+        #expect(recording.elapsed(at: start.addingTimeInterval(5)) == 35)
+        recording.status?.recording = "paused"
+        #expect(recording.elapsed(at: start.addingTimeInterval(5)) == 30)
+        #expect(WatchState(problem: "Not connected", status: nil).elapsed() == 0)
+    }
+
+    @Test func matchesIgnoresOnlyTheTimer() {
+        let a = WatchState(problem: nil, status: RemoteStatus(recording: "recording", elapsed: 30, slideIndex: 1, slideCount: 5), sentAt: Date())
+        var b = WatchState(problem: nil, status: RemoteStatus(recording: "recording", elapsed: 31, slideIndex: 1, slideCount: 5), sentAt: Date().addingTimeInterval(1))
+        #expect(a.matches(b))
+        b.status?.slideIndex = 2
+        #expect(!a.matches(b))
+    }
+
+    @Test func watchCannotChat() {
+        #expect(WatchLink.allows(.nextSlide))
+        #expect(WatchLink.allows(.stopRecording))
+        #expect(!WatchLink.allows(.chat("hi")))
+        #expect(!WatchLink.allows(.openPresentWindow))
+    }
+}
