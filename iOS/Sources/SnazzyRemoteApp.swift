@@ -1,3 +1,4 @@
+import SnazzyCore
 import SwiftUI
 
 /// Snazzy Pro for iPhone and iPad: a remote for Snazzy Pro on your Mac.
@@ -23,9 +24,24 @@ struct SnazzyRemoteApp: App {
 
 struct RootView: View {
     @Environment(RemoteModel.self) private var model
+    @State private var accepted = Legal.hasAccepted() || RootView.skipWelcome
+
+    /// UI tests start straight in the app.
+    static var skipWelcome: Bool {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "debugPairURL") != nil
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
-        if model.hosts.isEmpty && !model.isConnected {
+        if !accepted {
+            WelcomeView {
+                Legal.accept()
+                accepted = true
+            }
+        } else if model.hosts.isEmpty && !model.isConnected {
             PairView()
         } else {
             RemoteView()

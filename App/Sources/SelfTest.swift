@@ -108,6 +108,15 @@ enum SelfTest {
             b.recordWhileLive = savedRecord
             return ok
         }
+        if let title = value(after: "--forget-conversations") {
+            // Deletes conversations with exactly this title (left by interrupted tests).
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let gone = app.chat.conversations.filter { $0.title == title }
+            gone.forEach { app.chat.delete($0.id) }
+            report("forget conversations", true, "removed \(gone.count)")
+            return ok
+        }
         if let names = value(after: "--forget-devices") {
             // Removes paired remote devices by name (test simulators).
             let app = AppModel()

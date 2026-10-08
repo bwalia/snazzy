@@ -5,6 +5,17 @@ import SwiftUI
 struct MainView: View {
     @Environment(AppModel.self) private var model
     @State private var columns: NavigationSplitViewVisibility = .all
+    @State private var splash = !MainView.skipIntro
+    @State private var welcome = !Legal.hasAccepted() && !MainView.skipIntro
+
+    /// Tours and tests run without the splash and welcome screen.
+    static var skipIntro: Bool {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "SnazzyPro.tour") != nil || CommandLine.arguments.contains("-SnazzyPro.skipIntro")
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columns) {
@@ -23,6 +34,25 @@ struct MainView: View {
             .overlay(alignment: .bottom) { RecordingSavedBanner() }
         }
         .modifier(SharingSheets())
+        .overlay {
+            if splash {
+                SplashView()
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture { withAnimation { splash = false } }
+                    .task {
+                        try? await Task.sleep(for: .milliseconds(900))
+                        withAnimation(.easeInOut(duration: 0.35)) { splash = false }
+                    }
+            }
+        }
+        .sheet(isPresented: Binding(get: { welcome && !splash }, set: { _ in })) {
+            WelcomeView {
+                Legal.accept()
+                welcome = false
+            }
+            .interactiveDismissDisabled()
+        }
         .onChange(of: model.hideConversations) { _, hide in columns = hide ? .detailOnly : .all }
     }
 }

@@ -40,3 +40,15 @@ import Testing
         #expect(GitRefs.cap("short", limit: 50) == ("short", false))
     }
 }
+
+@Suite struct LegalTests {
+    @Test func acceptanceIsPerVersion() throws {
+        let d = try #require(UserDefaults(suiteName: "legal-test-\(UUID().uuidString)"))
+        #expect(!Legal.hasAccepted(d))
+        Legal.accept(d)
+        #expect(Legal.hasAccepted(d) && Legal.acceptedDate(d) != nil)
+        // A newer version of the terms asks again.
+        d.set(Legal.termsVersion - 1, forKey: Legal.acceptedKey)
+        #expect(!Legal.hasAccepted(d))
+    }
+}
