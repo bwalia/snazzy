@@ -105,7 +105,10 @@ out, and no mirroring delay or stalls. The device can also be a remote control
 and a teleprompter. The phase 4 raw-track + timeline design already supports
 re-compositing from device files.
 
-9. **Remote control** (2–3 weeks):
+9. **Remote control** (core done ✅: Remote module, Mac pairing window and
+   status, iPhone/iPad app with record/pause/stop, slides, teleprompter and
+   assistant chat; tested in the iPad simulator against the Mac. Next: test
+   on a real iPad/iPhone, voice input, TestFlight):
    - Move SnazzyCore, Assistant and Builder into packages that build for macOS and iOS.
    - Discovery and pairing over the local network (Bonjour), confirmed with a
      pairing code or QR code; an encrypted channel.

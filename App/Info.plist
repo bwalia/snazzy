@@ -46,6 +46,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_snazzyremote._tcp</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Snazzy Pro records your camera (including an iPad or iPhone connected by USB) as an inset in your presentation videos.</string>
 	<key>NSHumanReadableCopyright</key>

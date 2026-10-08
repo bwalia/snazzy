@@ -66,7 +66,8 @@ public final class RemoteHost: @unchecked Sendable {
         if let old = listener {
             listener = nil
             old.stateUpdateHandler = { [weak self] state in
-                if case .cancelled = state { self?.queue.async { self?.listen() } }
+                guard case .cancelled = state, let self else { return }
+                self.queue.async { [weak self] in self?.listen() }
             }
             old.newConnectionHandler = nil
             old.cancel()

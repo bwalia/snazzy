@@ -97,6 +97,24 @@ enum SelfTest {
             b.servers = savedServers
             return ok
         }
+        if arguments.contains("--remote-pair") {
+            // Opens pairing for the iPhone/iPad app, reports connections, then removes test devices.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let before = Set(app.remote.devices.map(\.id))
+            await app.remote.openPairing()
+            print("PAIR \(app.remote.pairingURL?.absoluteString ?? "none")")
+            let end = Date().addingTimeInterval(Double(value(after: "--seconds") ?? "60") ?? 60)
+            var last = ""
+            while Date() < end {
+                try? await Task.sleep(for: .milliseconds(500))
+                let now = "devices=\(app.remote.devices.map(\.name)) connected=\(app.remote.connected)"
+                if now != last { print(now); last = now }
+            }
+            for d in app.remote.devices where !before.contains(d.id) { app.remote.remove(d) }
+            report("remote pairing", !last.contains("connected=[]"), last)
+            return ok
+        }
         if arguments.contains("--live-deck") {
             // Ideas posted over the network become a deck via the assistant (get_brainstorm + builder tools).
             let app = AppModel()

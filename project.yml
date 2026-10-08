@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.snazzy
   deploymentTarget:
     macOS: "15.0"
+    iOS: "18.0"
   createIntermediateGroups: true
   developmentLanguage: en
 settings:
@@ -39,6 +40,8 @@ targets:
         product: Live
       - package: SnazzyKit
         product: Broadcast
+      - package: SnazzyKit
+        product: Remote
     info:
       path: App/Info.plist
       properties:
@@ -67,6 +70,8 @@ targets:
             CFBundleTypeRole: Viewer
             LSHandlerRank: Owner
             LSItemContentTypes: [com.snazzy.pro.share]
+        # Bonjour: the iPhone/iPad remote finds this Mac.
+        NSBonjourServices: [_snazzyremote._tcp]
         NSCameraUsageDescription: Snazzy Pro records your camera (including an iPad or iPhone connected by USB) as an inset in your presentation videos.
         NSMicrophoneUsageDescription: Snazzy Pro records your microphone for presentation voice-over and on-device captions.
         NSSpeechRecognitionUsageDescription: Snazzy Pro creates captions from your recording using on-device speech recognition.
@@ -95,6 +100,50 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  # Snazzy Pro for iPhone and iPad: a remote for the Mac app. Same bundle ID
+  # as the Mac app, so one App Store record covers both (Universal Purchase).
+  SnazzyProiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: iOS/Sources
+      - path: iOS/Resources
+    dependencies:
+      - package: SnazzyKit
+        product: Remote
+      - package: SnazzyKit
+        product: SnazzyCore
+    info:
+      path: iOS/Info.plist
+      properties:
+        CFBundleDisplayName: Snazzy Pro
+        CFBundleName: Snazzy Pro
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: Snazzy Pro scans the pairing code shown on your Mac.
+        NSLocalNetworkUsageDescription: Snazzy Pro connects to Snazzy Pro on your Mac over Wi-Fi so you can control recording and slides.
+        NSBonjourServices: [_snazzyremote._tcp]
+        # Pairing links from the Camera app: snazzypro://pair?...
+        CFBundleURLTypes:
+          - CFBundleURLName: com.snazzy.pro.pair
+            CFBundleURLSchemes: [snazzypro]
+    configFiles:
+      Debug: Config/iOS.xcconfig
+      Release: Config/iOS.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.snazzy.pro
+        PRODUCT_NAME: SnazzyPro
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
 schemes:
   SnazzyPro:
     build:
@@ -107,3 +156,9 @@ schemes:
       targets:
         - package: SnazzyKit/SnazzyCoreTests
         - package: SnazzyKit/AssistantTests
+  SnazzyProiOS:
+    build:
+      targets:
+        SnazzyProiOS: all
+    run:
+      config: Debug

@@ -1,0 +1,4 @@
+// iOS app signing: automatic, with the team from Local.xcconfig (git-ignored).
+#include "Base.xcconfig"
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
