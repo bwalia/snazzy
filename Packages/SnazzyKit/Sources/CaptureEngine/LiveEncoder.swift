@@ -20,6 +20,9 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
         public static let high = Quality(width: 1920, height: 1080, fps: 30, videoBitrate: 4_500_000)
         /// For busy or slow Wi-Fi.
         public static let low = Quality(width: 854, height: 480, fps: 24, videoBitrate: 900_000)
+        /// For viewers far away or over a VPN with little bandwidth (about 0.5 Mbps):
+        /// fewer frames, so slides stay readable.
+        public static let remote = Quality(width: 960, height: 540, fps: 12, videoBitrate: 450_000)
 
         public init(width: Int, height: Int, fps: Int32, videoBitrate: Int) {
             self.width = width

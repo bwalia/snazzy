@@ -56,6 +56,8 @@ public struct HTTPResponse: Equatable, Sendable {
     public var body: Data
     public var contentType = "application/json"
     public var extraHeaders: [String: String] = [:]
+    /// Leave the connection open for the next request (HTTP/1.1 keep-alive).
+    public var keepAlive = false
 
     public init(status: Int, body: Data, contentType: String = "application/json", extraHeaders: [String: String] = [:]) {
         self.status = status
@@ -68,7 +70,7 @@ public struct HTTPResponse: Equatable, Sendable {
         let reason = [200: "OK", 202: "Accepted", 204: "No Content", 400: "Bad Request", 401: "Unauthorized", 403: "Forbidden",
                       404: "Not Found", 405: "Method Not Allowed", 409: "Conflict", 413: "Payload Too Large",
                       429: "Too Many Requests", 503: "Service Unavailable"][status] ?? "Error"
-        var head = "HTTP/1.1 \(status) \(reason)\r\nContent-Length: \(body.count)\r\nConnection: close\r\n"
+        var head = "HTTP/1.1 \(status) \(reason)\r\nContent-Length: \(body.count)\r\nConnection: \(keepAlive ? "keep-alive" : "close")\r\n"
         if !body.isEmpty { head += "Content-Type: \(contentType)\r\n" }
         for (k, v) in extraHeaders.sorted(by: { $0.key < $1.key }) { head += "\(k): \(v)\r\n" }
         head += "\r\n"

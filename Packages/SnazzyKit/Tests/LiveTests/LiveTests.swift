@@ -140,6 +140,48 @@ import SnazzyCore
         clients.forEach { $0.cancel() }
     }
 
+    /// Video segments reuse one connection: over a distant VPN a new connection
+    /// per segment took longer than the segment lasts, and the picture froze.
+    @Test func connectionsStayOpenForTheNextRequest() async throws {
+        let port = UInt16.random(in: 40_000...49_000)
+        let server = LiveServer(port: port, code: "ABC234")
+        try await server.start()
+        defer { server.stop() }
+        let c = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
+        c.start(queue: DispatchQueue(label: "test-keepalive"))
+        defer { c.cancel() }
+        for _ in 0..<3 {
+            let reply = try await Self.exchange(c, "GET /api/board?k=ABC234 HTTP/1.1\r\nHost: x\r\n\r\n")
+            #expect(reply.hasPrefix("HTTP/1.1 200") && reply.contains("Connection: keep-alive"))
+        }
+        let closing = try await Self.exchange(c, "GET /api/board?k=ABC234 HTTP/1.1\r\nConnection: close\r\n\r\n")
+        #expect(closing.contains("Connection: close"))
+        #expect(!LiveServer.keepsAlive(HTTPRequest(method: "GET", path: "/", headers: [:], body: Data()), HTTPResponse(status: 400, body: Data())))
+    }
+
+    /// Sends one request and reads one whole response (head plus Content-Length bytes).
+    private static func exchange(_ c: NWConnection, _ request: String) async throws -> String {
+        c.send(content: Data(request.utf8), completion: .idempotent)
+        var data = Data()
+        while true {
+            let chunk: Data = try await withCheckedThrowingContinuation { cont in
+                c.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { d, _, done, error in
+                    if let error { cont.resume(throwing: error) } else if let d, !d.isEmpty { cont.resume(returning: d) }
+                    else { cont.resume(throwing: CancellationError()) }
+                    _ = done
+                }
+            }
+            data.append(chunk)
+            let text = String(decoding: data, as: UTF8.self)
+            if let end = text.range(of: "\r\n\r\n"),
+               let line = text[..<end.lowerBound].split(separator: "\r\n").first(where: { $0.hasPrefix("Content-Length:") }),
+               let length = Int(line.dropFirst("Content-Length:".count).trimmingCharacters(in: .whitespaces)),
+               data.count >= text[..<end.upperBound].utf8.count + length {
+                return text
+            }
+        }
+    }
+
     @Test func codesAvoidLookAlikes() {
         for _ in 0..<50 {
             let c = LiveServer.makeCode()

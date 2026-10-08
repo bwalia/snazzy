@@ -14,13 +14,15 @@ final class LiveController {
     enum Quality: String, CaseIterable, Identifiable {
         case high = "High (1080p, sharp text)"
         case standard = "Standard (720p)"
-        case low = "Low (480p, busy Wi-Fi or VPN)"
+        case low = "Low (480p, busy Wi-Fi)"
+        case remote = "Remote (540p, 12 fps: VPN or far away)"
         var id: String { rawValue }
         var encoder: LiveEncoder.Quality {
             switch self {
             case .high: .high
             case .standard: .standard
             case .low: .low
+            case .remote: .remote
             }
         }
     }
@@ -42,7 +44,15 @@ final class LiveController {
     private(set) var code = ""
     private(set) var qrCode: NSImage?
     private(set) var error: String?
-    var quality: Quality = .standard
+    /// Changing it while live restarts the video (viewers reconnect by themselves).
+    var quality: Quality = .standard {
+        didSet {
+            guard isStreaming, quality != oldValue else { return }
+            Task { await restartVideo(reason: "quality changed to \(quality.rawValue)", counted: false) }
+        }
+    }
+    /// Whether the link and QR code use a VPN address, where bandwidth is often low.
+    var joinsOverVPN: Bool { addresses.first { $0.ip == selectedAddress }?.isVPN ?? false }
     /// The board topic typed before the room starts.
     var pendingTopic = ""
 
@@ -157,9 +167,9 @@ final class LiveController {
     }
 
     /// Starts a fresh encoder (viewers' players pick up the new stream by themselves).
-    private func restartVideo(reason: String) async {
+    private func restartVideo(reason: String, counted: Bool = true) async {
         guard let server, let old = encoder else { return }
-        Log.app.error("Live video stalled, restarting: \(reason, privacy: .public)")
+        Log.app.error("Live video restarting: \(reason, privacy: .public)")
         encoder = nil
         await old.stop()
         let encoder = LiveEncoder()
@@ -171,7 +181,7 @@ final class LiveController {
         do {
             try encoder.start(micID: app.capture.setup.mic?.uniqueID, quality: quality.encoder)
             self.encoder = encoder
-            restarts += 1
+            if counted { restarts += 1 }
         } catch {
             self.error = "Live video couldn't restart: \(error.localizedDescription)"
             isStreaming = false
