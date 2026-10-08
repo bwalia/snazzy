@@ -9,6 +9,8 @@ struct BuilderPanel: View {
     @Environment(AppModel.self) private var model
     @State private var bottomTab: BottomTab = .code
     @State private var askingPR = false
+    @State private var editing: DeckOutline?
+    @State private var editingNew = false
     @State private var prRef = ""
 
     enum BottomTab: String, CaseIterable { case code = "Code", steps = "Steps", console = "Console" }
@@ -18,6 +20,12 @@ struct BuilderPanel: View {
         VStack(spacing: 0) {
             header(builder)
                 .sheet(isPresented: $askingPR) { prSheet }
+                .sheet(item: Binding(get: { editing.map(EditingDeck.init) }, set: { if $0 == nil { editing = nil } })) { item in
+                    DeckEditorView(outline: item.outline, isNew: editingNew, onSave: { o in
+                        if editingNew { try? builder.createDeck(o) } else { try? builder.saveDeck(o) }
+                        editing = nil
+                    }, onCancel: { editing = nil })
+                }
             Divider()
             if builder.current == nil {
                 ContentUnavailableView {
@@ -25,8 +33,9 @@ struct BuilderPanel: View {
                 } description: {
                     Text("Ask the assistant to build something, e.g. “Build a clickable prototype of a DevOps dashboard” or “Make a 6-slide deck on our Q3 results”.")
                 } actions: {
+                    Button("Make a Deck") { editingNew = true; editing = .starter(title: "My Presentation") }
+                        .buttonStyle(.borderedProminent)
                     Button("New Prototype") { _ = try? builder.createProject(name: "prototype", kind: .prototype, title: "Prototype") }
-                    Button("New Presentation") { _ = try? builder.createProject(name: "presentation", kind: .presentation, title: "Presentation") }
                 }
             } else {
                 VSplitView {
@@ -66,6 +75,11 @@ struct BuilderPanel: View {
             Menu {
                 ForEach(builder.projects) { p in
                     Button("\(p.name) (\(p.kind.rawValue))") { builder.open(p.name) }
+                }
+                Divider()
+                Button("New Deck (Slide Editor)…") { editingNew = true; editing = .starter(title: "My Presentation") }
+                if let o = builder.outline {
+                    Button("Edit Slides…") { editingNew = false; editing = o }
                 }
                 Divider()
                 Button("New Prototype") { _ = try? builder.createProject(name: "prototype-\(Int(Date().timeIntervalSince1970) % 10000)", kind: .prototype, title: "Prototype") }
@@ -238,4 +252,10 @@ private struct ConsolePane: View {
             }
         }
     }
+}
+
+/// Wraps an outline for `.sheet(item:)`.
+private struct EditingDeck: Identifiable {
+    let id = UUID()
+    let outline: DeckOutline
 }

@@ -40,8 +40,8 @@ public struct SampleDeck: Identifiable, Sendable {
         }
     }
 
-    public struct Slide: Sendable, Equatable {
-        public enum Layout: String, Sendable {
+    public struct Slide: Codable, Sendable, Equatable {
+        public enum Layout: String, Codable, CaseIterable, Sendable {
             /// heading = title, items[0] = subtitle
             case title
             case bullets
@@ -98,18 +98,24 @@ extension SampleDeck {
     }
 
     public func html() -> String {
+        Self.deckHTML(title: title, accent: accent, slides: slides,
+                      comment: "Sample deck (\(sector.rawValue)). All names and figures are made up.")
+    }
+
+    /// A complete deck page in the house style (deck.css + deck.js).
+    public static func deckHTML(title: String, accent: String, slides: [Slide], comment: String? = nil) -> String {
         let sections = slides.map(Self.render).joined(separator: "\n")
+        let note = comment.map { "  <!-- \(esc($0)) -->\n" } ?? ""
         return """
         <!doctype html>
         <html lang="en">
         <head>
           <meta charset="utf-8">
-          <title>\(Self.esc(title))</title>
+          <title>\(esc(title))</title>
           <link rel="stylesheet" href="deck.css">
         </head>
-        <body style="--accent: \(Self.esc(accent))">
-          <!-- Sample deck (\(Self.esc(sector.rawValue))). All names and figures are made up. -->
-          <div class="deck">
+        <body style="--accent: \(esc(accent))">
+        \(note)  <div class="deck">
         \(sections)
           </div>
           <div class="counter"></div>
@@ -172,6 +178,8 @@ extension Workspace {
         for (path, content) in sample.files() {
             try write(project: project.name, path: path, content: content)
         }
+        // Editable without AI in the slide editor.
+        try DeckOutline(title: sample.title, accent: sample.accent, slides: sample.slides).save(to: self, project: project.name, writeHTML: false)
         return project
     }
 }

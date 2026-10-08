@@ -274,7 +274,7 @@ final class ChatSession {
         guard !isRunning else { return false }
         let selection = app.activeSelection
         if let reason = app.unavailableReason(selection.provider) {
-            notice(reason, isError: true)
+            notice(reason + " Everything else works without AI: make decks in the slide editor (Builder › New Deck), start from Slides › Sample Decks, present, record, run a live room and go live.", isError: true)
             return false
         }
         guard Self.hasCloudConsent(selection.provider, app: app) else {

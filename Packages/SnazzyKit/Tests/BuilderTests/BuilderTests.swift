@@ -99,7 +99,7 @@ import SnazzyCore
         // Opening the sample again keeps the edits.
         let again = try ws.createSample(sample)
         #expect(again.kind == .presentation)
-        #expect(ws.files(project: again.name) == ["deck.css", "deck.js", "index.html"])
+        #expect(ws.files(project: again.name) == ["deck.css", "deck.js", "deck.json", "index.html"])
         #expect(try ws.read(project: again.name, path: "index.html") == "edited")
     }
 }
@@ -127,7 +127,7 @@ import SnazzyCore
         try Data("x".utf8).write(to: ws.projectURL(deck.name).appending(path: ".DS_Store"))
 
         let shared = try ws.shareProject(deck.name)
-        #expect(shared.files.map(\.path) == ["deck.css", "deck.js", "img/logo.png", "index.html"])
+        #expect(shared.files.map(\.path) == ["deck.css", "deck.js", "deck.json", "img/logo.png", "index.html"])
         let share = SnazzyShare(title: "Lesson", note: "For Monday", project: shared,
                                 presets: [presetWithImage("abc123")],
                                 backgrounds: [.init(id: "abc123", name: "Classroom", data: Data([9, 9]))])
@@ -187,5 +187,31 @@ import SnazzyCore
         #expect(bomb.count < 1_000_000)
         #expect(throws: WorkspaceError.self) { try SnazzyShare.inflate(bomb, limit: 1_000_000) }
         #expect(try SnazzyShare.inflate(bomb, limit: 60_000_000).count == 50_000_000)
+    }
+}
+
+@Suite struct DeckOutlineTests {
+    @Test func createEditAndReload() throws {
+        let ws = Workspace(root: FileManager.default.temporaryDirectory.appending(path: "ws-\(UUID().uuidString)"))
+        defer { try? FileManager.default.removeItem(at: ws.root) }
+        var outline = DeckOutline.starter(title: "Team Update")
+        let p = try DeckOutline.create(outline, in: ws)
+        #expect(Set(ws.files(project: p.name)).isSuperset(of: ["deck.json", "index.html", "deck.css", "deck.js"]))
+        outline.slides.append(.init(.stats, "Numbers", ["42", "happy customers"], notes: "Pause here."))
+        outline.accent = "#34D399"
+        try outline.save(to: ws, project: p.name)
+        #expect(DeckOutline.load(from: ws, project: p.name) == outline)
+        let html = try ws.read(project: p.name, path: "index.html")
+        #expect(html.contains("--accent: #34D399") && html.contains("layout-stats") && html.contains("Pause here."))
+        // A second deck with the same title gets its own project.
+        #expect(try DeckOutline.create(outline, in: ws).name == p.name + "-2")
+    }
+
+    @Test func samplesAreEditable() throws {
+        let ws = Workspace(root: FileManager.default.temporaryDirectory.appending(path: "ws-\(UUID().uuidString)"))
+        defer { try? FileManager.default.removeItem(at: ws.root) }
+        let sample = SampleDeck.all[0]
+        let p = try ws.createSample(sample)
+        #expect(DeckOutline.load(from: ws, project: p.name)?.slides == sample.slides)
     }
 }

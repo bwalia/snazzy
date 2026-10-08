@@ -5,12 +5,14 @@ import SwiftUI
 @main
 struct SnazzyRemoteApp: App {
     @State private var model = RemoteModel()
+    @State private var studio = StudioModel()
     @Environment(\.scenePhase) private var phase
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(model)
+                .environment(studio)
                 .preferredColorScheme(.dark)
                 .tint(Color(red: 0.42, green: 0.36, blue: 1))
                 // A pairing link from the Camera app (snazzypro://pair?...).
@@ -41,7 +43,18 @@ struct RootView: View {
                 Legal.accept()
                 accepted = true
             }
-        } else if model.hosts.isEmpty && !model.isConnected {
+        } else if RootView.skipWelcome {
+            remote  // UI tests drive the remote directly
+        } else {
+            TabView {
+                Tab("Studio", systemImage: "sparkles.rectangle.stack") { StudioView() }
+                Tab("Mac Remote", systemImage: "desktopcomputer") { remote }
+            }
+        }
+    }
+
+    @ViewBuilder private var remote: some View {
+        if model.hosts.isEmpty && !model.isConnected {
             PairView()
         } else {
             RemoteView()

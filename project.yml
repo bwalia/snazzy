@@ -24,6 +24,7 @@ targets:
     sources:
       - path: App/Sources
       - path: App/Resources
+      - path: Shared
     dependencies:
       - package: SnazzyKit
         product: SnazzyCore
@@ -111,11 +112,19 @@ targets:
     sources:
       - path: iOS/Sources
       - path: iOS/Resources
+      # Shared with the Mac app: serves project files to the web preview,
+      # and the slide editor.
+      - path: App/Sources/ProjectSchemeHandler.swift
+      - path: Shared
     dependencies:
       - package: SnazzyKit
         product: Remote
       - package: SnazzyKit
         product: SnazzyCore
+      - package: SnazzyKit
+        product: Assistant
+      - package: SnazzyKit
+        product: Builder
       # The Apple Watch app ships inside the iPhone app.
       - target: SnazzyProWatch
     info:
@@ -131,6 +140,9 @@ targets:
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: Snazzy Pro scans the pairing code shown on your Mac.
+        # Ollama on a computer on your network (plain http on the LAN).
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Snazzy Pro connects to Snazzy Pro on your Mac over Wi-Fi so you can control recording and slides.
         NSBonjourServices: [_snazzyremote._tcp]
         # Pairing links from the Camera app: snazzypro://pair?...

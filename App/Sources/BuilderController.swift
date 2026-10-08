@@ -185,6 +185,31 @@ final class BuilderController {
         return project
     }
 
+    /// The open deck's outline, if it was made in the slide editor or is a sample.
+    var outline: DeckOutline? {
+        guard let current else { return nil }
+        _ = reloadCount  // refresh after edits
+        return DeckOutline.load(from: workspace, project: current.name)
+    }
+
+    /// A new deck from the slide editor (no AI needed).
+    func createDeck(_ outline: DeckOutline) throws {
+        onActivity?()
+        let p = try DeckOutline.create(outline, in: workspace)
+        refreshProjects()
+        open(p.name, announce: false)
+        step(.info, "Deck \(p.name) created in the slide editor")
+    }
+
+    /// Saves edits from the slide editor and reloads the preview.
+    func saveDeck(_ outline: DeckOutline) throws {
+        guard let current else { return }
+        try outline.save(to: workspace, project: current.name)
+        files = workspace.files(project: current.name)
+        reload()
+        step(.wrote, "Slides saved from the slide editor")
+    }
+
     /// Copies a sample deck into the workspace and opens it.
     @discardableResult
     func openSample(_ sample: SampleDeck) throws -> BuilderProject {
