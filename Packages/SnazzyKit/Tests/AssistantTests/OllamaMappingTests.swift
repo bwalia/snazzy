@@ -4,6 +4,24 @@ import Testing
 @testable import SnazzyCore
 
 @Suite struct OllamaMappingTests {
+    /// Old file bodies and tool output are cut down to fit the context; recent ones stay whole.
+    @Test func oldToolPayloadsAreShortened() throws {
+        let big = String(repeating: "x", count: 10_000)
+        func write(_ id: String) -> [ChatMessage] {
+            [ChatMessage(role: .assistant, parts: [.toolCall(ToolCall(id: id, name: "write_file", arguments: ["path": "index.html", "content": .string(big)]))]),
+             ChatMessage(role: .tool, parts: [.toolResult(ToolResult(callID: id, name: "write_file", content: big))])]
+        }
+        let history = [.user("build it")] + write("old") + Array(repeating: ChatMessage.user("more"), count: OllamaMapping.recentMessages - 2) + write("new")
+        let messages = OllamaMapping.requestBody(ModelRequest(model: "m", messages: history))["messages"]?.arrayValue ?? []
+        let oldContent = try #require(messages[1]["tool_calls"]?.arrayValue?.first?["function"]?["arguments"]?["content"]?.stringValue)
+        #expect(oldContent.count < 2_000 && oldContent.contains("read_file"))
+        #expect(messages[1]["tool_calls"]?.arrayValue?.first?["function"]?["arguments"]?["path"] == "index.html")
+        #expect((messages[2]["content"]?.stringValue?.count ?? 0) < 2_000)
+        let n = messages.count
+        #expect(messages[n - 2]["tool_calls"]?.arrayValue?.first?["function"]?["arguments"]?["content"]?.stringValue == big)
+        #expect(messages[n - 1]["content"]?.stringValue == big)
+    }
+
     @Test func requestBody() throws {
         let tool = ToolDefinition(name: "list_devices", description: "List devices", inputSchema: ["type": "object", "properties": [:]])
         let call = ToolCall(id: "call_1", name: "list_devices", arguments: [:])

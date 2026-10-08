@@ -15,6 +15,14 @@ import Testing
         #expect(JSONValue.number(3.2).schemaTypeName == "number")
         #expect(JSONValue.object([:]).schemaTypeName == "object")
     }
+
+    /// A model can send any number; out-of-range ones must not crash.
+    @Test func intValueNeverTraps() {
+        #expect(JSONValue.number(3.9).intValue == 3)
+        #expect(JSONValue.number(-2.5).intValue == -2)
+        #expect(JSONValue.number(1e300).intValue == nil)
+        #expect(JSONValue.number(.infinity).intValue == nil)
+    }
 }
 
 @Suite struct SettingsTests {
@@ -53,6 +61,18 @@ import Testing
         #expect(!ProviderKind.anthropic.isLocal)
         #expect(ProviderKind.anthropic.keychainAccount == "anthropic")
         #expect(ProviderKind.ollama.keychainAccount == nil)
+    }
+
+    /// Ollama on another computer isn't local: what's sent leaves this Mac.
+    @Test func ollamaElsewhereIsNotOnThisMac() {
+        var s = AppSettings.default
+        #expect(s.runsOnThisMac(.ollama) && s.recipientName(.ollama) == ProviderKind.ollama.displayName)
+        s.ollamaBaseURL = "http://[::1]:11434"
+        #expect(s.runsOnThisMac(.ollama))
+        s.ollamaBaseURL = "http://studio.local:11434"
+        #expect(!s.runsOnThisMac(.ollama))
+        #expect(s.recipientName(.ollama) == "Ollama at studio.local")
+        #expect(s.runsOnThisMac(.appleOnDevice) && !s.runsOnThisMac(.anthropic))
     }
 }
 

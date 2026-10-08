@@ -51,7 +51,8 @@ targets:
         LSApplicationCategoryType: public.app-category.video
         LSMinimumSystemVersion: "15.0"
         NSHumanReadableCopyright: "© 2026 Snazzy Pro. All rights reserved."
-        # HTTPS only (standard encryption): no export compliance documentation needed.
+        # Only encryption built into the OS (HTTPS, and TLS to the iPhone/iPad remote):
+        # exempt, so no export compliance documentation is needed.
         ITSAppUsesNonExemptEncryption: false
         # Ollama / LM Studio on this Mac or another computer on the local network.
         NSAppTransportSecurity:

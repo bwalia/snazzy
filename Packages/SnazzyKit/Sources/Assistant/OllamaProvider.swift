@@ -52,6 +52,17 @@ public struct OllamaProvider: ModelProvider {
 public enum OllamaMapping {
     /// Ollama's default context is small; tool schemas plus a conversation need more.
     public static let contextLength = 32_768
+    /// Tool calls and results older than this many messages are cut down, so a long
+    /// builder chat fits in `contextLength` (whole files written or read many turns
+    /// ago aren't needed again).
+    // ponytail: a fixed message window; switch to a token budget if 32k still overflows.
+    static let recentMessages = 8
+    static let oldTextLimit = 1_500
+
+    static func shortened(_ text: String) -> String {
+        guard text.count > oldTextLimit else { return text }
+        return String(text.prefix(oldTextLimit)) + "\n… [\(text.count - oldTextLimit) more characters left out to save space; read_file shows the current file]"
+    }
 
     public static func requestBody(_ request: ModelRequest) -> JSONValue {
         var body: [String: JSONValue] = [
@@ -80,7 +91,9 @@ public enum OllamaMapping {
         if let system = request.system, !system.isEmpty {
             out.append(["role": "system", "content": .string(system)])
         }
-        for message in request.messages {
+        let firstRecent = request.messages.count - recentMessages
+        for (index, message) in request.messages.enumerated() {
+            let old = index < firstRecent
             switch message.role {
             case .user:
                 var m: [String: JSONValue] = ["role": "user", "content": .string(message.text)]
@@ -92,14 +105,16 @@ public enum OllamaMapping {
                 let calls = message.toolCalls
                 if !calls.isEmpty {
                     m["tool_calls"] = .array(calls.map { call in
-                        ["function": ["name": .string(call.name), "arguments": call.arguments.objectValue != nil ? call.arguments : [:]]]
+                        var args = call.arguments.objectValue ?? [:]
+                        if old { args = args.mapValues { $0.stringValue.map { .string(shortened($0)) } ?? $0 } }
+                        return ["function": ["name": .string(call.name), "arguments": .object(args)]]
                     })
                 }
                 out.append(.object(m))
             case .tool:
                 for part in message.parts {
                     if case .toolResult(let r) = part {
-                        out.append(["role": "tool", "content": .string(r.content), "tool_name": .string(r.name)])
+                        out.append(["role": "tool", "content": .string(old ? shortened(r.content) : r.content), "tool_name": .string(r.name)])
                     }
                 }
             }

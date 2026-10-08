@@ -19,6 +19,7 @@ struct RemoteWindow: View {
                         Image(nsImage: qr).interpolation(.none).resizable()
                             .frame(width: 220, height: 220).padding(10)
                             .background(.white, in: RoundedRectangle(cornerRadius: 12))
+                            .background(HiddenFromScreenSharing())
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Scan with your iPhone or iPad").font(.headline)
                             Text("Open the Camera app (or Snazzy Pro on the device › Pair) and point it at the code. Both need to be on the same Wi-Fi.")
@@ -80,5 +81,15 @@ struct RemoteWindow: View {
             .padding(24)
         }
         .frame(minWidth: 520, minHeight: 420)
+    }
+}
+
+/// Keeps the window showing the pairing code out of other apps' screen sharing
+/// (Zoom, Meet), so viewers can't scan it. Snazzy Pro's own capture already
+/// leaves its windows out.
+private struct HiddenFromScreenSharing: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async { view.window?.sharingType = .none }
     }
 }

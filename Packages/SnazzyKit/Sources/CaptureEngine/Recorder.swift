@@ -69,6 +69,10 @@ public final class Recorder {
                 ? "Screen recording permission is needed. Allow it in the Sources panel."
                 : "The screen capture isn't running (\(screen.state.description)). Choose a display or window first.")
         }
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        if let free = Self.freeSpace(folder), free < Self.minFreeToStart {
+            throw CaptureError("Only \(free.formatted(.byteCount(style: .file))) free on this disk. Recording needs at least 1 GB (it writes about 6 MB a second).")
+        }
         warning = nil
         if countdown > 0 {
             for n in stride(from: countdown, to: 0, by: -1) {
@@ -80,6 +84,7 @@ public final class Recorder {
         let stamp = Self.stamp.string(from: Date())
         let composite = folder.appending(path: "presentation-\(stamp).mov")
         let raw = folder.appending(path: "presentation-\(stamp) raw", directoryHint: .isDirectory)
+        let rawIsNew = !FileManager.default.fileExists(atPath: raw.path)
         do {
             try FileManager.default.createDirectory(at: raw, withIntermediateDirectories: true)
             let session = try RecordingSession(composite: composite, rawFolder: raw, spec: spec)
@@ -98,11 +103,14 @@ public final class Recorder {
             state = .recording
             diagnostics.log("Recording started: \(composite.lastPathComponent)", category: "recording")
             ticker = Task { [weak self] in
+                var ticks = 0
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(250))
                     guard let self, let session = self.session else { return }
                     self.elapsed = session.recordedSeconds
-                    if let error = session.failure {
+                    ticks += 1
+                    let diskFull = ticks % 20 == 0 && (Self.freeSpace(folder) ?? .max) < Self.minFreeWhileRecording
+                    if let error = session.failure ?? (diskFull ? "The disk is almost full, so recording stopped. Everything up to now is saved." : nil) {
                         self.diagnostics.log("Recording failed: \(error)", category: "recording", level: .error)
                         _ = await self.stop()
                         self.state = .failed(error)
@@ -111,6 +119,7 @@ public final class Recorder {
                 }
             }
         } catch {
+            if rawIsNew { try? FileManager.default.removeItem(at: raw) }
             state = .failed(error.localizedDescription)
             diagnostics.log("Recording could not start: \(error.localizedDescription)", category: "recording", level: .error)
             throw error
@@ -176,6 +185,15 @@ public final class Recorder {
             diagnostics.log("Recording failed to save: \(error.localizedDescription)", category: "recording", level: .error)
             return nil
         }
+    }
+
+    /// The composite plus raw tracks write about 6 MB a second.
+    static let minFreeToStart: Int64 = 1_000_000_000
+    static let minFreeWhileRecording: Int64 = 500_000_000
+
+    /// Space available for new files on the disk holding `folder` (nil if unknown).
+    static func freeSpace(_ folder: URL) -> Int64? {
+        try? folder.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage
     }
 
     static let stamp: DateFormatter = {
@@ -253,7 +271,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
         compositeURL = composite
         self.rawFolder = rawFolder
         self.spec = spec
-        writer = try AVAssetWriter(outputURL: composite, fileType: .mov)
+        writer = try AVAssetWriter.crashSafeMovie(composite)
         let w = Int(spec.canvas.width), h = Int(spec.canvas.height)
         videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: [
             AVVideoCodecKey: AVVideoCodecType.h264,
@@ -307,7 +325,15 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
         screenConsumer = screen.addConsumer { [weak self] buffer in self?.raw(buffer, kind: .screen) }
         if let camera { cameraConsumer = camera.addConsumer { [weak self] buffer in self?.raw(buffer, kind: .camera) } }
 
-        try startMic(micID)
+        do {
+            try startMic(micID)
+        } catch {
+            // Leave no half-made movie behind (the recorder removes the raw folder).
+            if let id = screenConsumer { screen.removeConsumer(id) }
+            if let id = cameraConsumer { camera?.removeConsumer(id) }
+            writer.cancelWriting()
+            throw error
+        }
 
         // Composite at a constant 30 fps from the latest frames.
         let timer = DispatchSource.makeTimerSource(flags: .strict, queue: queue)
@@ -487,12 +513,13 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
             if let e = track.error { onWarning?("A raw track failed: \(e)") }
             await track.finish()
         }
+        let duration = end.seconds - (queue.sync { sessionStart?.seconds } ?? 0) + 1 / Double(fps)
+        let result = RecordingResult(composite: compositeURL, rawFolder: rawFolder, duration: duration, freezes: freezes, droppedFrames: dropped)
+        // The raw tracks share this timeline, so keep it even if the composite failed.
+        writeTimeline(result, recordingStart: recordingStart)
         if writer.status != .completed {
             return .failure(CaptureError(writer.error?.localizedDescription ?? "The movie couldn't be finished."))
         }
-        let duration = end.seconds - (queue.sync { sessionStart?.seconds } ?? 0) + 1 / Double(fps)
-        let result = RecordingResult(composite: compositeURL, rawFolder: rawFolder, duration: duration, freezes: freezes, droppedFrames: dropped)
-        writeTimeline(result, recordingStart: recordingStart)
         return .success(result)
     }
 
@@ -546,7 +573,7 @@ final class RawTrack: @unchecked Sendable {
 
     init(url: URL, video sample: CMSampleBuffer, codec: AVVideoCodecType, bitRate: Int) throws {
         guard let pixels = CMSampleBufferGetImageBuffer(sample) else { throw CaptureError("No image in sample") }
-        writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        writer = try AVAssetWriter.crashSafeMovie(url)
         let w = CVPixelBufferGetWidth(pixels) & ~1, h = CVPixelBufferGetHeight(pixels) & ~1
         input = AVAssetWriterInput(mediaType: .video, outputSettings: [
             AVVideoCodecKey: codec, AVVideoWidthKey: w, AVVideoHeightKey: h,
@@ -560,7 +587,7 @@ final class RawTrack: @unchecked Sendable {
     }
 
     init(url: URL, audio sample: CMSampleBuffer) throws {
-        writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        writer = try AVAssetWriter.crashSafeMovie(url)
         // Lossless 24-bit interleaved PCM at the mic's own rate and channel count
         // (mics often deliver float, non-interleaved audio, which .mov can't pass through).
         let asbd = CMSampleBufferGetFormatDescription(sample).flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
@@ -601,6 +628,16 @@ final class RawTrack: @unchecked Sendable {
         guard writer.status == .writing else { return }
         input.markAsFinished()
         await writer.finishWriting()
+    }
+}
+
+extension AVAssetWriter {
+    /// A QuickTime movie written in fragments: if the app crashes, is force
+    /// quit or the Mac loses power, the file still plays up to the last fragment.
+    static func crashSafeMovie(_ url: URL) throws -> AVAssetWriter {
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        writer.movieFragmentInterval = CMTime(seconds: 2, preferredTimescale: 600)
+        return writer
     }
 }
 

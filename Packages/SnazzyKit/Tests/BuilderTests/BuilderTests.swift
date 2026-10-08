@@ -54,11 +54,19 @@ import SnazzyCore
             #expect(throws: WorkspaceError.self) { try ws.write(project: "demo", path: bad, content: "x") }
         }
         #expect(try ws.resolve(project: "demo", path: "a/../b.txt").lastPathComponent == "b.txt")
+        // A symlink inside the project can't lead out of it.
+        let outside = ws.root.appending(path: "outside", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: ws.projectURL("demo").appending(path: "link"), withDestinationURL: outside)
+        #expect(throws: WorkspaceError.self) { try ws.write(project: "demo", path: "link/x.txt", content: "x") }
+        #expect(!FileManager.default.fileExists(atPath: outside.appending(path: "x.txt").path))
     }
 
     @Test func slugs() {
         #expect(Workspace.slug("  Hello, World  ") == "hello-world")
         #expect(Workspace.slug("!!!") == "project")
+        // ASCII, so it works as the project's URL host.
+        #expect(Workspace.slug("Café Q3 日本") == "cafe-q3-ri-ben")
     }
 }
 

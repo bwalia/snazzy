@@ -226,8 +226,8 @@ final class DeveloperController {
             Transcript:
             \(transcript)
             """
-        if !selection.provider.isLocal {
-            guard CloudReview.confirm(provider: selection.provider.displayName, what: "this transcript", text: prompt,
+        if !app.settings.runsOnThisMac(selection.provider) {
+            guard CloudReview.confirm(provider: app.settings.recipientName(selection.provider), what: "this transcript", text: prompt,
                                       note: "Summaries use your Writing model (\(selection.model)). Choose a local model in Settings › Models to keep it on this Mac.")
             else { throw CaptureActionError(message: "Not sent. The summary was cancelled.") }
         }
@@ -250,7 +250,7 @@ final class DeveloperController {
     // MARK: Feature 5: what's on screen
 
     /// Text of the frontmost window of another app (terminal, editor…).
-    func readFrontWindow() async throws -> JSONValue {
+    func readFrontWindow(offMac: String?) async throws -> JSONValue {
         guard settings.screenReadingEnabled else { throw disabled("Screen reading") }
         busy = "Reading the front window…"
         defer { busy = nil }
@@ -259,12 +259,11 @@ final class DeveloperController {
         if text.count > 20_000 { text = String(text.suffix(20_000)) }  // the newest output matters most
         var result: [String: JSONValue] = ["app": .string(capture.app), "window": .string(capture.title),
                                            "method": .string(capture.method), "text": .string(text)]
-        let provider = app.activeSelection.provider
-        if !provider.isLocal {
+        if let offMac {
             let redacted = SecretRedactor.redact(text)
             result["text"] = .string(redacted.text)
             if let note = SecretRedactor.summary(redacted.hidden) { result["hidden"] = .string(note) }
-            guard CloudReview.confirm(provider: provider.displayName, what: "the text of \(capture.app)'s window",
+            guard CloudReview.confirm(provider: offMac, what: "the text of \(capture.app)'s window",
                                       text: redacted.text, note: SecretRedactor.summary(redacted.hidden) ?? "No likely secrets were found.")
             else { throw CaptureActionError(message: "Not sent. The user kept the window text on their Mac.") }
         }

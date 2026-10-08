@@ -179,12 +179,13 @@ final class SharingController {
     }
 
     private func freePresetName(_ name: String) -> String {
-        let taken = Set(app.presets.presets.map { $0.name.lowercased() })
-        guard taken.contains(name.lowercased()) else { return name }
+        // Compared by file name: "lesson-setup" would otherwise overwrite "Lesson setup".
+        let taken = Set(app.presets.presets.map { PresetStore.fileName($0.name) })
+        guard taken.contains(PresetStore.fileName(name)) else { return name }
         var n = 1
         while true {
             let candidate = n == 1 ? "\(name) (shared)" : "\(name) (shared \(n))"
-            if !taken.contains(candidate.lowercased()) { return candidate }
+            if !taken.contains(PresetStore.fileName(candidate)) { return candidate }
             n += 1
         }
     }

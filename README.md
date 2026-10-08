@@ -68,8 +68,8 @@ Warnings are treated as errors in the app target.
 | ↳ `Builder` | Builder workspace (projects, safe file access, starter templates), partial-JSON reader for streamed tool input |
 | ↳ `Slides` | Present the open Builder deck (slide list, speaker notes, Record This Deck): the "slides" source records its Present window directly, and slide changes become chapters. Plus sample decks for 12 sectors. |
 | ↳ Sharing | `.snazzy` files: send a deck or prototype, presets and their background images to another Snazzy Pro user with AirDrop, Messages, Mail or Save As (File › Share…, ⇧⌘S); double-click to import. No API keys, conversations or recordings. |
-| ↳ Live classroom | Live tab: a room on your Wi-Fi. People scan a QR code and watch the live picture (slides or screen + camera, with your mic) in their browser, and post and vote on ideas on a brainstorm board; the assistant turns the ideas into a deck. Peer to peer from your Mac: no servers, accounts or internet. Room code required. |
-| ↳ Go live online | Stream the same picture and mic to YouTube, Twitch, Vimeo, Facebook or any RTMP(S) server (Live tab). Stream keys stay in the Keychain; it asks before every stream. Uses HaishinKit (BSD-3-Clause); see THIRD_PARTY_NOTICES.md. |
+| ↳ Live classroom | Live tab: a room on your Wi-Fi. People scan a QR code and watch the live picture (slides or screen + camera, with your mic) in their browser, and post and vote on ideas on a brainstorm board; the assistant turns the ideas into a deck. Peer to peer from your Mac: no servers, accounts or internet. Room code required. Limits apply per device (by IP address): posts, one vote per idea, connections and wrong-code guesses, so one device can't flood or block the room. |
+| ↳ Go live online | Stream the same picture and mic to YouTube, Twitch, Vimeo, Facebook or any RTMP(S) server (Live tab). Stream keys stay in the Keychain; it asks before every stream. A destination that drops reconnects (3 tries, 2–6 s apart); if the stream is lost for good, the copy recorded on the Mac keeps going. Uses HaishinKit (BSD-3-Clause); see THIRD_PARTY_NOTICES.md. |
 
 ## Assistant design
 
@@ -80,10 +80,19 @@ Warnings are treated as errors in the app target.
   from settings, `eager_input_streaming` on tools, and server-side refusal
   fallbacks (`fallbacks: "default"`) on models that support them. Thinking blocks
   are stored opaquely and sent back unchanged; history is append-only.
-- Ollama: `/api/chat` NDJSON with `tools`; `num_ctx` raised to 32k.
+- Anthropic prompt caching covers the whole prefix (tools, system and history).
+  Long chats rely on server-side context editing, which clears old tool calls and
+  results past about 150k input tokens and keeps the latest six. History is never
+  trimmed on the Mac, because that would invalidate thinking blocks.
+- Ollama: `/api/chat` NDJSON with `tools`; `num_ctx` raised to 32k. Tool calls
+  and results older than the last 8 messages are cut to 1,500 characters so
+  that long chats still fit.
 - Every tool call is validated against its JSON schema. An invalid call gets the
   error back so the model can retry once; a second invalid round stops and asks
   the user. Tools marked `requiresConfirmation` show a confirmation alert first.
+- Text from outside the app (MCP servers, live-room ideas, web pages and
+  project files, GitHub, screen text) comes back wrapped in `<external_data>`,
+  and the model is told never to follow instructions in it.
 - The chat header shows the task, model, local/cloud badge (it pulses while
   sending to a cloud provider), token use, and a warning when offline or when a
   key is missing.
@@ -101,7 +110,7 @@ exact text is shown and approved first. Originals are never changed.
 | Captions and summary | `make_captions`, `summarize_recording` | On-device `SpeechAnalyzer` → `.srt`/`.vtt`, optional `(captioned).mp4`; summary `.md` by the Writing model; text only, never audio |
 | Share links (off by default) | `share_recording` | Own S3/R2/MinIO bucket (SigV4, time-limited link), GitHub release asset, or Gist for text; confirm before every upload; Slack/PR/Jira text; delete remote copies |
 | PR demos | `load_pull_request`, `load_git_changes` | GitHub API (token optional for public repos); diff capped; local branches compared through GitHub (the sandbox can't run `git`) |
-| What's on screen | `read_front_window`, `zoom_screen` | On-device OCR of the front window (Accessibility isn't available in the sandbox); secrets hidden for cloud models; smooth zoom to text while recording |
+| What's on screen | `read_front_window`, `zoom_screen` | On-device OCR of the front window (Accessibility isn't available in the sandbox); secrets hidden and the text shown first whenever it leaves the Mac (a cloud model, or an AI agent over MCP); smooth zoom to text while recording |
 
 Self-tests: `--s3-test <endpoint> --access … --secret …` (e.g. a local
 MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
@@ -158,6 +167,10 @@ MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
 - **Robustness:** a stalled or unplugged camera never stops the screen or mic.
   The inset holds its last frame, and the freeze goes in the timeline. A silent
   or failing mic shows a warning, and the screen keeps recording.
+- **Crash-safe:** every movie is written in 2-second fragments, so a crash,
+  force quit or power cut keeps everything but the last moments. Quitting
+  finishes the recording first. Recording won't start with under 1 GB free,
+  and stops (and saves) itself below 500 MB.
 - **Controls:** toolbar Record/Pause/Stop with timer and mic meter, the
   Record menu (⇧⌘R start/stop, ⌃⌘P pause), and the chat tools
   `start_recording`, `pause_recording`, `resume_recording` and `stop_recording`.

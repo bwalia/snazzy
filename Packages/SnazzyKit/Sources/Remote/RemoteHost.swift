@@ -192,29 +192,37 @@ public final class RemoteHost: @unchecked Sendable {
 
     private func handle(_ message: RemoteMessage, from link: RemoteLink, id: ObjectIdentifier) {
         switch message {
-        case .hello(let deviceID, let deviceName, let version, let pairing):
+        case .hello(let deviceID, let deviceName, let version, let pairing, let proof):
             guard version == RemoteProtocol.version else {
                 link.close("Update Snazzy Pro on this device and the Mac to the same version.")
                 return
             }
             let name = String(deviceName.prefix(60))
             if pairing {
-                // Only someone who scanned the current QR code can get here (the
-                // TLS handshake needs the pairing secret), unless they hold a
-                // device key; either way they're allowed in.
+                // Only someone holding the current QR code's secret may pair. A paired
+                // device can also pass the TLS handshake (with its own key), so the
+                // handshake alone doesn't prove that.
                 let device = TrustedDevice(id: deviceID, name: name, key: RemoteSecurity.newKey())
-                lock.withLock {
+                let accepted = lock.withLock { () -> Bool in
+                    guard let secret = pairingSecret, pairingExpires > Date(),
+                          RemoteSecurity.verify(proof, deviceID: deviceID, key: secret) else { return false }
                     devices[deviceID] = device
                     pairingSecret = nil  // one device per QR code
                     links[id] = (link, deviceID, name)
+                    return true
+                }
+                guard accepted else {
+                    link.close("This pairing code has expired or was already used. Show a new one on the Mac.")
+                    return
                 }
                 onPaired?(device)
                 link.send(.paired(hostID: hostID, hostName: hostName, deviceKey: device.key))
                 // Accept the new key, stop accepting the pairing secret.
                 start()
             } else {
-                let known = lock.withLock { devices[deviceID] != nil }
-                guard known else {
+                // The device must hold this ID's own key, not just any paired device's.
+                let key = lock.withLock { devices[deviceID]?.key }
+                guard let key, RemoteSecurity.verify(proof, deviceID: deviceID, key: key) else {
                     link.close("This device isn't paired with this Mac. Pair again.")
                     return
                 }

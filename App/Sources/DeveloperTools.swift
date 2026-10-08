@@ -7,7 +7,7 @@ import SnazzyCore
 /// feature is turned on in Settings › Developer.
 @MainActor
 enum DeveloperTools {
-    static func tools(_ dev: DeveloperController) -> [RegisteredTool] {
+    static func tools(_ dev: DeveloperController, offMac: String?) -> [RegisteredTool] {
         let s = dev.settings
         var tools: [RegisteredTool] = [
             RegisteredTool(
@@ -82,9 +82,10 @@ enum DeveloperTools {
                 inputSchema: AssistantTools.object([
                     "repo": ["type": "string", "minLength": 3],
                     "number": ["type": "integer", "minimum": 1],
-                ], required: ["repo"])
+                ], required: ["repo"]),
+                external: "GitHub"
             ) { @Sendable args in
-                try await dev.loadPullRequest(args["repo"]?.stringValue ?? "", number: args["number"]?.intValue)
+                try await dev.loadPullRequest(args["repo"]?.stringValue ?? "", number: args["number"]?.intValue, offMac: offMac)
             })
             tools.append(RegisteredTool(
                 name: "load_git_changes",
@@ -92,17 +93,19 @@ enum DeveloperTools {
                 inputSchema: AssistantTools.object([
                     "path": ["type": "string"],
                     "base_branch": ["type": "string", "minLength": 1],
-                ], required: ["base_branch"])
+                ], required: ["base_branch"]),
+                external: "GitHub"
             ) { @Sendable args in
-                try await dev.loadGitChanges(path: args["path"]?.stringValue, base: args["base_branch"]?.stringValue ?? "main")
+                try await dev.loadGitChanges(path: args["path"]?.stringValue, base: args["base_branch"]?.stringValue ?? "main", offMac: offMac)
             })
         }
         if s.screenReadingEnabled {
             tools.append(RegisteredTool(
                 name: "read_front_window",
                 description: "Read the text in the user's frontmost window of another app (terminal, editor, Xcode, browser) with on-device text recognition, so you can explain errors or output. With a cloud model, likely secrets are hidden and the user approves the text first.",
-                inputSchema: AssistantTools.emptySchema
-            ) { @Sendable _ in try await dev.readFrontWindow() })
+                inputSchema: AssistantTools.emptySchema,
+                external: "the screen"
+            ) { @Sendable _ in try await dev.readFrontWindow(offMac: offMac) })
         }
         if s.zoomEnabled {
             let capture = dev.app.capture
@@ -113,7 +116,8 @@ enum DeveloperTools {
                     "text": ["type": "string", "minLength": 1],
                     "hold_seconds": ["type": "number", "minimum": 0, "maximum": 60],
                     "reset": ["type": "boolean"],
-                ], required: [])
+                ], required: []),
+                external: "the screen"
             ) { @Sendable args in
                 if args["reset"]?.boolValue == true {
                     await capture.animateZoom(to: nil)

@@ -92,8 +92,14 @@ enum SelfTest {
             b.destinations = [.custom]
             await b.start([.custom])
             report("broadcast live", b.state == .live, "\(b.stateJSON())")
-            try? await Task.sleep(for: .seconds(Double(value(after: "--seconds") ?? "6") ?? 6))
+            // Once a second, so a server restart mid-test shows the reconnect.
+            for _ in 0..<(Int(value(after: "--seconds") ?? "6") ?? 6) {
+                try? await Task.sleep(for: .seconds(1))
+                print("  \(b.state) recorder: \(app.capture.recorder.state) \(b.message ?? "")")
+            }
             await b.stop()
+            // A recording outlives a lost stream on purpose; end it here.
+            if app.capture.recorder.isActive { await app.capture.stopRecording() }
             report("broadcast stopped", b.state == .idle, "\(b.stateJSON())")
             if !hadKey { b.deleteKey(for: .custom) }
             b.platform = savedPlatform
@@ -238,7 +244,7 @@ enum SelfTest {
             var made: (projects: [String], presets: [String], images: [String]) = ([], [], [])
             func cleanUp() {
                 for p in made.projects { try? app.builder.workspace.deleteProject(p) }
-                for p in made.presets { try? app.presets.store.delete(p) }
+                for p in made.presets { _ = try? app.presets.store.delete(p) }
                 for i in made.images { library.delete(i) }
                 app.presets.refresh()
                 app.builder.refreshProjects()
@@ -495,7 +501,7 @@ enum SelfTest {
 
         let app = AppModel()
         app.sessionLoggingSuspended = true
-        let registry = app.makeToolRegistry()
+        let registry = app.makeToolRegistry(for: app.activeSelection.provider)
         let prompt = "Call the get_project_state tool, then reply with only the value of build_phase."
         let phase = app.projectState()["build_phase"]?.intValue.map(String.init) ?? "?"
 
@@ -614,7 +620,7 @@ enum SelfTest {
         do {
             let kind: ProviderKind = provider == "anthropic" ? .anthropic : provider == "apple" ? .appleOnDevice : .ollama
             let p = try app.makeProvider(kind)
-            let runner = ConversationRunner(provider: p, registry: app.makeToolRegistry(), model: kind == .appleOnDevice ? ProviderKind.appleModelID : model,
+            let runner = ConversationRunner(provider: p, registry: app.makeToolRegistry(for: kind), model: kind == .appleOnDevice ? ProviderKind.appleModelID : model,
                                             system: kind == .appleOnDevice ? ChatSession.compactSystemPrompt : ChatSession.systemPrompt, maxTokens: 8000,
                                             effort: provider == "anthropic" ? "low" : nil)
             for try await event in runner.run(history: [.user(prompt)]) {

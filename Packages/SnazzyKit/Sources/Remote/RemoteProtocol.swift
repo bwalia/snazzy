@@ -4,7 +4,8 @@ import Foundation
 /// iPhone/iPad app (client): length-prefixed JSON messages over TLS with
 /// pre-shared keys (see `RemoteSecurity`).
 public enum RemoteProtocol {
-    public static let version = 1
+    /// 2: `hello` carries a proof of the key behind its claim.
+    public static let version = 2
     /// Bonjour service type (also listed in each app's NSBonjourServices).
     public static let serviceType = "_snazzyremote._tcp"
     public static let maxFrame = 1_000_000
@@ -69,8 +70,10 @@ public enum RemoteCommand: Codable, Sendable, Equatable {
 }
 
 public enum RemoteMessage: Codable, Sendable, Equatable {
-    /// Device → Mac, first message on every connection.
-    case hello(deviceID: String, deviceName: String, version: Int, pairing: Bool)
+    /// Device → Mac, first message on every connection. `proof` is
+    /// `RemoteSecurity.proof` with the pairing secret (pairing) or the device's
+    /// own key; optional only so an older app still decodes and is told to update.
+    case hello(deviceID: String, deviceName: String, version: Int, pairing: Bool, proof: Data?)
     /// Mac → device after pairing: the device's own key for future connections.
     case paired(hostID: String, hostName: String, deviceKey: Data)
     /// Mac → device on a normal connection.

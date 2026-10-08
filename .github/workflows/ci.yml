@@ -1,0 +1,48 @@
+# Builds and tests every pull request and every push to main.
+name: CI
+
+on:
+  pull_request:
+    paths-ignore: ["site/**", "docs/**", "**/*.md"]
+  push:
+    branches: [main]
+    paths-ignore: ["site/**", "docs/**", "**/*.md"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Same Xcode as local development (the runner's default is older).
+  DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+
+jobs:
+  mac:
+    name: Package tests + Mac app
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - run: brew install xcodegen
+      - name: Package tests
+        run: swift test --package-path Packages/SnazzyKit
+      - name: Mac app (warnings are errors)
+        run: |
+          xcodegen
+          xcodebuild -quiet -scheme SnazzyPro -derivedDataPath build/DerivedData build
+
+  ios:
+    name: iPhone/iPad + Watch apps
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - run: brew install xcodegen
+      - name: watchOS platform (the iPhone app embeds the Watch app)
+        run: xcodebuild -downloadPlatform watchOS
+      - name: Build, unsigned
+        run: |
+          xcodegen
+          xcodebuild -quiet -scheme SnazzyProiOS -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData build CODE_SIGNING_ALLOWED=NO

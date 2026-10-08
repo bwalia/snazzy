@@ -145,6 +145,20 @@ public struct AppSettings: Codable, Hashable, Sendable {
         maxOutputTokens = try c.decodeIfPresent(Int.self, forKey: .maxOutputTokens) ?? d.maxOutputTokens
     }
 
+    /// Whether `kind`'s model runs on this Mac. Ollama can point at another computer
+    /// (say a Mac Studio on the network); then what's sent leaves this Mac.
+    public func runsOnThisMac(_ kind: ProviderKind) -> Bool {
+        guard kind == .ollama else { return kind.isLocal }
+        let host = URL(string: ollamaBaseURL)?.host()?.lowercased() ?? ""
+        return ["localhost", "127.0.0.1", "::1"].contains(host)
+    }
+
+    /// Who receives what's sent to `kind`, for "Send … to X?" prompts and badges.
+    public func recipientName(_ kind: ProviderKind) -> String {
+        guard kind == .ollama, !runsOnThisMac(kind) else { return kind.displayName }
+        return "Ollama at \(URL(string: ollamaBaseURL)?.host() ?? ollamaBaseURL)"
+    }
+
     public func selection(for task: AssistantTask) -> ModelSelection {
         switch task {
         case .planning: planning

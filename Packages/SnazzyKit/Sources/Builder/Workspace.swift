@@ -36,10 +36,12 @@ public struct Workspace: Sendable {
             .appending(path: "Snazzy Pro/Projects", directoryHint: .isDirectory)
     }
 
-    /// Lower-case, dash-separated folder name.
+    /// Lower-case, dash-separated ASCII folder name (accents and other scripts are
+    /// transliterated: "Café 日本" → "cafe-ri-ben"). ASCII because it's also the host of
+    /// the project's `snazzy-project://` URL, where anything else gets encoded.
     public static func slug(_ name: String) -> String {
-        let allowed = CharacterSet.alphanumerics
-        let parts = name.lowercased().unicodeScalars.split { !allowed.contains($0) }.map { String(String.UnicodeScalarView($0)) }
+        let latin = name.applyingTransform(.toLatin, reverse: false)?.applyingTransform(.stripCombiningMarks, reverse: false) ?? name
+        let parts = latin.lowercased().split { !($0.isASCII && ($0.isLetter || $0.isNumber)) }.map(String.init)
         let slug = parts.joined(separator: "-")
         return slug.isEmpty ? "project" : String(slug.prefix(60))
     }
@@ -90,6 +92,15 @@ public struct Workspace: Sendable {
         let url = dir.appending(path: cleaned).standardizedFileURL
         guard url.path.hasPrefix(dir.path + "/") else {
             throw WorkspaceError("Path \"\(path)\" is outside the project.")
+        }
+        // Projects never contain symlinks (the tools and imports can't make them), so any
+        // symlink on the way, even a dangling one, is refused: it could lead outside.
+        var step = dir
+        for part in url.path.dropFirst(dir.path.count + 1).split(separator: "/") {
+            step.append(path: String(part))
+            if (try? FileManager.default.destinationOfSymbolicLink(atPath: step.path)) != nil {
+                throw WorkspaceError("Path \"\(path)\" is outside the project.")
+            }
         }
         guard !url.lastPathComponent.hasPrefix(".snazzy") else { throw WorkspaceError("That file is reserved.") }
         return url

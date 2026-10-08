@@ -8,7 +8,8 @@ import Testing
 /// Writes a small H.264 movie of solid frames.
 func makeMovie(_ url: URL, seconds: Double, fps: Int32 = 30, fileType: AVFileType = .mov) async throws {
     try? FileManager.default.removeItem(at: url)
-    let writer = try AVAssetWriter(outputURL: url, fileType: fileType)
+    // .mov the way the recorder writes it (fragmented), so tests cover real recordings.
+    let writer = fileType == .mov ? try AVAssetWriter.crashSafeMovie(url) : try AVAssetWriter(outputURL: url, fileType: fileType)
     let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
         AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 160, AVVideoHeightKey: 90,
     ])
@@ -31,6 +32,36 @@ func makeMovie(_ url: URL, seconds: Double, fps: Int32 = 30, fileType: AVFileTyp
 }
 
 @Suite(.serialized) struct RecordingEditorTests {
+    /// A recording cut off by a crash or power loss must still play up to its last fragment.
+    @Test func unfinishedRecordingStillPlays() async throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "crash-\(UUID().uuidString).mov")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let writer = try AVAssetWriter.crashSafeMovie(url)
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 160, AVVideoHeightKey: 90,
+        ])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA, kCVPixelBufferWidthKey as String: 160, kCVPixelBufferHeightKey as String: 90,
+        ])
+        writer.add(input)
+        writer.startWriting()
+        writer.startSession(atSourceTime: .zero)
+        for i in 0..<(6 * 30) {
+            while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(2)) }
+            var pb: CVPixelBuffer?
+            CVPixelBufferPoolCreatePixelBuffer(nil, adaptor.pixelBufferPool!, &pb)
+            adaptor.append(pb!, withPresentationTime: CMTime(value: CMTimeValue(i), timescale: 30))
+        }
+        // Never finished, as after a crash. Fragments are flushed asynchronously.
+        var seconds = 0.0
+        for _ in 0..<50 where seconds < 4 {
+            try await Task.sleep(for: .milliseconds(100))
+            seconds = (try? await AVURLAsset(url: url).load(.duration).seconds) ?? 0
+        }
+        writer.cancelWriting()
+        #expect(seconds >= 4)
+    }
+
     @Test func rangeResolution() throws {
         #expect(try RecordingEditor.resolveRange(start: 5, end: 20, duration: 30) == (5, 20))
         #expect(try RecordingEditor.resolveRange(start: 0, end: -3, duration: 30) == (0, 27))

@@ -28,16 +28,31 @@ enum Main {
     }
 }
 
-/// Receives .snazzy files opened from Finder, AirDrop or Mail.
+/// Receives .snazzy files opened from Finder, AirDrop or Mail, and finishes a
+/// recording before the app quits.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static var openHandler: (([URL]) -> Void)? {
         didSet { if let openHandler, !pending.isEmpty { openHandler(pending); pending = [] } }
     }
     @MainActor private static var pending: [URL] = []
+    @MainActor static var capture: CaptureController?
 
     func application(_ application: NSApplication, open urls: [URL]) {
         MainActor.assumeIsolated {
             if let handler = Self.openHandler { handler(urls) } else { Self.pending += urls }
+        }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        MainActor.assumeIsolated {
+            guard let capture = Self.capture, capture.recorder.isActive else { return .terminateNow }
+            Task { @MainActor in
+                await capture.stopRecording()
+                // A stop already in progress: wait for the movie to be saved.
+                while capture.recorder.isActive { try? await Task.sleep(for: .milliseconds(100)) }
+                sender.reply(toApplicationShouldTerminate: true)
+            }
+            return .terminateLater
         }
     }
 }
@@ -54,6 +69,7 @@ struct SnazzyProApp: App {
                 .frame(minWidth: 900, minHeight: 560)
                 .onAppear {
                     let sharing = model.sharing!
+                    AppDelegate.capture = model.capture
                     AppDelegate.openHandler = { urls in
                         for url in urls where url.pathExtension.lowercased() == SnazzyShare.fileExtension { sharing.open(url) }
                     }

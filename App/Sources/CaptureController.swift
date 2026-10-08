@@ -340,7 +340,8 @@ final class CaptureController {
         diagnostics.log("Preview closed", category: "preview")
     }
 
-    /// Windows that must never appear in a recording (used by the recorder, phase 4).
+    /// The floating preview windows (the self-test checks they're kept out of captures;
+    /// recordings leave out all of the app's windows by bundle ID).
     var excludedWindowNumbers: [Int] {
         previewWindows.values.compactMap(\.windowNumber) + [compositeWindow?.windowNumber].compactMap { $0 }
     }

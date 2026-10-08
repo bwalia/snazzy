@@ -17,6 +17,18 @@ public enum RemoteSecurity {
         SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
     }
 
+    /// Shows the Mac that a device holds the key its hello claims: the pairing
+    /// secret to pair, or that device's own key to reconnect. The TLS handshake
+    /// alone only proves the device holds *some* key the Mac accepts.
+    public static func proof(deviceID: String, key: Data) -> Data {
+        Data(HMAC<SHA256>.authenticationCode(for: Data(deviceID.utf8), using: SymmetricKey(data: key)))
+    }
+
+    public static func verify(_ proof: Data?, deviceID: String, key: Data) -> Bool {
+        guard let proof else { return false }
+        return HMAC<SHA256>.isValidAuthenticationCode(proof, authenticating: Data(deviceID.utf8), using: SymmetricKey(data: key))
+    }
+
     /// TCP + TLS-PSK parameters. A client passes its one key; the Mac passes
     /// every key it accepts (paired devices, plus the pairing secret while
     /// pairing is open).

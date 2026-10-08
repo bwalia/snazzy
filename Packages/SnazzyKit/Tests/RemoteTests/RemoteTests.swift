@@ -22,7 +22,7 @@ final class Box<T: Sendable>: @unchecked Sendable {
 @Suite struct RemoteProtocolTests {
     @Test func framesRoundTripAndSplit() throws {
         let messages: [RemoteMessage] = [
-            .hello(deviceID: "d1", deviceName: "iPad", version: 1, pairing: true),
+            .hello(deviceID: "d1", deviceName: "iPad", version: 2, pairing: true, proof: Data([1, 2])),
             .command(id: 7, .goToSlide(3)),
             .status(RemoteStatus(hostName: "Mac", recording: "recording", elapsed: 12.5, slideIndex: 2, slideCount: 6, notes: "Smile")),
         ]
@@ -60,6 +60,47 @@ final class Box<T: Sendable>: @unchecked Sendable {
             return command == .stopRecording ? (false, "Not recording.") : (true, nil)
         }
         return (host, 0, paired, commands)
+    }
+
+    /// A paired device holds a key the Mac accepts, but may only speak for
+    /// itself: it can't pair new devices or take over another device's ID.
+    @Test func pairedDeviceCantPairOthersOrImpersonate() async throws {
+        let keyA = RemoteSecurity.newKey(), keyB = RemoteSecurity.newKey()
+        let (host, _, paired, _) = await host(devices: [TrustedDevice(id: "A", name: "A", key: keyA),
+                                                        TrustedDevice(id: "B", name: "B", key: keyB)])
+        host.start()
+        for _ in 0..<40 where host.listeningPort == nil { try await Task.sleep(for: .milliseconds(50)) }
+        let port = try #require(host.listeningPort)
+
+        /// Connects as device A (its TLS key) and returns the Mac's first reply to `hello`.
+        func reply(to hello: RemoteMessage) async -> RemoteMessage? {
+            let params = RemoteSecurity.parameters(keys: [(RemoteSecurity.deviceIdentity("A"), keyA)])
+            let connection = NWConnection(to: .hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!), using: params)
+            let link = RemoteLink(connection, queue: DispatchQueue(label: "test-device"))
+            let replies = Box<RemoteMessage>()
+            link.onState = { if $0 == .ready { link.send(hello) } }
+            link.onMessage = { replies.add($0) }
+            link.start()
+            _ = await replies.wait { !$0.isEmpty }
+            link.close()
+            return replies.all.first
+        }
+        func hello(_ id: String, pairing: Bool, key: Data) -> RemoteMessage {
+            .hello(deviceID: id, deviceName: id, version: RemoteProtocol.version, pairing: pairing,
+                   proof: RemoteSecurity.proof(deviceID: id, key: key))
+        }
+
+        // Pairing is closed: A can't pair a new device, even with a valid TLS key.
+        guard case .bye = await reply(to: hello("C", pairing: true, key: keyA)) else { Issue.record("pairing accepted"); return }
+        // A can't claim to be B.
+        guard case .bye = await reply(to: hello("B", pairing: false, key: keyA)) else { Issue.record("impersonation accepted"); return }
+        // No proof at all (an older app) is refused too.
+        guard case .bye = await reply(to: .hello(deviceID: "A", deviceName: "A", version: RemoteProtocol.version, pairing: false, proof: nil))
+        else { Issue.record("missing proof accepted"); return }
+        // A as itself is welcome.
+        guard case .welcome = await reply(to: hello("A", pairing: false, key: keyA)) else { Issue.record("A refused"); return }
+        #expect(paired.all.isEmpty)
+        host.stop()
     }
 
     @Test func pairCommandStatusReconnectRevoke() async throws {
