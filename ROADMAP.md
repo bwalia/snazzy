@@ -104,6 +104,23 @@ original spec listed an iOS/iPadOS app as out of scope.
   privacy policy, because data leaves the Mac; off by default, with consent.
 - The phase 9 iPhone/iPad app joins live rooms as a viewer or co-host.
 
+### Standalone iPad app (phase 14, in stages, about 3–5 weeks)
+
+Today the iPad app is the Mac's remote and teleprompter. It becomes a studio of
+its own; the shared packages (SnazzyCore, Assistant, Builder, Live, Broadcast,
+Remote) already build for iOS.
+1. **Talk, build and present** (about 1 week, in progress): chat with the
+   assistant (Claude, Ollama on the network, Apple on-device on M1+ iPads),
+   build decks and prototypes in an iPad Builder, sample decks, present with
+   notes. The remote stays as a tab.
+2. **Teach and go live from the iPad**: the live room (server, board) and
+   streaming (HaishinKit), with the iPad's own screen as the picture.
+3. **Record on the iPad**: ReplayKit for the iPad's screen plus the front
+   camera as the inset (AVCaptureMultiCam where supported); background removal
+   with Vision.
+Distribution: a public TestFlight link on the website's Downloads page, then
+the App Store (Universal Purchase with the Mac app).
+
 ### Companion iPhone/iPad app (phases 9–12, about 2–3 months)
 
 Why: recording the device's own camera and mic on the device beats today's
