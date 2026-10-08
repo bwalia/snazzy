@@ -97,7 +97,17 @@ private struct RunningRoom: View {
                         .help("Copy the link")
                     }
                 }
-                Text("Scan the QR code, or open the link on the same Wi-Fi.").font(.caption).foregroundStyle(.secondary)
+                if live.addresses.count > 1 {
+                    Picker("Join over", selection: Binding(get: { live.selectedAddress ?? "" }, set: { live.selectedAddress = $0 })) {
+                        ForEach(live.addresses) { a in Text("\(a.label): \(a.ip)").tag(a.ip) }
+                    }
+                    .frame(maxWidth: 380)
+                    .help("Pick the network your audience is on: Wi-Fi, or a VPN such as WireGuard")
+                }
+                HStack {
+                    Text("Scan the QR code, or open the link on the same network.").font(.caption).foregroundStyle(.secondary)
+                    Button("Refresh addresses") { live.refreshAddresses() }.buttonStyle(.link).font(.caption)
+                }
                 Button(role: .destructive) { live.stop() } label: { Label("End Live Room", systemImage: "stop.circle") }
                     .controlSize(.large)
             }

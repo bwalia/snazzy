@@ -35,6 +35,8 @@ public enum RemoteSecurity {
         tcp.enableKeepalive = true
         tcp.keepaliveIdle = 5
         tcp.noDelay = true
+        // Give up quickly on an address that doesn't answer (then try the next).
+        tcp.connectionTimeout = 6
         let params = NWParameters(tls: tls, tcp: tcp)
         params.includePeerToPeer = true
         return params
@@ -46,7 +48,8 @@ public struct PairingInvite: Sendable, Equatable {
     public var hostID: String
     public var hostName: String
     public var secret: Data
-    /// "192.168.1.20:52000" — a direct address, in case Bonjour is blocked.
+    /// "192.168.1.20:52000,10.8.0.2:52000": direct addresses (Wi-Fi, VPN…),
+    /// in case Bonjour can't find the Mac (it doesn't cross VPNs).
     public var address: String?
 
     public init(hostID: String, hostName: String, secret: Data, address: String?) {

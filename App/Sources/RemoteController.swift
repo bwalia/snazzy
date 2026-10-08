@@ -75,7 +75,12 @@ final class RemoteController {
             if port != nil { break }
             try? await Task.sleep(for: .milliseconds(50))
         }
-        let address = port.flatMap { p in LiveController.lanAddress().map { "\($0):\(p)" } }
+        // Every address (Wi-Fi first, then VPN such as WireGuard): Bonjour
+        // doesn't cross VPNs, so the device tries these in turn.
+        let address = port.flatMap { p -> String? in
+            let all = LiveController.networkAddresses().map { "\($0.ip):\(p)" }
+            return all.isEmpty ? nil : all.joined(separator: ",")
+        }
         let invite = host.openPairing(address: address)
         pairingURL = invite.url
         pairingQR = LiveController.qr(invite.url.absoluteString)

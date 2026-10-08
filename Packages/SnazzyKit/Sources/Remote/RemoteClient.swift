@@ -7,7 +7,8 @@ public struct PairedHost: Codable, Sendable, Equatable, Identifiable {
     public var name: String
     /// This device's key for that Mac (keep it in the Keychain).
     public var key: Data
-    /// Last direct address, used when Bonjour can't find the Mac.
+    /// Direct addresses ("ip:port", comma-separated, the last one that worked
+    /// first), used when Bonjour can't find the Mac, e.g. over a VPN.
     public var address: String?
 
     public init(id: String, name: String, key: Data, address: String?) {
@@ -89,21 +90,23 @@ public final class RemoteClient: @unchecked Sendable {
     /// Pairs using a scanned invite. `endpoint` comes from Bonjour, or the
     /// invite's address is used.
     public func pair(_ invite: PairingInvite, endpoint: NWEndpoint?) {
-        guard let endpoint = endpoint ?? Self.endpoint(invite.address) else {
+        let candidates = ([endpoint].compactMap { $0 }) + Self.endpoints(invite.address)
+        guard !candidates.isEmpty else {
             onState?(.disconnected("Couldn't find that Mac on this network."))
             return
         }
-        connect(endpoint: endpoint, identity: RemoteSecurity.pairingIdentity(hostID: invite.hostID), key: invite.secret,
-                pairing: true, address: invite.address)
+        connect(candidates: candidates, identity: RemoteSecurity.pairingIdentity(hostID: invite.hostID), key: invite.secret,
+                pairing: true, addresses: invite.address)
     }
 
     /// Connects to a Mac paired before.
     public func connect(to host: PairedHost, endpoint: NWEndpoint?) {
-        guard let endpoint = endpoint ?? Self.endpoint(host.address) else {
+        let candidates = ([endpoint].compactMap { $0 }) + Self.endpoints(host.address)
+        guard !candidates.isEmpty else {
             onState?(.disconnected("\(host.name) isn't on this network right now."))
             return
         }
-        connect(endpoint: endpoint, identity: RemoteSecurity.deviceIdentity(deviceID), key: host.key, pairing: false, address: host.address)
+        connect(candidates: candidates, identity: RemoteSecurity.deviceIdentity(deviceID), key: host.key, pairing: false, addresses: host.address)
     }
 
     public func disconnect() {
@@ -113,18 +116,36 @@ public final class RemoteClient: @unchecked Sendable {
         failPending()
     }
 
-    private func connect(endpoint: NWEndpoint, identity: String, key: Data, pairing: Bool, address: String?) {
+    /// Tries each address in turn (Bonjour first, then Wi-Fi, VPN…) until one connects.
+    private func connect(candidates: [NWEndpoint], identity: String, key: Data, pairing: Bool, addresses: String?) {
         disconnect()
         onState?(.connecting)
+        attempt(candidates[...], identity: identity, key: key, pairing: pairing, addresses: addresses, lastError: nil)
+    }
+
+    private func attempt(_ candidates: ArraySlice<NWEndpoint>, identity: String, key: Data, pairing: Bool, addresses: String?, lastError: String?) {
+        guard let endpoint = candidates.first else {
+            onState?(.disconnected(lastError ?? "Couldn't reach that Mac."))
+            return
+        }
         let params = RemoteSecurity.parameters(keys: [(identity, key)])
         let link = RemoteLink(NWConnection(to: endpoint, using: params), queue: queue)
         self.link = link
         let hello = RemoteMessage.hello(deviceID: deviceID, deviceName: deviceName, version: RemoteProtocol.version, pairing: pairing)
+        let ready = ReadyFlag()
         link.onState = { [weak self, weak link] state in
             guard let self, let link else { return }
             switch state {
-            case .ready: link.send(hello)
+            case .ready:
+                ready.set()
+                link.send(hello)
             case .closed(let reason):
+                guard self.link === link else { return }
+                if !ready.isSet, candidates.count > 1 {
+                    // Couldn't connect this way: try the next address.
+                    self.attempt(candidates.dropFirst(), identity: identity, key: key, pairing: pairing, addresses: addresses, lastError: reason)
+                    return
+                }
                 self.lock.withLock { self.isOpen = false }
                 self.failPending()
                 self.onState?(.disconnected(reason))
@@ -132,7 +153,9 @@ public final class RemoteClient: @unchecked Sendable {
             }
         }
         link.onMessage = { [weak self] message in
-            self?.handle(message, address: address ?? Self.address(of: link.connection))
+            // Remember the address that worked, first.
+            let used = Self.address(of: link.connection)
+            self?.handle(message, address: Self.merge(used, addresses))
         }
         link.start()
     }
@@ -183,6 +206,18 @@ public final class RemoteClient: @unchecked Sendable {
         all.forEach { $0.resume(returning: (false, "Disconnected.")) }
     }
 
+    /// "ip:port,ip:port" → endpoints.
+    static func endpoints(_ addresses: String?) -> [NWEndpoint] {
+        (addresses ?? "").split(separator: ",").compactMap { endpoint(String($0).trimmingCharacters(in: .whitespaces)) }
+    }
+
+    /// The address that worked first, then the others (no duplicates).
+    static func merge(_ used: String?, _ addresses: String?) -> String? {
+        var list = (addresses ?? "").split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        if let used { list.removeAll { $0 == used }; list.insert(used, at: 0) }
+        return list.isEmpty ? nil : list.prefix(6).joined(separator: ",")
+    }
+
     static func endpoint(_ address: String?) -> NWEndpoint? {
         guard let address, let colon = address.lastIndex(of: ":"),
               let port = NWEndpoint.Port(String(address[address.index(after: colon)...])) else { return nil }
@@ -195,4 +230,11 @@ public final class RemoteClient: @unchecked Sendable {
         if let percent = h.firstIndex(of: "%") { h = String(h[..<percent]) }
         return "\(h):\(port.rawValue)"
     }
+}
+
+private final class ReadyFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    func set() { lock.withLock { value = true } }
+    var isSet: Bool { lock.withLock { value } }
 }

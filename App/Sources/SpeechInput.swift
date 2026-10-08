@@ -135,9 +135,11 @@ final class SpeechInput {
         partial = ""
     }
 
-    static func authorize() async -> Bool {
-        let speech: Bool = await withCheckedContinuation { c in
-            SFSpeechRecognizer.requestAuthorization { c.resume(returning: $0 == .authorized) }
+    /// Not on the main actor: the system calls the authorization handler on a
+    /// background queue (a main-actor closure here traps).
+    nonisolated static func authorize() async -> Bool {
+        let speech: Bool = await withCheckedContinuation { (c: CheckedContinuation<Bool, Never>) in
+            SFSpeechRecognizer.requestAuthorization { @Sendable status in c.resume(returning: status == .authorized) }
         }
         guard speech else { return false }
         switch AVCaptureDevice.authorizationStatus(for: .audio) {

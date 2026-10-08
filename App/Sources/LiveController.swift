@@ -24,6 +24,12 @@ final class LiveController {
     private(set) var viewers = 0
     private(set) var board = BrainstormBoard()
     private(set) var joinURL: URL?
+    /// Every address students could use (Wi-Fi, VPN…).
+    private(set) var addresses: [NetworkAddress] = []
+    /// Which address the QR code and link use.
+    var selectedAddress: String? {
+        didSet { updateJoinURL() }
+    }
     private(set) var code = ""
     private(set) var qrCode: NSImage?
     private(set) var error: String?
@@ -93,8 +99,7 @@ final class LiveController {
         self.server = server
         self.board = server.currentBoard()
         code = server.code
-        joinURL = Self.lanAddress().flatMap { URL(string: "http://\($0):\(server.port)/?k=\(server.code)") }
-        qrCode = joinURL.flatMap { Self.qr($0.absoluteString) }
+        refreshAddresses()
         if joinURL == nil { error = "This Mac isn't on a network. Connect to Wi-Fi so students can join." }
 
         // The picture: same source as recording.
@@ -149,6 +154,26 @@ final class LiveController {
         joinURL = nil
         qrCode = nil
         app.chat.logSession("live_room_stopped", ["ideas": .number(Double(board.notes.count))])
+    }
+
+    /// Re-reads this Mac's addresses (e.g. after a VPN connects).
+    func refreshAddresses() {
+        addresses = Self.networkAddresses()
+        if selectedAddress == nil || !addresses.contains(where: { $0.ip == selectedAddress }) {
+            selectedAddress = addresses.first?.ip
+        } else {
+            updateJoinURL()
+        }
+    }
+
+    private func updateJoinURL() {
+        guard let server, let ip = selectedAddress else {
+            joinURL = nil
+            qrCode = nil
+            return
+        }
+        joinURL = URL(string: "http://\(ip):\(server.port)/?k=\(server.code)")
+        qrCode = joinURL.flatMap { Self.qr($0.absoluteString) }
     }
 
     private func updateSource(_ encoder: LiveEncoder) {
@@ -217,12 +242,23 @@ final class LiveController {
 
     // MARK: Helpers
 
-    /// This Mac's IPv4 address on Wi-Fi or Ethernet (not loopback or self-assigned).
-    static func lanAddress() -> String? {
+    /// One of this Mac's IPv4 addresses that other devices can reach.
+    struct NetworkAddress: Hashable, Identifiable {
+        let interface: String
+        let ip: String
+        var id: String { ip }
+        /// Wi-Fi/Ethernet, or a VPN tunnel (WireGuard, Tailscale, IPsec…).
+        var isVPN: Bool { !interface.hasPrefix("en") }
+        var label: String { isVPN ? "VPN (\(interface))" : "Wi-Fi / Ethernet (\(interface))" }
+    }
+
+    /// Wi-Fi/Ethernet first, then VPN tunnels. Loopback, self-assigned and
+    /// Internet Sharing bridges are left out.
+    static func networkAddresses() -> [NetworkAddress] {
         var list: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&list) == 0, let first = list else { return nil }
+        guard getifaddrs(&list) == 0, let first = list else { return [] }
         defer { freeifaddrs(list) }
-        var candidates: [(name: String, ip: String)] = []
+        var out: [NetworkAddress] = []
         for ptr in sequence(first: first, next: { $0.pointee.ifa_next }) {
             let ifa = ptr.pointee
             guard let addr = ifa.ifa_addr, addr.pointee.sa_family == UInt8(AF_INET),
@@ -231,11 +267,15 @@ final class LiveController {
             guard getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 else { continue }
             let ip = String(decoding: host.prefix { $0 != 0 }.map(UInt8.init(bitPattern:)), as: UTF8.self)
             let name = String(cString: ifa.ifa_name)
-            guard !ip.hasPrefix("169.254."), name.hasPrefix("en") else { continue }
-            candidates.append((name, ip))
+            let usable = ["en", "utun", "wg", "ipsec", "ppp", "tun", "tap"].contains { name.hasPrefix($0) }
+            guard usable, !ip.hasPrefix("169.254."), !out.contains(where: { $0.ip == ip }) else { continue }
+            out.append(NetworkAddress(interface: name, ip: ip))
         }
-        return candidates.sorted { $0.name < $1.name }.first?.ip
+        return out.sorted { ($0.isVPN ? 1 : 0, $0.interface) < ($1.isVPN ? 1 : 0, $1.interface) }
     }
+
+    /// The main Wi-Fi/Ethernet address (or a VPN one if that's all there is).
+    static func lanAddress() -> String? { networkAddresses().first?.ip }
 
     static func qr(_ text: String) -> NSImage? {
         let filter = CIFilter.qrCodeGenerator()

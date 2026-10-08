@@ -158,3 +158,30 @@ final class Box<T: Sendable>: @unchecked Sendable {
         #expect(!WatchLink.allows(.openPresentWindow))
     }
 }
+
+@Suite struct RemoteAddressTests {
+    @Test func multipleAddresses() {
+        #expect(RemoteClient.endpoints("192.168.1.9:5000, 10.8.0.2:5000").count == 2)
+        #expect(RemoteClient.endpoints(nil).isEmpty)
+        #expect(RemoteClient.merge("10.8.0.2:5000", "192.168.1.9:5000,10.8.0.2:5000") == "10.8.0.2:5000,192.168.1.9:5000")
+        #expect(RemoteClient.merge(nil, "a:1") == "a:1")
+    }
+
+    @Test func fallsBackToTheNextAddress() async throws {
+        let host = RemoteHost(hostID: "h-\(UUID().uuidString.prefix(4))", hostName: "VPN Mac", devices: [])
+        let invite0 = host.openPairing(address: nil)
+        for _ in 0..<40 where host.listeningPort == nil { try await Task.sleep(for: .milliseconds(50)) }
+        let port = try #require(host.listeningPort)
+        // First address refuses (nothing listens there); the second works.
+        var invite = invite0
+        invite.address = "127.0.0.1:1,127.0.0.1:\(port)"
+        let client = RemoteClient(deviceID: "d-vpn", deviceName: "iPad")
+        let hosts = Box<PairedHost>()
+        client.onPaired = { hosts.add($0) }
+        client.pair(invite, endpoint: nil)
+        #expect(await hosts.wait(10) { !$0.isEmpty })
+        #expect(hosts.all.first?.address?.hasPrefix("127.0.0.1:\(port)") == true)
+        client.disconnect()
+        host.stop()
+    }
+}
