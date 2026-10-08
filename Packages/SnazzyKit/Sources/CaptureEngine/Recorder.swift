@@ -605,6 +605,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
                 "center_x": .number(spec.profile.crop.centerX), "center_y": .number(spec.profile.crop.centerY),
                 "aspect": spec.profile.crop.aspect.map(JSONValue.number) ?? "fit",
                 "video_delay_ms": .number(spec.profile.videoDelayMs), "background": background,
+                "title_slide_size": spec.titleSlideInsetSize.map(JSONValue.number) ?? .null,
             ],
             "camera_latency_ms": latencies.isEmpty ? .null : .number((latencies[latencies.count / 2] * 1000).rounded()),
             "camera_freezes": .array(freezes),

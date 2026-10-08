@@ -30,6 +30,8 @@ final class BuilderController {
         let id: Int
         let title: String
         let notes: String
+        /// A title or closing slide (`<section class="slide title">`).
+        var isTitle = false
 
         var displayTitle: String { title.isEmpty ? "Slide \(id + 1)" : title }
     }
@@ -129,7 +131,8 @@ final class BuilderController {
               const h = s.querySelector('h1, h2, blockquote, h3');
               const n = s.querySelector('.notes');
               return { title: h ? h.textContent.replace(/\\s+/g, ' ').trim().slice(0, 160) : '',
-                       notes: n ? n.textContent.trim().slice(0, 4000) : '' };
+                       notes: n ? n.textContent.trim().slice(0, 4000) : '',
+                       isTitle: s.classList.contains('title') };
             });
           }
           function tick(full) {
@@ -596,7 +599,8 @@ final class DeckBridge: NSObject, WKScriptMessageHandler {
         let index = (body["index"] as? NSNumber)?.intValue ?? -1
         let slides = (body["slides"] as? [[String: Any]]).map { list in
             list.enumerated().map { i, s in
-                BuilderController.DeckSlide(id: i, title: s["title"] as? String ?? "", notes: s["notes"] as? String ?? "")
+                BuilderController.DeckSlide(id: i, title: s["title"] as? String ?? "", notes: s["notes"] as? String ?? "",
+                                            isTitle: s["isTitle"] as? Bool ?? false)
             }
         }
         let web = message.webView

@@ -34,14 +34,17 @@ public enum Relayout {
         public var resolution: Resolution
         /// Only this part of the recording (seconds from its start); nil = all of it.
         public var range: ClosedRange<Double>?
+        /// The camera grows to this size on title slides (needs a recording that noted them).
+        public var titleSlideInsetSize: Double?
 
         public init(layout: InsetLayout, profile: DeviceProfile, showCamera: Bool = true, resolution: Resolution = .hd1080,
-                    range: ClosedRange<Double>? = nil) {
+                    range: ClosedRange<Double>? = nil, titleSlideInsetSize: Double? = nil) {
             self.layout = layout
             self.profile = profile
             self.showCamera = showCamera
             self.resolution = resolution
             self.range = range
+            self.titleSlideInsetSize = titleSlideInsetSize
         }
 
         /// "new layout", "clip 4K", "vertical clip"…: what the new file is called after.
@@ -69,6 +72,10 @@ public enum Relayout {
         /// of the lip-sync delay is made up here.
         public var cameraLatency: Double
         var markers: [JSONValue]
+        /// Slide changes noted with whether each was a title slide (raw-track time).
+        var titleSlides: [TitleSlides.Change]
+        /// Whether "bigger camera on title slides" can be used: it has title slides on record.
+        public var hasTitleSlides: Bool { titleSlides.contains(where: \.isTitle) }
 
         public init(rawFolder: URL) throws {
             guard let data = try? Data(contentsOf: rawFolder.appending(path: "timeline.json")), let t = try? JSONValue.parse(data) else {
@@ -84,7 +91,9 @@ public enum Relayout {
             hasCamera = FileManager.default.fileExists(atPath: rawFolder.appending(path: "camera.mov").path)
             cameraLatency = (t["camera_latency_ms"]?.doubleValue ?? 0) / 1000
             markers = t["markers"]?.arrayValue ?? []
-            original = Options(layout: Self.layout(t["inset"]), profile: Self.profile(t["inset"]), showCamera: hasCamera)
+            titleSlides = TitleSlides.changes(fromTimeline: markers)
+            original = Options(layout: Self.layout(t["inset"]), profile: Self.profile(t["inset"]), showCamera: hasCamera,
+                               titleSlideInsetSize: t["inset"]?["title_slide_size"]?.doubleValue)
         }
 
         static func layout(_ inset: JSONValue?) -> InsetLayout {
@@ -119,6 +128,14 @@ public enum Relayout {
             let start = max(0, range.lowerBound), end = min(range.upperBound, duration)
             guard end - start >= 1 else { throw CaptureError("A clip has to be at least a second long.") }
             return (start, end - start)
+        }
+
+        /// The spec for the moment `time` (raw-track time): the camera bigger on title slides.
+        func spec(_ base: CompositeSpec, at time: Double, options: Options) -> CompositeSpec {
+            guard let title = options.titleSlideInsetSize, base.arrangement == .inset, !titleSlides.isEmpty else { return base }
+            var spec = base
+            spec.insetSize = TitleSlides.insetSize(at: time, changes: titleSlides, normal: options.layout.normalized.size, title: title)
+            return spec
         }
 
         /// Where to look in camera.mov for the picture that goes with sound at `time`.
@@ -245,7 +262,7 @@ public enum Relayout {
             if let frame = camera?.frame(at: recording.cameraTime(t, options: options)) {
                 cameraImage = segmenter?.apply(frame, background: options.profile.background, image: backgroundImage) ?? frame.image
             }
-            let image = Compositor.compose(screen: screenImage, camera: cameraImage, spec: spec)
+            let image = Compositor.compose(screen: screenImage, camera: cameraImage, spec: recording.spec(spec, at: t, options: options))
             while !videoInput.isReadyForMoreMediaData, writer.status == .writing {
                 try await Task.sleep(for: .milliseconds(2))
             }
@@ -277,7 +294,7 @@ public enum Relayout {
         let canvas = options.resolution == .vertical ? CGSize(width: 540, height: 960) : CGSize(width: 960, height: 540)
         var spec = CompositeSpec(canvas: canvas, layout: options.layout, profile: options.profile)
         spec.arrangement = options.resolution.arrangement
-        let image = Compositor.compose(screen: screen, camera: camera, spec: spec)
+        let image = Compositor.compose(screen: screen, camera: camera, spec: recording.spec(spec, at: t, options: options))
         guard let cg = CIContext().createCGImage(image, from: CGRect(origin: .zero, size: canvas)) else {
             throw CaptureError("Couldn't draw the preview.")
         }

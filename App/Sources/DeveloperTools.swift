@@ -18,7 +18,7 @@ enum DeveloperTools {
         ]
         tools.append(RegisteredTool(
             name: "relayout_recording",
-            description: "Make a recording again from its raw tracks with a new layout, as a new file next to it (the original is kept): move or resize the camera inset (corner, size), crop it (aspect, zoom, center_x/center_y), rotate it, change its background (none, blur, as_recorded), fix lip sync (video_delay_ms), hide the camera, export in 4K, or as a vertical 9:16 clip (resolution \"vertical\": screen on top, camera below, for Shorts, Reels, TikTok). start_seconds/end_seconds make just that part (at least 1 s), with its captions and chapters. Starts from the layout it was recorded with; pass only what should change. Takes about as long as the part with a background, less without. recording_id can be \"latest\".",
+            description: "Make a recording again from its raw tracks with a new layout, as a new file next to it (the original is kept): move or resize the camera inset (corner, size), crop it (aspect, zoom, center_x/center_y), rotate it, change its background (none, blur, as_recorded), fix lip sync (video_delay_ms), hide the camera, export in 4K, or as a vertical 9:16 clip (resolution \"vertical\": screen on top, camera below, for Shorts, Reels, TikTok). start_seconds/end_seconds make just that part (at least 1 s), with its captions and chapters. title_slide_size (0.3–0.6, 0 = off) makes the camera bigger on title slides, for recordings of decks that noted them. Starts from the layout it was recorded with; pass only what should change. Takes about as long as the part with a background, less without. recording_id can be \"latest\".",
             inputSchema: AssistantTools.object([
                 "recording_id": ["type": "string", "minLength": 1],
                 "corner": ["type": "string", "enum": .array(InsetCorner.allCases.map { .string($0.rawValue) })],
@@ -36,6 +36,7 @@ enum DeveloperTools {
                 "resolution": ["type": "string", "enum": ["1080p", "4K", "vertical"]],
                 "start_seconds": ["type": "number", "minimum": 0],
                 "end_seconds": ["type": "number", "minimum": 1],
+                "title_slide_size": ["type": "number", "minimum": 0, "maximum": 0.6],
             ], required: ["recording_id"])
         ) { @Sendable args in
             let item = try await dev.recording(args["recording_id"]?.stringValue)
@@ -62,6 +63,12 @@ enum DeveloperTools {
             case "4K": options.resolution = .uhd4K
             case "vertical": options.resolution = .vertical
             default: break
+            }
+            if let size = args["title_slide_size"]?.doubleValue {
+                if size > 0, try await !dev.relayoutSource(item).hasTitleSlides {
+                    throw CaptureActionError(message: "This recording didn't note its title slides (it wasn't of a deck, or was made before this version).")
+                }
+                options.titleSlideInsetSize = size == 0 ? nil : min(max(size, CaptureSetup.titleSlideSizeRange.lowerBound), CaptureSetup.titleSlideSizeRange.upperBound)
             }
             let start = args["start_seconds"]?.doubleValue, end = args["end_seconds"]?.doubleValue
             if start != nil || end != nil {

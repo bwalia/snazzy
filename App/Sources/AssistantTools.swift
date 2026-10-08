@@ -73,7 +73,7 @@ enum AssistantTools {
 
             RegisteredTool(
                 name: "set_inset",
-                description: "Change the camera inset. Layout: position (corner), size (inset height as a fraction of the video height, 0.05–0.6), border_width (px), corner_radius (fraction of height). Crop of the device picture: aspect (\"16:9\", \"4:3\", \"1:1\", \"9:16\" or \"fit\" for the whole picture), zoom (0.1–1, smaller = tighter), center_x / center_y (0–1 from left/top; lower center_y moves the crop up, e.g. if the head is cut off), rotation (none, left = 90° anticlockwise, right, upsideDown; an iPhone held sideways usually needs left). video_delay_ms is lip sync: how far the camera's picture runs behind the sound (−500 to 1000; an iPad by cable is often 150–250; negative for a Bluetooth mic). Only pass what should change.",
+                description: "Change the camera inset. Layout: position (corner), size (inset height as a fraction of the video height, 0.05–0.6), border_width (px), corner_radius (fraction of height). Crop of the device picture: aspect (\"16:9\", \"4:3\", \"1:1\", \"9:16\" or \"fit\" for the whole picture), zoom (0.1–1, smaller = tighter), center_x / center_y (0–1 from left/top; lower center_y moves the crop up, e.g. if the head is cut off), rotation (none, left = 90° anticlockwise, right, upsideDown; an iPhone held sideways usually needs left). video_delay_ms is lip sync: how far the camera's picture runs behind the sound (−500 to 1000; an iPad by cable is often 150–250; negative for a Bluetooth mic). title_slide_size makes the camera grow to that size (0.3–0.6) on title and closing slides while a deck is presented, and shrink back on the rest; 0 turns it off. Only pass what should change.",
                 inputSchema: object([
                     "position": ["type": "string", "enum": .array(corners)],
                     "size": ["type": "number", "minimum": 0.05, "maximum": 0.6],
@@ -85,6 +85,7 @@ enum AssistantTools {
                     "center_y": ["type": "number", "minimum": 0, "maximum": 1],
                     "rotation": ["type": "string", "enum": .array(rotations)],
                     "video_delay_ms": ["type": "number", "minimum": -500, "maximum": 1000],
+                    "title_slide_size": ["type": "number", "minimum": 0, "maximum": 0.6],
                 ], required: [])
             ) { @Sendable args in
                 var c = InsetChanges()
@@ -99,6 +100,7 @@ enum AssistantTools {
                 c.rotation = args["rotation"]?.stringValue.flatMap(InsetRotation.init(rawValue:))
                 c.videoDelayMs = args["video_delay_ms"]?.doubleValue
                 try await capture.updateInset(c)
+                if let size = args["title_slide_size"]?.doubleValue { await capture.setTitleSlideSize(size == 0 ? nil : size) }
                 return await capture.stateJSON()
             },
             RegisteredTool(

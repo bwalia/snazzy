@@ -284,6 +284,10 @@ public struct CaptureSetup: Codable, Hashable, Sendable {
     public var layout: InsetLayout
     /// Per-device profiles keyed by device unique ID.
     public var profiles: [String: DeviceProfile]
+    /// On title slides the camera inset grows to this size (fraction of the picture
+    /// height), and shrinks back on other slides; nil = off.
+    public var titleSlideInsetSize: Double?
+    public static let titleSlideSizeRange = 0.3...InsetLayout.sizeRange.upperBound
 
     public init(mic: MicSelection? = nil, source: CaptureSourceSelection? = nil,
                 insetDevice: InsetDeviceSelection? = nil, layout: InsetLayout = InsetLayout(),
@@ -306,6 +310,7 @@ public struct CaptureSetup: Codable, Hashable, Sendable {
         insetDevice = try c.decodeIfPresent(InsetDeviceSelection.self, forKey: .insetDevice)
         layout = try c.decodeIfPresent(InsetLayout.self, forKey: .layout) ?? InsetLayout()
         profiles = try c.decodeIfPresent([String: DeviceProfile].self, forKey: .profiles) ?? [:]
+        titleSlideInsetSize = try c.decodeIfPresent(Double.self, forKey: .titleSlideInsetSize)
     }
 }
 
