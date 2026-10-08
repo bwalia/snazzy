@@ -68,6 +68,12 @@ echo "› Exporting"
 xcodebuild -exportArchive -quiet -archivePath "$ARCHIVE" -exportPath "$OUT/export" -exportOptionsPlist "$OUT/ExportOptions.plist"
 APP="$OUT/export/SnazzyPro.app"
 echo "  architectures: $(lipo -archs "$APP/Contents/MacOS/SnazzyPro")"
+BUILT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist")
+if [[ "$BUILT" != "$VERSION" ]]; then
+  echo "The app says version $BUILT but MARKETING_VERSION is $VERSION" >&2
+  exit 1
+fi
+echo "  version: $BUILT ($(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Contents/Info.plist"))"
 
 echo "› Building the DMG"
 STAGE="$OUT/dmg"

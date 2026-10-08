@@ -49,6 +49,8 @@ targets:
       properties:
         CFBundleDisplayName: Snazzy Pro
         CFBundleName: Snazzy Pro
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.video
         LSMinimumSystemVersion: "15.0"
         NSHumanReadableCopyright: "© 2026 Snazzy Pro. All rights reserved."
