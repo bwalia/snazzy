@@ -154,6 +154,11 @@ MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
   from display capture, except the Builder's result window.
 - **One clock.** Screen, camera and mic samples are all timestamped on the
   host clock, so nothing has to be lined up afterwards.
+- **Lip sync** (phase 5): each camera has a delay (Sources › Crop & rotation ›
+  Lip sync, or `set_inset video_delay_ms`) for a picture that runs behind the
+  sound, such as an iPad by cable (150–250 ms), or negative for a Bluetooth
+  mic. Frames are stamped earlier by it in recordings, the live room and live
+  streams; raw `camera.mov` keeps true times and `timeline.json` the delay.
 - **Composite** (`Compositor`): screen fitted into 1920×1080, inset rotated,
   cropped, scaled, rounded and bordered. The live "Preview of the recording"
   (Sources tab, or ⌥⌘P floating) uses the same code, so it shows exactly what

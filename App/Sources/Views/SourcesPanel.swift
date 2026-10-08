@@ -313,6 +313,9 @@ private struct CropSection: View {
                     LabeledSlider("Centre X", value: binding(profile, \.crop.centerX, device), range: 0...1, format: "%.3f")
                     LabeledSlider("Centre Y", value: binding(profile, \.crop.centerY, device), range: 0...1, format: "%.3f")
                 }
+                LabeledSlider("Lip sync", value: binding(profile, \.videoDelayMs, device), range: DeviceProfile.videoDelayRange, format: "%.0f ms")
+                Text("If your voice comes before your lips move, move this right (an iPad by cable is often 150–250 ms late; left for a Bluetooth mic). Check with a short test recording.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Button("Reset to \(device.kind.rawValue) defaults") { capture.resetProfile(for: device) }
             }
         }

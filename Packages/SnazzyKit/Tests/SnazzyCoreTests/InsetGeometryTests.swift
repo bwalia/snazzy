@@ -68,6 +68,21 @@ import Testing
         #expect(DeviceKind.detect(name: "iPhone Camera", modelID: "Continuity") == .camera)
     }
 
+    /// The lip-sync delay is set through the same changes, and kept in a sane range.
+    @Test func videoDelayIsClampedAndKept() {
+        var layout = InsetLayout()
+        var profile = DeviceProfile.defaults(for: .iPad)
+        var c = InsetChanges()
+        c.videoDelayMs = 180
+        c.apply(layout: &layout, profile: &profile)
+        #expect(profile.videoDelayMs == 180)
+        c.videoDelayMs = 5_000
+        c.apply(layout: &layout, profile: &profile)
+        #expect(profile.videoDelayMs == DeviceProfile.videoDelayRange.upperBound)
+        InsetChanges().apply(layout: &layout, profile: &profile)  // other changes leave it alone
+        #expect(profile.videoDelayMs == DeviceProfile.videoDelayRange.upperBound)
+    }
+
     @Test func insetChanges() throws {
         #expect(InsetChanges.parseAspect("4:3") == .some(4.0 / 3.0))
         #expect(InsetChanges.parseAspect("fit") == .some(nil))

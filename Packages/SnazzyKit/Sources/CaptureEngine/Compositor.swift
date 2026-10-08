@@ -1,5 +1,6 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
+import CoreMedia
 import SnazzyCore
 
 /// What goes into one composited frame.
@@ -19,6 +20,16 @@ public struct CompositeSpec: Equatable, Sendable {
         self.profile = profile
         self.borderColor = borderColor
         self.background = background
+    }
+}
+
+public extension CompositeSpec {
+    /// Lip sync: the time to stamp a composited frame made at `time`. A camera picture
+    /// that runs `profile.videoDelayMs` behind the sound is stamped that much earlier
+    /// (later when negative). Without a camera there's nothing to line up.
+    func syncedVideoTime(_ time: CMTime, hasCamera: Bool) -> CMTime {
+        guard hasCamera, profile.videoDelayMs != 0 else { return time }
+        return time - CMTime(seconds: profile.videoDelayMs / 1000, preferredTimescale: 1_000_000)
     }
 }
 

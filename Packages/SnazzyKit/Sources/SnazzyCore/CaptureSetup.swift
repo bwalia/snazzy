@@ -115,9 +115,11 @@ public enum BuiltInBackground: String, CaseIterable, Sendable {
 public struct DeviceProfile: Codable, Hashable, Sendable {
     public var crop: InsetCrop
     public var rotation: InsetRotation
-    /// Delay of this device's video relative to the mic, from clap calibration
-    /// or the manual slider (phase 5).
+    /// Lip sync: how far this device's picture runs behind the sound, in ms (an iPad
+    /// over USB or Continuity Camera can be 100–250 ms late). Negative when the sound
+    /// is the late one, e.g. a Bluetooth mic. Video frames are stamped earlier by this.
     public var videoDelayMs: Double
+    public static let videoDelayRange: ClosedRange<Double> = -500...1000
     /// Background replacement or blur behind the person.
     public var background: CameraBackground
 
@@ -338,6 +340,7 @@ public struct InsetChanges: Equatable, Sendable {
     public var centerY: Double?
     public var rotation: InsetRotation?
     public var background: CameraBackground?
+    public var videoDelayMs: Double?
 
     public init() {}
 
@@ -360,6 +363,9 @@ public struct InsetChanges: Equatable, Sendable {
         if let centerY { profile.crop.centerY = centerY }
         if let rotation { profile.rotation = rotation }
         if let background { profile.background = background }
+        if let videoDelayMs {
+            profile.videoDelayMs = min(max(videoDelayMs, DeviceProfile.videoDelayRange.lowerBound), DeviceProfile.videoDelayRange.upperBound)
+        }
         layout = layout.normalized
         profile.crop = profile.crop.normalized
     }

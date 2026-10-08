@@ -186,9 +186,8 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
         let (screen, camera, spec) = lock.withLock { (self.screen, self.camera, self.spec) }
         guard var spec else { return }
         let size = CGSize(width: quality.width, height: quality.height)
-        // Composite at the stream size: the same layout as recordings, scaled.
-        let scale = size.width / spec.canvas.width
-        spec.layout.borderWidth *= scale
+        // Composite at the stream size: the same layout as recordings (the compositor
+        // scales the border with the canvas).
         spec.canvas = size
         let image = Compositor.compose(screen: screen?.latest?.image, camera: camera?.latestImage, spec: spec)
         guard let pool = adaptor.pixelBufferPool else { return }
@@ -196,7 +195,7 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
         CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer)
         guard let buffer else { return }
         context.render(image, to: buffer, bounds: CGRect(origin: .zero, size: size), colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
-        let t = CMTimeSubtract(CMClockGetTime(clock), start)
+        let t = CMTimeSubtract(spec.syncedVideoTime(CMClockGetTime(clock), hasCamera: camera != nil), start)
         guard t.seconds >= 0, !lastVideo.isValid || CMTimeCompare(t, lastVideo) > 0 else { return }
         lastVideo = t
         if adaptor.append(buffer, withPresentationTime: t) { framesIn += 1 } else { checkFailure() }

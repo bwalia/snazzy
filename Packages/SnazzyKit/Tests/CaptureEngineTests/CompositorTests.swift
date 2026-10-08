@@ -1,8 +1,24 @@
 import CoreImage
+import CoreMedia
 import Foundation
 import Testing
 @testable import CaptureEngine
 @testable import SnazzyCore
+
+@Suite struct LipSyncTests {
+    /// A camera picture that runs behind the sound is stamped earlier, so they line up.
+    @Test func lateCameraIsStampedEarlier() {
+        var profile = DeviceProfile.defaults(for: .camera)
+        profile.videoDelayMs = 200
+        let spec = CompositeSpec(layout: InsetLayout(), profile: profile)
+        let now = CMTime(seconds: 10, preferredTimescale: 600)
+        #expect(spec.syncedVideoTime(now, hasCamera: true).seconds == 9.8)
+        #expect(spec.syncedVideoTime(now, hasCamera: false) == now)  // nothing to line up
+        var bluetooth = spec
+        bluetooth.profile.videoDelayMs = -150  // the sound is the late one
+        #expect(abs(bluetooth.syncedVideoTime(now, hasCamera: true).seconds - 10.15) < 0.000_001)
+    }
+}
 
 @Suite struct CompositorTests {
     let canvas = CGSize(width: 192, height: 108)

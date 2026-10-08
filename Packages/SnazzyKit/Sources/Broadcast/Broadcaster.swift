@@ -248,8 +248,7 @@ public final class Broadcaster: @unchecked Sendable {
         let (screen, camera, spec) = lock.withLock { (self.screen, self.camera, self.spec) }
         guard var spec, let pool, let media else { return }
         let size = CGSize(width: quality.width, height: quality.height)
-        spec.layout.borderWidth *= size.width / spec.canvas.width
-        spec.canvas = size
+        spec.canvas = size  // the compositor scales the border with the canvas
         let image = Compositor.compose(screen: screen?.latest?.image, camera: camera?.latestImage, spec: spec)
         var pixels: CVPixelBuffer?
         CVPixelBufferPoolCreatePixelBuffer(nil, pool, &pixels)
@@ -259,7 +258,7 @@ public final class Broadcaster: @unchecked Sendable {
             CMVideoFormatDescriptionCreateForImageBuffer(allocator: nil, imageBuffer: pixels, formatDescriptionOut: &formatDescription)
         }
         guard let formatDescription else { return }
-        let pts = CMClockGetTime(CMClockGetHostTimeClock())
+        let pts = spec.syncedVideoTime(CMClockGetTime(CMClockGetHostTimeClock()), hasCamera: camera != nil)
         guard !lastPTS.isValid || pts > lastPTS else { return }
         lastPTS = pts
         var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: CMTimeScale(quality.fps)), presentationTimeStamp: pts, decodeTimeStamp: .invalid)
