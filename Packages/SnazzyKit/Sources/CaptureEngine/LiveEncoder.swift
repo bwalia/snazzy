@@ -15,7 +15,9 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
         public var fps: Int32
         public var videoBitrate: Int
 
-        public static let standard = Quality(width: 1280, height: 720, fps: 30, videoBitrate: 2_000_000)
+        public static let standard = Quality(width: 1280, height: 720, fps: 30, videoBitrate: 2_500_000)
+        /// Sharp text on big screens; needs a good network.
+        public static let high = Quality(width: 1920, height: 1080, fps: 30, videoBitrate: 4_500_000)
         /// For busy or slow Wi-Fi.
         public static let low = Quality(width: 854, height: 480, fps: 24, videoBitrate: 900_000)
 
@@ -48,12 +50,23 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
     private let clock = CMClockGetHostTimeClock()
     private var start = CMTime.invalid
     private var lastVideo = CMTime.invalid
+    /// End of the last audio appended (real or silence).
+    private var lastAudioEnd = CMTime.invalid
+    private var silenceFormat: CMAudioFormatDescription?
+    /// For reopening the mic when it goes quiet (another recording or the
+    /// chat mic can take it over).
+    private var micID: String?
+    private var lastMicSample = Date()
+    private var lastMicRestart = Date.distantPast
     private var quality = Quality.standard
     private let context = CIContext(options: [.cacheIntermediates: false])
     private var failed = false
 
     public private(set) var isRunning = false
     private var framesIn = 0, audioIn = 0, segmentsOut = 0
+
+    /// Video frames encoded so far (the app restarts the encoder if this stops).
+    public var framesEncoded: Int { queue.sync { framesIn } }
 
     /// For diagnostics: frames and audio buffers encoded, segments produced, writer status.
     public var stats: String {
@@ -125,9 +138,14 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
             self.adaptor = adaptor
             self.start = CMClockGetTime(clock)
             self.lastVideo = .invalid
+            self.lastAudioEnd = .invalid
             self.failed = false
         }
-        if audio != nil { startMic(micID) }
+        if audio != nil {
+            self.micID = micID
+            queue.sync { lastMicSample = Date() }
+            startMic(micID)
+        }
 
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now(), repeating: 1.0 / Double(quality.fps), leeway: .milliseconds(2))
@@ -182,6 +200,17 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
         guard t.seconds >= 0, !lastVideo.isValid || CMTimeCompare(t, lastVideo) > 0 else { return }
         lastVideo = t
         if adaptor.append(buffer, withPresentationTime: t) { framesIn += 1 } else { checkFailure() }
+        // The writer only finishes a segment when both tracks reach it: if the
+        // mic goes quiet (unplugged, taken by another app), fill with silence
+        // so the picture never stalls.
+        if audioInput != nil {
+            fillSilence(upTo: CMTimeSubtract(t, CMTime(value: 1, timescale: 4)))
+            if Date().timeIntervalSince(lastMicSample) > 3, Date().timeIntervalSince(lastMicRestart) > 5 {
+                lastMicRestart = Date()
+                let id = micID
+                DispatchQueue.global(qos: .userInitiated).async { [weak self] in self?.restartMic(id) }
+            }
+        }
     }
 
     private func checkFailure() {
@@ -191,6 +220,15 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
     }
 
     // MARK: Audio
+
+    /// Reopens the mic after it went quiet.
+    private func restartMic(_ micID: String?) {
+        guard isRunning else { return }
+        micSession?.stopRunning()
+        micSession = nil
+        micDelegate = nil
+        startMic(micID)
+    }
 
     private func startMic(_ micID: String?) {
         let device = micID.flatMap { AVCaptureDevice(uniqueID: $0) } ?? AVCaptureDevice.default(for: .audio)
@@ -221,13 +259,53 @@ public final class LiveEncoder: NSObject, AVAssetWriterDelegate, @unchecked Send
         let box = SampleBox(sample)
         queue.async { [self] in
             let buffer = box.buffer
+            lastMicSample = Date()
             guard let writer, writer.status == .writing, let input = audioInput, input.isReadyForMoreMediaData else { return }
             let pts = CMTimeSubtract(CMSampleBufferGetPresentationTimeStamp(buffer), start)
             // Start audio with the video, so the first segment begins with a picture.
             guard pts.seconds >= 0, lastVideo.isValid else { return }
+            // Skip audio that overlaps silence already written.
+            if lastAudioEnd.isValid, CMTimeCompare(pts, lastAudioEnd) < 0 { return }
             let retimed = buffer.retimed(to: pts)
+            if let retimed { lastAudioEnd = CMTimeAdd(pts, CMSampleBufferGetDuration(retimed)) }
             if let retimed, input.append(retimed) { audioIn += 1 }
         }
+    }
+
+    /// Appends silence from the end of the last audio up to `time` (on `queue`).
+    private func fillSilence(upTo time: CMTime) {
+        guard let input = audioInput, input.isReadyForMoreMediaData, time.seconds > 0 else { return }
+        let from = lastAudioEnd.isValid ? lastAudioEnd : (time.seconds > 1 ? .zero : time)
+        let gap = CMTimeSubtract(time, from).seconds
+        // Only real gaps (the mic normally delivers every ~20 ms).
+        guard gap > 0.35 else { return }
+        let frames = min(Int(gap * 48_000), 48_000)
+        guard let sample = silence(at: from, frames: frames), input.append(sample) else { return }
+        lastAudioEnd = CMTimeAdd(from, CMTime(value: CMTimeValue(frames), timescale: 48_000))
+    }
+
+    private func silence(at time: CMTime, frames: Int) -> CMSampleBuffer? {
+        if silenceFormat == nil {
+            var asbd = AudioStreamBasicDescription(mSampleRate: 48_000, mFormatID: kAudioFormatLinearPCM,
+                                                   mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked,
+                                                   mBytesPerPacket: 2, mFramesPerPacket: 1, mBytesPerFrame: 2,
+                                                   mChannelsPerFrame: 1, mBitsPerChannel: 16, mReserved: 0)
+            CMAudioFormatDescriptionCreate(allocator: nil, asbd: &asbd, layoutSize: 0, layout: nil, magicCookieSize: 0,
+                                           magicCookie: nil, extensions: nil, formatDescriptionOut: &silenceFormat)
+        }
+        guard let format = silenceFormat else { return nil }
+        var block: CMBlockBuffer?
+        let bytes = frames * 2
+        guard CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: nil, blockLength: bytes, blockAllocator: nil,
+                                                 customBlockSource: nil, offsetToData: 0, dataLength: bytes,
+                                                 flags: kCMBlockBufferAssureMemoryNowFlag, blockBufferOut: &block) == noErr,
+              let block, CMBlockBufferFillDataBytes(with: 0, blockBuffer: block, offsetIntoDestination: 0, dataLength: bytes) == noErr
+        else { return nil }
+        var sample: CMSampleBuffer?
+        CMAudioSampleBufferCreateReadyWithPacketDescriptions(allocator: nil, dataBuffer: block, formatDescription: format,
+                                                             sampleCount: frames, presentationTimeStamp: time,
+                                                             packetDescriptions: nil, sampleBufferOut: &sample)
+        return sample
     }
 
     // MARK: Segments

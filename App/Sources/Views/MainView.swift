@@ -23,6 +23,7 @@ struct MainView: View {
             .overlay(alignment: .bottom) { RecordingSavedBanner() }
         }
         .modifier(SharingSheets())
+        .onChange(of: model.hideConversations) { _, hide in columns = hide ? .detailOnly : .all }
     }
 }
 

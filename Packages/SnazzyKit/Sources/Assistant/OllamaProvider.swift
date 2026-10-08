@@ -173,6 +173,13 @@ public struct OllamaStreamParser {
     }
 
     public func completion() -> StreamEvent {
+        var text = self.text
+        var toolCalls = self.toolCalls
+        // A model that wrote its tool call as text: run it anyway.
+        if toolCalls.isEmpty, let found = TextToolCalls.extract(from: text) {
+            text = found.text
+            toolCalls = found.calls.map { ToolCall(id: "call_\(UUID().uuidString.prefix(8).lowercased())", name: $0.name, arguments: $0.arguments) }
+        }
         var parts: [ContentPart] = []
         if !text.isEmpty { parts.append(.text(text)) }
         parts += toolCalls.map(ContentPart.toolCall)

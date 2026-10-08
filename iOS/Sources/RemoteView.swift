@@ -200,7 +200,9 @@ private struct Teleprompter: View {
                 Text("Speaker notes").font(.caption.weight(.semibold)).textCase(.uppercase).foregroundStyle(.secondary)
                 Spacer()
                 Button { fontSize = max(18, fontSize - 3) } label: { Image(systemName: "textformat.size.smaller") }
+                    .accessibilityLabel("Smaller text")
                 Button { fontSize = min(64, fontSize + 3) } label: { Image(systemName: "textformat.size.larger") }
+                    .accessibilityLabel("Larger text")
             }
             ScrollView {
                 Text(status.notes ?? (status.slideCount > 0 ? "No notes for this slide." : "Open a deck on the Mac to see your notes here."))
@@ -243,6 +245,7 @@ private struct AssistantChat: View {
                 HStack {
                     TextField("Message", text: $text, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityIdentifier("chatField")
                         .onSubmit(send)
                     Button("Send", action: send).disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
                 }

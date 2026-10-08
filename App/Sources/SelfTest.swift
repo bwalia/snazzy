@@ -102,6 +102,48 @@ enum SelfTest {
             b.recordWhileLive = savedRecord
             return ok
         }
+        if arguments.contains("--remote-tour") {
+            // A Mac for the iPhone/iPad UI tests: a demo deck presented as slides,
+            // pairing open (one device per --pairings), then everything cleaned up.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let savedSetup = app.capture.setup
+            let devicesBefore = Set(app.remote.devices.map(\.id))
+            let conversationsBefore = Set(app.chat.conversations.map(\.id))
+            var recordings: [RecordingResult] = []
+            app.capture.onRecordingSaved = { if let r = app.capture.recorder.lastResult { recordings.append(r) } }
+            if let s = SampleDeck.all.first(where: { $0.id == "sales-demo" }) { _ = try? app.builder.openSample(s) }
+            app.capture.setInsetDevice(nil)
+            app.capture.selectSlidesSource()
+            for _ in 0..<40 where !app.builder.isDeckOpen { try? await Task.sleep(for: .milliseconds(100)) }
+            app.builder.openPopOut()
+            let pairings = Int(value(after: "--pairings") ?? "1") ?? 1
+            let end = Date().addingTimeInterval(Double(value(after: "--seconds") ?? "300") ?? 300)
+            var paired = 0
+            await app.remote.openPairing()
+            print("PAIR \(app.remote.pairingURL?.absoluteString ?? "none")")
+            var last = ""
+            while Date() < end {
+                try? await Task.sleep(for: .milliseconds(500))
+                let count = app.remote.devices.filter { !devicesBefore.contains($0.id) }.count
+                if count > paired {
+                    paired = count
+                    if paired < pairings {
+                        await app.remote.openPairing()
+                        print("PAIR \(app.remote.pairingURL?.absoluteString ?? "none")")
+                    }
+                }
+                let now = "devices=\(app.remote.devices.map(\.name)) connected=\(app.remote.connected) recording=\(app.capture.recorder.state) slide=\(app.builder.currentSlide)"
+                if now != last { print(now); last = now }
+            }
+            if app.capture.recorder.isActive { _ = await app.capture.stopRecording() }
+            for d in app.remote.devices where !devicesBefore.contains(d.id) { app.remote.remove(d) }
+            for c in app.chat.conversations where !conversationsBefore.contains(c.id) { app.chat.delete(c.id) }
+            for r in recordings { for u in [r.composite, Chapters.url(forMovie: r.composite), r.rawFolder] { try? FileManager.default.removeItem(at: u) } }
+            app.capture.apply(savedSetup)
+            report("remote tour host", true, "paired \(paired), \(recordings.count) test recording(s) deleted")
+            return ok
+        }
         if arguments.contains("--remote-pair") {
             // Opens pairing for the iPhone/iPad app, reports connections, then removes test devices.
             let app = AppModel()
@@ -184,7 +226,7 @@ enum SelfTest {
             print("BOARD\n\(app.live.board.summaryText)")
             app.live.stop()
             try? await Task.sleep(for: .milliseconds(500))
-            report("live room", app.live.error == nil, app.live.error ?? "ran \(Int(seconds)) s")
+            report("live room", app.live.error == nil, (app.live.error ?? "ran \(Int(seconds)) s") + ", video restarts: \(app.live.restarts)")
             return ok
         }
         if arguments.contains("--share-roundtrip") {

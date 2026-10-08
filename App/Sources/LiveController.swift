@@ -12,15 +12,24 @@ import SnazzyCore
 @MainActor @Observable
 final class LiveController {
     enum Quality: String, CaseIterable, Identifiable {
+        case high = "High (1080p, sharp text)"
         case standard = "Standard (720p)"
-        case low = "Low (480p, busy Wi-Fi)"
+        case low = "Low (480p, busy Wi-Fi or VPN)"
         var id: String { rawValue }
-        var encoder: LiveEncoder.Quality { self == .standard ? .standard : .low }
+        var encoder: LiveEncoder.Quality {
+            switch self {
+            case .high: .high
+            case .standard: .standard
+            case .low: .low
+            }
+        }
     }
 
     private(set) var isRunning = false
     private(set) var isStreaming = false
     private(set) var isStarting = false
+    /// How often the video had to be restarted (shown when > 0).
+    private(set) var restarts = 0
     private(set) var viewers = 0
     private(set) var board = BrainstormBoard()
     private(set) var joinURL: URL?
@@ -121,15 +130,53 @@ final class LiveController {
         }
         isRunning = true
         publishStatus()
-        // Follow source, camera and layout changes.
+        // Follow source, camera and layout changes; restart the video if it stalls.
         refresher = Task { [weak self] in
+            var lastSeq = -1, lastFrames = -1
+            var stalledSince = Date()
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(500))
-                guard let self, let encoder = self.encoder else { continue }
+                guard let self, let encoder = self.encoder, let server = self.server else { continue }
                 self.updateSource(encoder)
+                // Both new segments and new frames must keep coming (a stuck
+                // hardware encoder can keep making segments of a frozen picture).
+                let seq = server.segments.statusJSON()["segments"]?.arrayValue?.last?["seq"]?.intValue ?? -1
+                let frames = encoder.framesEncoded
+                if seq != lastSeq && frames != lastFrames {
+                    lastSeq = seq
+                    lastFrames = frames
+                    stalledSince = Date()
+                } else if Date().timeIntervalSince(stalledSince) > 5 {
+                    lastFrames = -1
+                    stalledSince = Date()
+                    await self.restartVideo(reason: encoder.stats)
+                }
             }
         }
         app.chat.logSession("live_room_started", ["viewers_max": .number(Double(LiveServer.maxViewers))])
+    }
+
+    /// Starts a fresh encoder (viewers' players pick up the new stream by themselves).
+    private func restartVideo(reason: String) async {
+        guard let server, let old = encoder else { return }
+        Log.app.error("Live video stalled, restarting: \(reason, privacy: .public)")
+        encoder = nil
+        await old.stop()
+        let encoder = LiveEncoder()
+        let segments = server.segments
+        encoder.onInitSegment = { segments.setInit($0) }
+        encoder.onSegment = { data, duration in segments.append(data, duration: duration) }
+        encoder.onError = { [weak self] message in Task { @MainActor in self?.error = "Live video stopped: \(message)" } }
+        updateSource(encoder)
+        do {
+            try encoder.start(micID: app.capture.setup.mic?.uniqueID, quality: quality.encoder)
+            self.encoder = encoder
+            restarts += 1
+        } catch {
+            self.error = "Live video couldn't restart: \(error.localizedDescription)"
+            isStreaming = false
+            publishStatus()
+        }
     }
 
     func stop() {

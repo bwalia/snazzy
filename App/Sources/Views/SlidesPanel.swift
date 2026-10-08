@@ -10,12 +10,12 @@ struct SlidesPanel: View {
     }
 
     @Environment(AppModel.self) private var model
-    @State private var mode: Mode?
 
     var body: some View {
-        let current = mode ?? (model.builder.isDeckOpen ? .present : .samples)
+        @Bindable var model = model
+        let current = model.slidesMode ?? (model.builder.isDeckOpen ? .present : .samples)
         VStack(spacing: 0) {
-            Picker("Slides", selection: Binding(get: { current }, set: { mode = $0 })) {
+            Picker("Slides", selection: Binding(get: { current }, set: { model.slidesMode = $0 })) {
                 ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
@@ -23,8 +23,8 @@ struct SlidesPanel: View {
             .frame(maxWidth: 320)
             .padding(.top, 10)
             switch current {
-            case .present: PresentView(showSamples: { mode = .samples })
-            case .samples: SampleGallery(opened: { mode = .present })
+            case .present: PresentView(showSamples: { model.slidesMode = .samples })
+            case .samples: SampleGallery(opened: { model.slidesMode = .present })
             }
         }
     }

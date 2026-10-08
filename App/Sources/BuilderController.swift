@@ -409,6 +409,10 @@ final class BuilderController {
         return (UInt32(w.windowNumber), Double(top), w.frame.size)
     }
 
+    func closePopOutIfOpen() {
+        popOut?.close()
+    }
+
     /// Stops the Present window being resized (while recording: the capture size is fixed).
     func setStageLocked(_ locked: Bool) {
         guard let w = popOut else { return }

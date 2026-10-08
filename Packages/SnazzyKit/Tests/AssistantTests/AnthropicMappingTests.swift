@@ -157,3 +157,43 @@ import Testing
         #expect(AnthropicMapping.errorMessage(json) == "authentication_error: invalid x-api-key")
     }
 }
+
+@Suite struct TextToolCallTests {
+    @Test func qwenXMLStyle() throws {
+        let text = """
+        I'll create the deck. Let me check the devices first.
+        <function=list_devices>
+        </function>
+        </tool_call>
+        """
+        let r = try #require(TextToolCalls.extract(from: text))
+        #expect(r.calls.count == 1 && r.calls[0].name == "list_devices")
+        #expect(r.text == "I'll create the deck. Let me check the devices first.")
+
+        let two = """
+        <tool_call>
+        <function=write_file>
+        <parameter=path>
+        index.html
+        </parameter>
+        <parameter=content>
+        <h1>Hi</h1>
+        </parameter>
+        </function>
+        </tool_call>
+        <tool_call><function=show_slide><parameter=index>2</parameter></function></tool_call>
+        """
+        let r2 = try #require(TextToolCalls.extract(from: two))
+        #expect(r2.calls.map(\.name) == ["write_file", "show_slide"])
+        #expect(r2.calls[0].arguments["path"]?.stringValue == "index.html")
+        #expect(r2.calls[0].arguments["content"]?.stringValue == "<h1>Hi</h1>")
+        #expect(r2.calls[1].arguments["index"] == .number(2))
+        #expect(r2.text.isEmpty)
+    }
+
+    @Test func jsonStyleAndPlainText() throws {
+        let r = try #require(TextToolCalls.extract(from: #"<tool_call>{"name": "next_slide", "arguments": {}}</tool_call>"#))
+        #expect(r.calls.first?.name == "next_slide")
+        #expect(TextToolCalls.extract(from: "Just a normal answer about <b>HTML</b>.") == nil)
+    }
+}

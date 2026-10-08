@@ -9,18 +9,26 @@ struct LivePanel: View {
 
     var body: some View {
         let live = model.live!
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                Color.clear.frame(height: 0).id("top")
                 if live.isRunning { RunningRoom() } else { StartRoom() }
                 if let error = live.error {
                     Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.callout)
                 }
                 if live.isRunning { BoardManager() }
-                BroadcastSection()
+                BroadcastSection().id("broadcast")
             }
             .padding(20)
             .frame(maxWidth: 900, alignment: .leading)
             .frame(maxWidth: .infinity)
+        }
+        .onChange(of: model.liveScrollTarget) { _, target in
+            guard let target else { return }
+            withAnimation(.easeInOut(duration: 0.6)) { proxy.scrollTo(target, anchor: .top) }
+            model.liveScrollTarget = nil
+        }
         }
     }
 }

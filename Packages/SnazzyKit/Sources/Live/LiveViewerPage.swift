@@ -217,7 +217,7 @@ enum LiveViewerPage {
         sb.addEventListener('error', reject, { once: true });
         sb.appendBuffer(data);
       });
-      let next = -1;
+      let next = -1, lastTime = -1, stalled = 0;
       const restart = () => { this.running = false; clearTimeout(this.timer); try { ms.endOfStream(); } catch (e) {} this.ensure(); };
       const tick = async () => {
         try {
@@ -236,10 +236,16 @@ enum LiveViewerPage {
             await append(await r.arrayBuffer());
             next++;
           }
-          // Stay close to live.
+          // Stay close to live, and get past gaps (a missed segment leaves a
+          // hole the video would wait at forever).
           if (video.buffered.length) {
             const end = video.buffered.end(video.buffered.length - 1);
-            if (end - video.currentTime > 4 || video.currentTime < video.buffered.start(0)) video.currentTime = Math.max(0, end - 1);
+            if (!video.paused && Math.abs(video.currentTime - lastTime) < 0.01) stalled++; else stalled = 0;
+            lastTime = video.currentTime;
+            if (end - video.currentTime > 4 || video.currentTime < video.buffered.start(0) || (stalled >= 4 && end - video.currentTime > 0.5)) {
+              video.currentTime = Math.max(0, end - 1);
+              stalled = 0;
+            }
             if (video.currentTime - video.buffered.start(0) > 30 && !sb.updating) sb.remove(0, video.currentTime - 10);
           }
           if (video.paused) video.play().then(() => { $('waiting').hidden = true; $('unmute').hidden = !video.muted; }).catch(() => {});

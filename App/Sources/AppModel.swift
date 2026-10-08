@@ -34,6 +34,12 @@ final class AppModel {
     @ObservationIgnored private(set) var remote: RemoteController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
+    /// Hides the conversation list (tours, screen sharing).
+    var hideConversations = false
+    /// The Slides tab's mode (nil: Present when a deck is open, else samples).
+    var slidesMode: SlidesPanel.Mode?
+    /// Asks the Live tab to scroll to a section ("broadcast" or "top").
+    var liveScrollTarget: String?
     /// The right-hand panel's tab (the builder switches to it when it works).
     var sidePanelTab: SidePanel.Tab = SidePanel.Tab(rawValue: UserDefaults.standard.string(forKey: "SnazzyPro.sidePanelTab") ?? "") ?? .builder {
         didSet { UserDefaults.standard.set(sidePanelTab.rawValue, forKey: "SnazzyPro.sidePanelTab") }
