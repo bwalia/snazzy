@@ -22,6 +22,17 @@ public final class LiveServer: @unchecked Sendable {
 
     public static let maxViewers = 100
     static let maxBody = 16_000
+    // Limits per device, keyed by its IP address on the network (which a page can't
+    // choose, unlike anything it sends), so one device can't tie up or flood the room.
+    static let maxConnectionsPerDevice = 24
+    static let maxStreamsPerDevice = 3
+    /// A request must arrive (and its answer go out) within this; event streams are exempt.
+    static let requestTimeout: TimeInterval = 10
+    static let postInterval: TimeInterval = 0.25
+    /// Wrong room codes allowed per device per minute before it has to wait.
+    static let maxWrongCodes = 30
+    /// Board updates go out at most this often, however fast votes arrive.
+    static let boardUpdateInterval: TimeInterval = 0.25
 
     private let queue = DispatchQueue(label: "com.snazzy.pro.live-server")
     private let lock = NSLock()
@@ -30,6 +41,10 @@ public final class LiveServer: @unchecked Sendable {
     private var status: JSONValue = ["live": false]
     private var subscribers: [ObjectIdentifier: (connection: NWConnection, voter: String)] = [:]
     private var keepAlive: DispatchSourceTimer?
+    private var openConnections: [String: Int] = [:]
+    private var lastPost: [String: Date] = [:]
+    private var wrongCodes: [String: [Date]] = [:]
+    private var boardUpdatePending = false
 
     public init(port: UInt16 = 8787, code: String = LiveServer.makeCode(), board: BrainstormBoard = BrainstormBoard(), segments: LiveSegments = LiveSegments()) {
         self.port = port
@@ -51,6 +66,8 @@ public final class LiveServer: @unchecked Sendable {
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = false
         params.includePeerToPeer = false
+        // The join link is an IPv4 address; IPv4 only also keeps a device to one address.
+        (params.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options)?.version = .v4
         let listener = try NWListener(using: params, on: NWEndpoint.Port(rawValue: port)!)
         listener.newConnectionHandler = { [weak self] c in self?.accept(c) }
         let once = Once()
@@ -112,36 +129,71 @@ public final class LiveServer: @unchecked Sendable {
     // MARK: Connections
 
     private func accept(_ connection: NWConnection) {
+        let device = Self.address(of: connection)
+        let allowed = lock.withLock { () -> Bool in
+            guard openConnections[device, default: 0] < Self.maxConnectionsPerDevice else { return false }
+            openConnections[device, default: 0] += 1
+            return true
+        }
+        guard allowed else { return connection.cancel() }
+        let id = ObjectIdentifier(connection)
+        connection.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .failed: connection.cancel()
+            case .cancelled: self?.closed(id, device: device)
+            default: break
+            }
+        }
         connection.start(queue: queue)
-        receive(connection, buffer: Data())
+        // Slow or idle connections (a request trickling in) are dropped.
+        queue.asyncAfter(deadline: .now() + Self.requestTimeout) { [weak self, weak connection] in
+            guard let self, let connection, !self.lock.withLock({ self.subscribers[id] != nil }) else { return }
+            connection.cancel()
+        }
+        receive(connection, buffer: Data(), device: device)
     }
 
-    private func receive(_ connection: NWConnection, buffer: Data) {
+    private func closed(_ id: ObjectIdentifier, device: String) {
+        let (removed, n) = lock.withLock { () -> (Bool, Int) in
+            openConnections[device, default: 1] -= 1
+            if openConnections[device] == 0 { openConnections[device] = nil }
+            return (subscribers.removeValue(forKey: id) != nil, subscribers.count)
+        }
+        if removed { onViewersChange?(n) }
+    }
+
+    /// The device's IP address, without the port.
+    static func address(of connection: NWConnection) -> String {
+        if case .hostPort(let host, _) = connection.endpoint { return "\(host)" }
+        return "unknown"
+    }
+
+    private func receive(_ connection: NWConnection, buffer: Data, device: String) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { [weak self] data, _, isComplete, error in
             guard let self else { return }
             var buffer = buffer
             if let data { buffer.append(data) }
             switch HTTPRequest.parse(buffer, maxBody: Self.maxBody) {
             case .complete(let request):
-                self.respond(to: request, on: connection)
+                self.respond(to: request, on: connection, device: device)
             case .incomplete where !isComplete && error == nil && buffer.count < Self.maxBody + 8_192:
-                self.receive(connection, buffer: buffer)
+                self.receive(connection, buffer: buffer, device: device)
             default:
                 self.send(HTTPResponse(status: 400, body: Data("Bad request".utf8), contentType: "text/plain"), on: connection)
             }
         }
     }
 
-    private func respond(to request: HTTPRequest, on connection: NWConnection) {
-        if request.method == "GET", request.route == "/api/events", authorized(request) {
-            subscribe(connection, voter: Self.voter(request))
+    private func respond(to request: HTTPRequest, on connection: NWConnection, device: String) {
+        if request.method == "GET", request.route == "/api/events", codeProblem(request, from: device) == nil {
+            subscribe(connection, device: device)
             return
         }
-        send(handle(request), on: connection)
+        send(handle(request, from: device), on: connection)
     }
 
-    /// Routing (internal for tests). SSE is handled separately.
-    func handle(_ request: HTTPRequest) -> HTTPResponse {
+    /// Routing (internal for tests); `device` is the caller's IP address. SSE is handled separately.
+    func handle(_ request: HTTPRequest, from device: String) -> HTTPResponse {
         let route = request.route
         // The page itself works without a code (it asks for one).
         if request.method == "GET", route == "/" || route == "/index.html" {
@@ -149,10 +201,17 @@ public final class LiveServer: @unchecked Sendable {
                                 extraHeaders: Self.pageHeaders)
         }
         if request.method == "GET", route == "/favicon.ico" { return HTTPResponse(status: 204, body: Data()) }
-        guard authorized(request) else {
-            return json(401, ["error": "Wrong or missing room code."])
+        if let problem = codeProblem(request, from: device) { return problem }
+        // One vote per idea and the post limits count per device, not per browser ID.
+        let voter = device
+        if request.method == "POST" {
+            let now = Date()
+            let tooSoon = lock.withLock { () -> Bool in
+                defer { lastPost[device] = now }
+                return lastPost[device].map { now.timeIntervalSince($0) < Self.postInterval } ?? false
+            }
+            if tooSoon { return json(429, ["error": "Slow down a little."]) }
         }
-        let voter = Self.voter(request)
         switch (request.method, route) {
         case ("GET", "/api/board"):
             return json(200, lock.withLock { board.publicJSON(for: voter) })
@@ -198,17 +257,18 @@ public final class LiveServer: @unchecked Sendable {
         }
     }
 
-    private func authorized(_ request: HTTPRequest) -> Bool {
+    /// Nil when the room code is right. A device that keeps guessing has to wait a minute.
+    private func codeProblem(_ request: HTTPRequest, from device: String) -> HTTPResponse? {
+        let now = Date()
+        let guesses = lock.withLock { () -> Int in
+            wrongCodes[device] = wrongCodes[device]?.filter { now.timeIntervalSince($0) < 60 }
+            return wrongCodes[device]?.count ?? 0
+        }
+        guard guesses < Self.maxWrongCodes else { return json(429, ["error": "Too many wrong room codes. Wait a minute and try again."]) }
         let given = request.query["k"] ?? request.headers["x-room-code"] ?? ""
-        return Self.constantTimeEqual(given.uppercased(), code)
-    }
-
-    /// A per-browser ID from the page (random, kept in the browser), used for
-    /// one vote per idea and post limits. Not an identity.
-    static func voter(_ request: HTTPRequest) -> String {
-        let raw = request.headers["x-snazzy-client"] ?? request.query["c"] ?? ""
-        let clean = raw.filter { $0.isLetter || $0.isNumber || $0 == "-" }.prefix(64)
-        return clean.isEmpty ? "anonymous" : String(clean)
+        if Self.constantTimeEqual(given.uppercased(), code) { return nil }
+        lock.withLock { wrongCodes[device, default: []].append(now) }
+        return json(401, ["error": "Wrong or missing room code."])
     }
 
     static func constantTimeEqual(_ a: String, _ b: String) -> Bool {
@@ -235,9 +295,10 @@ public final class LiveServer: @unchecked Sendable {
 
     // MARK: Server-Sent Events
 
-    private func subscribe(_ connection: NWConnection, voter: String) {
-        let count = lock.withLock { subscribers.count }
-        guard count < Self.maxViewers else {
+    private func subscribe(_ connection: NWConnection, device: String) {
+        let voter = device
+        let (count, mine) = lock.withLock { (subscribers.count, subscribers.values.filter { $0.voter == device }.count) }
+        guard count < Self.maxViewers, mine < Self.maxStreamsPerDevice else {
             send(HTTPResponse(status: 503, body: Data(#"{"error":"The room is full."}"#.utf8)), on: connection)
             return
         }
@@ -247,17 +308,9 @@ public final class LiveServer: @unchecked Sendable {
         first.append(Self.event("board", b))
         first.append(Self.event("status", s))
         let id = ObjectIdentifier(connection)
-        connection.stateUpdateHandler = { [weak self] state in
-            switch state {
-            case .failed, .cancelled: self?.unsubscribe(id)
-            default: break
-            }
-        }
-        // Notice when the browser goes away (a read returns end of stream).
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 1) { [weak self] _, _, _, _ in
-            self?.unsubscribe(id)
-            connection.cancel()
-        }
+        // Notice when the browser goes away (a read returns end of stream); cancelling
+        // removes the subscriber (see `accept`).
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 1) { _, _, _, _ in connection.cancel() }
         let n = lock.withLock { () -> Int in
             subscribers[id] = (connection, voter)
             return subscribers.count
@@ -266,19 +319,27 @@ public final class LiveServer: @unchecked Sendable {
         onViewersChange?(n)
     }
 
-    private func unsubscribe(_ id: ObjectIdentifier) {
-        let (removed, n) = lock.withLock { (subscribers.removeValue(forKey: id) != nil, subscribers.count) }
-        if removed { onViewersChange?(n) }
-    }
-
     static func event(_ name: String, _ value: JSONValue) -> Data {
         let json = (try? value.encoded(sortedKeys: false)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
         return Data("event: \(name)\ndata: \(json)\n\n".utf8)
     }
 
+    /// Sends the board to everyone, batching changes that arrive close together.
     private func boardChanged(_ snapshot: BrainstormBoard) {
-        broadcast(event: "board") { voter in snapshot.publicJSON(for: voter) }
-        onBoardChange?(snapshot)
+        let schedule = lock.withLock { () -> Bool in
+            defer { boardUpdatePending = true }
+            return !boardUpdatePending
+        }
+        guard schedule else { return }
+        queue.asyncAfter(deadline: .now() + Self.boardUpdateInterval) { [weak self] in
+            guard let self else { return }
+            let board = self.lock.withLock { () -> BrainstormBoard in
+                self.boardUpdatePending = false
+                return self.board
+            }
+            self.broadcast(event: "board") { voter in board.publicJSON(for: voter) }
+            self.onBoardChange?(board)
+        }
     }
 
     private func broadcast(event: String, _ value: (String) -> JSONValue) {

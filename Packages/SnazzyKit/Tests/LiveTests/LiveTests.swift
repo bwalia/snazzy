@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import Testing
 @testable import Live
 import SnazzyCore
@@ -63,34 +64,80 @@ import SnazzyCore
 }
 
 @Suite struct LiveServerTests {
-    func req(_ method: String, _ path: String, body: String = "", client: String = "c1") -> HTTPRequest {
-        HTTPRequest(method: method, path: path, headers: ["x-snazzy-client": client], body: Data(body.utf8))
+    /// A request from a device on the network (by IP address).
+    func call(_ server: LiveServer, _ method: String, _ path: String, body: String = "", from device: String = "10.0.0.1",
+              client: String = "c1") -> HTTPResponse {
+        server.handle(HTTPRequest(method: method, path: path, headers: ["x-snazzy-client": client], body: Data(body.utf8)), from: device)
     }
 
     @Test func roomCodeAndRoutes() throws {
         let server = LiveServer(port: 0, code: "ABC234")
-        #expect(server.handle(req("GET", "/")).status == 200)
-        #expect(server.handle(req("GET", "/api/board")).status == 401)
-        #expect(server.handle(req("GET", "/api/board?k=WRONG1")).status == 401)
-        #expect(server.handle(req("GET", "/api/board?k=abc234")).status == 200)  // case-insensitive
-        #expect(server.handle(req("GET", "/live/stream.m3u8?k=ABC234")).status == 404)  // not live yet
+        #expect(call(server, "GET", "/").status == 200)
+        #expect(call(server, "GET", "/api/board").status == 401)
+        #expect(call(server, "GET", "/api/board?k=WRONG1").status == 401)
+        #expect(call(server, "GET", "/api/board?k=abc234").status == 200)  // case-insensitive
+        #expect(call(server, "GET", "/live/stream.m3u8?k=ABC234").status == 404)  // not live yet
 
-        let posted = server.handle(req("POST", "/api/notes?k=ABC234", body: #"{"text":"<script>alert(1)</script>","name":"Bo"}"#))
+        let posted = call(server, "POST", "/api/notes?k=ABC234", body: #"{"text":"<script>alert(1)</script>","name":"Bo"}"#)
         #expect(posted.status == 200)
         let board = try JSONValue.parse(posted.body)
         let note = try #require(board["notes"]?.arrayValue?.first)
         #expect(note["text"] == "<script>alert(1)</script>")  // stored as text; the page inserts it with textContent
-        let again = server.handle(req("POST", "/api/notes?k=ABC234", body: #"{"text":"second"}"#))
+        let again = call(server, "POST", "/api/notes?k=ABC234", body: #"{"text":"second"}"#)
         #expect(again.status == 429)
         let id = note["id"]?.stringValue ?? ""
-        let voted = server.handle(req("POST", "/api/vote?k=ABC234", body: #"{"id":"\#(id)"}"#, client: "c2"))
+        let voted = call(server, "POST", "/api/vote?k=ABC234", body: #"{"id":"\#(id)"}"#, from: "10.0.0.2")
         #expect(try JSONValue.parse(voted.body)["notes"]?.arrayValue?.first?["votes"] == 1)
 
         server.updateBoard { $0.setOpen(false) }
-        #expect(server.handle(req("POST", "/api/notes?k=ABC234", body: #"{"text":"late"}"#, client: "c3")).status == 409)
-        #expect(server.handle(req("GET", "/etc/passwd?k=ABC234")).status == 404)
-        let page = server.handle(req("GET", "/"))
+        #expect(call(server, "POST", "/api/notes?k=ABC234", body: #"{"text":"late"}"#, from: "10.0.0.3").status == 409)
+        #expect(call(server, "GET", "/etc/passwd?k=ABC234").status == 404)
+        let page = call(server, "GET", "/")
         #expect(page.extraHeaders["Content-Security-Policy"]?.contains("default-src 'self'") == true)
+    }
+
+    /// Limits count per device (IP address), so changing the browser ID or guessing
+    /// codes from one device doesn't get around them.
+    @Test func limitsArePerDevice() async throws {
+        let server = LiveServer(port: 0, code: "ABC234")
+        let posted = call(server, "POST", "/api/notes?k=ABC234", body: #"{"text":"idea"}"#, from: "10.0.0.9")
+        let id = try JSONValue.parse(posted.body)["notes"]?.arrayValue?.first?["id"]?.stringValue ?? ""
+        try await Task.sleep(for: .seconds(LiveServer.postInterval + 0.05))
+
+        // A new browser ID from the same device is the same voter: the second vote toggles it off.
+        let vote = #"{"id":"\#(id)"}"#
+        #expect(call(server, "POST", "/api/vote?k=ABC234", body: vote, from: "10.0.0.5", client: "a").status == 200)
+        #expect(call(server, "POST", "/api/vote?k=ABC234", body: vote, from: "10.0.0.5", client: "b").status == 429)  // too soon
+        try await Task.sleep(for: .seconds(LiveServer.postInterval + 0.05))
+        let again = call(server, "POST", "/api/vote?k=ABC234", body: vote, from: "10.0.0.5", client: "b")
+        #expect(try JSONValue.parse(again.body)["notes"]?.arrayValue?.first?["votes"] == 0)
+
+        // Guessing the code: after enough wrong tries the device has to wait, even with the right code.
+        for _ in 0..<LiveServer.maxWrongCodes { _ = call(server, "GET", "/api/board?k=WRONG1", from: "10.0.0.66") }
+        #expect(call(server, "GET", "/api/board?k=ABC234", from: "10.0.0.66").status == 429)
+        #expect(call(server, "GET", "/api/board?k=ABC234", from: "10.0.0.7").status == 200)  // others unaffected
+    }
+
+    /// One device can't hold open more than its share of connections (a slow-request attack).
+    @Test func oneDeviceCantHogConnections() async throws {
+        let port = UInt16.random(in: 40_000...49_000)
+        let server = LiveServer(port: port)
+        try await server.start()
+        defer { server.stop() }
+        let refused = Counter()
+        let queue = DispatchQueue(label: "test-clients")
+        let extra = 5
+        var clients: [NWConnection] = []
+        for _ in 0..<(LiveServer.maxConnectionsPerDevice + extra) {
+            let c = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
+            // Idle (no request sent): only the server closing it ends the read.
+            c.receive(minimumIncompleteLength: 1, maximumLength: 1) { _, _, done, error in if done || error != nil { refused.add() } }
+            c.start(queue: queue)
+            clients.append(c)
+        }
+        try await Task.sleep(for: .seconds(1))
+        #expect(refused.value == extra)
+        clients.forEach { $0.cancel() }
     }
 
     @Test func codesAvoidLookAlikes() {
@@ -129,4 +176,12 @@ import SnazzyCore
         #expect(json["notes"]?.arrayValue?.first?["host"] == true)
         #expect(board.summaryText.contains("(0 votes, presenter)"))
     }
+}
+
+/// Counts callbacks from any queue.
+final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var n = 0
+    func add() { lock.withLock { n += 1 } }
+    var value: Int { lock.withLock { n } }
 }
