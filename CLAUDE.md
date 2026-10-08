@@ -137,7 +137,8 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 
   Create recording writers with `AVAssetWriter.crashSafeMovie(_:)` (fragmented `.mov`),
   never a plain `AVAssetWriter`. The required-reason APIs used (disk space, boot time,
-  UserDefaults) must be declared in `App/Resources/PrivacyInfo.xcprivacy`.
+  UserDefaults, file timestamps) must be declared in `App/Resources/PrivacyInfo.xcprivacy`,
+  and in `iOS/Resources/PrivacyInfo.xcprivacy` for anything the iPhone app links.
 - **Deck contract.** `deck.js` must keep:
   - `window.snazzyDeck = {show, count, current}`
   - `<section class="slide">` elements

@@ -25,6 +25,13 @@
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array><string>35F9.1</string></array>
 		</dict>
+		<!-- File dates: the Recordings list shows when each recording was made. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array><string>DDA9.1</string></array>
+		</dict>
 		<!-- Free disk space: refuse to start, or stop, a recording before the disk fills. -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
