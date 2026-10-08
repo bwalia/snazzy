@@ -1,0 +1,107 @@
+name: Domains (Cloudflare DNS + WSL Proxy)
+
+# Takes every host in .github/wslproxy/data/servers/<env>/ live, with no manual step:
+#   1. Cloudflare: CNAME <host> -> lon1.pop0.uk (DNS-only, so the edge can solve
+#      the ACME HTTP-01 challenge and terminate TLS itself). The apex (snazzy.pro)
+#      works through Cloudflare's CNAME flattening.
+#   2. WSL Proxy control plane cp.pop0.uk (source of truth).
+#   3. WSL Proxy POP lon1.pop0.uk (the edge the CNAMEs point at).
+#
+# Chain once live:
+#   browser -> snazzy.pro / www.snazzy.pro --(CNAME)--> lon1.pop0.uk (TLS)
+#   -> rule snazzy-prod-gh-pages -> https://bwalia.github.io/snazzy/
+#
+# Every step is an idempotent upsert, so re-runs (and the scheduled drift guard,
+# which reverts out-of-band edits on the gateways) are no-ops when nothing changed.
+#
+# Needs: secret CLOUDFLARE_API_TOKEN (Zone:DNS:Edit + Zone:Zone:Read on snazzy.pro),
+# plus the WSL Proxy credentials described in wslproxy-register-domains.yml.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/wslproxy/**"
+      - ".github/scripts/cloudflare-dns.sh"
+      - ".github/workflows/domains.yml"
+      - ".github/workflows/wslproxy-register-domains.yml"
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      ACTIVATE_CONFIG:
+        description: "Push servers with config_status=true (live). False stages them."
+        required: false
+        default: true
+        type: boolean
+      DRY_RUN:
+        description: "Show what would change without writing"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: domains
+  cancel-in-progress: false
+
+env:
+  TARGET_ENV: prod
+  DNS_TARGET: lon1.pop0.uk
+  DNS_PROXIED: "false"
+
+jobs:
+  dns:
+    name: Cloudflare DNS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Ensure a CNAME for every host
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DRY_RUN: ${{ inputs.DRY_RUN }}
+        run: |
+          set -euo pipefail
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "::error::CLOUDFLARE_API_TOKEN secret is not set"; exit 1; }
+          # Single source of truth: the hosts the gateway will serve.
+          HOSTS=$(jq -r '.server_name' ".github/wslproxy/data/servers/${TARGET_ENV}"/*.json)
+          for H in $HOSTS; do
+            # Zone = registrable apex (last two labels), e.g. www.snazzy.pro -> snazzy.pro.
+            CLOUDFLARE_ZONE="$(echo "$H" | awk -F. '{print $(NF-1)"."$NF}')"
+            export CLOUDFLARE_ZONE
+            echo "Ensuring ${H} (zone ${CLOUDFLARE_ZONE}) -> ${DNS_TARGET} (proxied=${DNS_PROXIED})"
+            ARGS=(--name "$H" --content "$DNS_TARGET" --proxied "$DNS_PROXIED")
+            [ "$DRY_RUN" = "true" ] && ARGS+=(--dry-run)
+            ./.github/scripts/cloudflare-dns.sh "${ARGS[@]}"
+          done
+
+  # Control plane first: it is the source of truth that the POPs mirror.
+  wslproxy-cp:
+    name: WSL Proxy cp.pop0.uk
+    needs: [dns]
+    uses: ./.github/workflows/wslproxy-register-domains.yml
+    with:
+      GATEWAY_DOMAIN: https://cp.pop0.uk
+      POP_KEY: CP
+      TARGET_ENV: prod
+      # Push and schedule runs go live; a manual run keeps its explicit choice
+      # (`||` would coerce an explicit false to true).
+      ACTIVATE_CONFIG: ${{ github.event_name != 'workflow_dispatch' || inputs.ACTIVATE_CONFIG }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.DRY_RUN }}
+    secrets: inherit
+
+  wslproxy-lon1:
+    name: WSL Proxy lon1.pop0.uk
+    needs: [wslproxy-cp]
+    uses: ./.github/workflows/wslproxy-register-domains.yml
+    with:
+      GATEWAY_DOMAIN: https://lon1.pop0.uk
+      POP_KEY: LON1
+      TARGET_ENV: prod
+      ACTIVATE_CONFIG: ${{ github.event_name != 'workflow_dispatch' || inputs.ACTIVATE_CONFIG }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.DRY_RUN }}
+    secrets: inherit
