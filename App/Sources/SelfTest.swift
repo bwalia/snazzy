@@ -108,6 +108,16 @@ enum SelfTest {
             b.recordWhileLive = savedRecord
             return ok
         }
+        if let names = value(after: "--forget-devices") {
+            // Removes paired remote devices by name (test simulators).
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let wanted = Set(names.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+            let gone = app.remote.devices.filter { wanted.contains($0.name) }
+            gone.forEach { app.remote.remove($0) }
+            report("forget devices", true, "removed \(gone.count); remaining: \(app.remote.devices.map(\.name))")
+            return ok
+        }
         if arguments.contains("--remote-tour") {
             // A Mac for the iPhone/iPad UI tests: a demo deck presented as slides,
             // pairing open (one device per --pairings), then everything cleaned up.
@@ -117,9 +127,12 @@ enum SelfTest {
             let devicesBefore = Set(app.remote.devices.map(\.id))
             let conversationsBefore = Set(app.chat.conversations.map(\.id))
             var recordings: [RecordingResult] = []
+            app.chat.clear()  // a fresh conversation: the assistant only knows this session
             app.capture.onRecordingSaved = { if let r = app.capture.recorder.lastResult { recordings.append(r) } }
             if let s = SampleDeck.all.first(where: { $0.id == "sales-demo" }) { _ = try? app.builder.openSample(s) }
             app.capture.setInsetDevice(nil)
+            // The built-in mic, so a running Snazzy Pro keeps the usual one to itself.
+            if let mic = value(after: "--mic") { _ = try? app.capture.selectMic(mic) }
             app.capture.selectSlidesSource()
             for _ in 0..<40 where !app.builder.isDeckOpen { try? await Task.sleep(for: .milliseconds(100)) }
             app.builder.openPopOut()

@@ -59,10 +59,8 @@ final class RemoteTourUITests: XCTestCase {
         app.buttons["Send"].tap()
         snap(app, "6 Asked the assistant")
         // The reply comes from the Mac's model; give it time.
-        let replied = NSPredicate { _, _ in app.staticTexts.allElementsBoundByIndex.count >= 3 }
-        expectation(for: replied, evaluatedWith: nil)
-        waitForExpectations(timeout: 180)
-        pause(3)
+        XCTAssertTrue(app.staticTexts["assistantReply"].waitForExistence(timeout: 240), "No reply from the assistant")
+        pause(4)
         snap(app, "7 Assistant replied")
     }
 

@@ -364,6 +364,9 @@ final class ChatSession {
             if let id = currentAssistant, let i = transcript.firstIndex(where: { $0.id == id }) {
                 transcript[i].isStreaming = false
                 if let servedBy { transcript[i].model = servedBy }
+                // A tool call the model wrote as text streamed in as text: show the cleaned reply.
+                let shown = transcript[i].text
+                if shown.contains("<function=") || shown.contains("<tool_call>") { transcript[i].text = message.text }
                 if transcript[i].text.isEmpty && transcript[i].thinking.isEmpty { transcript.remove(at: i) }
             }
             // Tool calls that arrived whole (Ollama) never got a "started" event.

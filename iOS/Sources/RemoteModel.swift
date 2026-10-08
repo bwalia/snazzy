@@ -34,6 +34,9 @@ final class RemoteModel {
     @ObservationIgnored private let watch = WatchRelay()
 
     static let hostsAccount = "remote.hosts"
+    #if DEBUG
+    private static var didDebugPair = false
+    #endif
 
     var deviceID: String {
         if let id = UserDefaults.standard.string(forKey: "remote.deviceID") { return id }
@@ -57,8 +60,10 @@ final class RemoteModel {
     func start() {
         #if DEBUG
         // Tests: `simctl launch … -debugPairURL snazzypro://pair?...`
-        if let s = UserDefaults.standard.string(forKey: "debugPairURL"), let url = URL(string: s), hosts.isEmpty {
+        if !Self.didDebugPair, let s = UserDefaults.standard.string(forKey: "debugPairURL"), let url = URL(string: s) {
+            Self.didDebugPair = true
             pair(with: url)
+            return
         }
         #endif
         browser.start()

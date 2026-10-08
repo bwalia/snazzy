@@ -235,6 +235,7 @@ private struct AssistantChat: View {
                         }
                         ForEach(model.chat, id: \.id) { m in
                             Text(m.text)
+                                .accessibilityIdentifier(m.fromMe ? "myMessage" : "assistantReply")
                                 .padding(10)
                                 .background(m.fromMe ? Color.accentColor.opacity(0.3) : Color.secondary.opacity(0.18), in: RoundedRectangle(cornerRadius: 12))
                                 .frame(maxWidth: .infinity, alignment: m.fromMe ? .trailing : .leading)
