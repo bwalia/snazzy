@@ -151,7 +151,8 @@ final class Box<T: Sendable>: @unchecked Sendable {
 
         // Removing the device closes it and its key stops working.
         host.removeDevice("dev-1")
-        #expect(await againStates.wait { $0.contains { if case .disconnected = $0 { true } else { false } } })
+        // The Mac's reason reaches the device, as a deliberate end (no retrying).
+        #expect(await againStates.wait { $0.contains(.ended("This device was removed on the Mac.")) })
         try await Task.sleep(for: .milliseconds(300))
         let revoked = RemoteClient(deviceID: "dev-1", deviceName: "Test iPad")
         let revokedStates = Box<RemoteClient.State>()

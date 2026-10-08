@@ -154,6 +154,13 @@ final class RemoteModel {
                 hosts[i].name = name
                 saveHosts()
             }
+        case .ended(let reason):
+            // The Mac removed this device or runs another version: retrying won't help.
+            UIApplication.shared.isIdleTimerDisabled = false
+            status = nil
+            client = nil
+            retry?.cancel()
+            connection = .failed(reason)
         case .disconnected(let reason):
             UIApplication.shared.isIdleTimerDisabled = false
             status = nil

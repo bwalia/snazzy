@@ -84,14 +84,18 @@ private struct Controls: View {
                     round(status.recording == "paused" ? "play.fill" : "pause.fill", status.recording == "paused" ? "Resume" : "Pause", .gray) {
                         model.send(status.recording == "paused" ? .resumeRecording : .pauseRecording)
                     }
+                    .disabled(model.busy)
+                    // Stop always works, even while another command is on its way.
                     round("stop.fill", "Stop", .red) { model.send(.stopRecording) }
                 } else if status.recording == "countdown" {
                     Text("Starting in \(status.countdown ?? 0)…").font(.title2.bold())
+                    round("xmark", "Cancel", .gray) { model.send(.stopRecording) }
                 } else {
                     round("record.circle", "Record", .red, big: true) { model.send(.startRecording) }
+                        .disabled(model.busy)
                 }
             }
-            .disabled(model.busy || status.recording == "finishing")
+            .disabled(status.recording == "finishing")
 
             // Slides
             if status.slideCount > 0 {
