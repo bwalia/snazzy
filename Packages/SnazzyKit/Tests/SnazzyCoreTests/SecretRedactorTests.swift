@@ -39,6 +39,27 @@ import Testing
         #expect(r.hidden.filter { $0 == "secret setting" }.count == 2)
     }
 
+    @Test func hidesOpaqueTokensQuotedKeysAndCutOffKeys() {
+        let opaque = "mF_9.B5f-4.1JqM" + String(repeating: "Zx8", count: 6)
+        let gitlab = "glpat-" + String(repeating: "Ab3", count: 7)
+        let awsSecret = "wJalr" + "XUtnF/" + String(repeating: "K7MDe", count: 4)
+        let text = [
+            "Authorization: Bearer \(opaque)",
+            #"curl -H "Authorization: Bearer \#(opaque)" http://127.0.0.1:47823/mcp"#,
+            #"  "SecretAccessKey": "\#(awsSecret)","#,
+            "git remote add origin https://oauth2:\(gitlab)@gitlab.com/x.git",
+            "-----BEGIN RSA PRIVATE KEY-----",
+            "MIIEowIBAAKCAQEA",
+        ].joined(separator: "\n")
+        let r = SecretRedactor.redact(text)
+        #expect(!r.text.contains(opaque))
+        #expect(!r.text.contains(awsSecret))
+        #expect(!r.text.contains(gitlab))
+        #expect(!r.text.contains("MIIEowIBAAKCAQEA"))  // cut off before its END line
+        #expect(r.text.contains("http://127.0.0.1:47823/mcp"))
+        #expect(SecretRedactor.redact("Use a Bearer token for this API.").hidden.isEmpty)  // prose stays
+    }
+
     @Test func privateKeysAndSummary() {
         let r = SecretRedactor.redact("-----BEGIN OPENSSH PRIVATE KEY-----\nabc\ndef\n-----END OPENSSH PRIVATE KEY-----\nok")
         #expect(r.text == "[hidden private key]\nok")

@@ -55,8 +55,8 @@ final class PresetController {
     }
 
     func delete(_ name: String) throws {
-        try store.delete(name)
-        if activeName?.lowercased() == name.lowercased() { setActive(nil) }
+        let deleted = try store.delete(name)
+        if activeName.map(PresetStore.fileName) == PresetStore.fileName(deleted) { setActive(nil) }
         refresh()
     }
 

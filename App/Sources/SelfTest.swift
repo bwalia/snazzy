@@ -244,7 +244,7 @@ enum SelfTest {
             var made: (projects: [String], presets: [String], images: [String]) = ([], [], [])
             func cleanUp() {
                 for p in made.projects { try? app.builder.workspace.deleteProject(p) }
-                for p in made.presets { try? app.presets.store.delete(p) }
+                for p in made.presets { _ = try? app.presets.store.delete(p) }
                 for i in made.images { library.delete(i) }
                 app.presets.refresh()
                 app.builder.refreshProjects()

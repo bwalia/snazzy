@@ -43,8 +43,9 @@ public struct PresetStore: Sendable {
             .appending(path: "Snazzy Pro/Presets", directoryHint: .isDirectory)
     }
 
-    /// File-safe name (presets are matched case-insensitively by name).
-    static func fileName(_ name: String) -> String {
+    /// File-safe name. Two names with the same file name are the same preset
+    /// (e.g. "Lesson setup" and "lesson-setup").
+    public static func fileName(_ name: String) -> String {
         let cleaned = name.lowercased().map { $0.isLetter || $0.isNumber ? $0 : "-" }
         let slug = String(cleaned).split(separator: "-").joined(separator: "-")
         return (slug.isEmpty ? "preset" : String(slug.prefix(80))) + ".json"
@@ -69,26 +70,31 @@ public struct PresetStore: Sendable {
     public func save(_ preset: SettingsPreset) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var p = preset
-        if let existing = load(preset.name) {
+        if let existing = stored(preset.name) {
             p.created = existing.created
             p.updated = Date()
         }
         try Self.encoder.encode(p).write(to: url(p.name), options: .atomic)
     }
 
+    /// Finds a preset by name, falling back to a partial match (for loading only).
     public func load(_ name: String) -> SettingsPreset? {
-        if let data = try? Data(contentsOf: url(name)), let p = try? Self.decoder.decode(SettingsPreset.self, from: data) {
-            return p
-        }
-        // Fall back to a case-insensitive / partial name match.
-        let all = list()
+        if let p = stored(name) { return p }
         let lower = name.lowercased()
-        return all.first { $0.name.lowercased() == lower } ?? all.first { $0.name.lowercased().contains(lower) }
+        return list().first { $0.name.lowercased().contains(lower) }
     }
 
-    public func delete(_ name: String) throws {
-        guard let p = load(name) else { throw PresetError("No preset named “\(name)”.") }
+    /// The preset with exactly this name (same file name, so case and punctuation don't matter).
+    func stored(_ name: String) -> SettingsPreset? {
+        (try? Data(contentsOf: url(name))).flatMap { try? Self.decoder.decode(SettingsPreset.self, from: $0) }
+    }
+
+    /// Deletes the preset with exactly this name (never a partial match); returns its name.
+    @discardableResult
+    public func delete(_ name: String) throws -> String {
+        guard let p = stored(name) else { throw PresetError("No preset named “\(name)”. Use its full name.") }
         try FileManager.default.removeItem(at: url(p.name))
+        return p.name
     }
 
     /// Most recently updated first.

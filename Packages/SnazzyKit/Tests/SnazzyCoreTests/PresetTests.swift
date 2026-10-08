@@ -29,6 +29,13 @@ import Testing
         try s.save(SettingsPreset(name: "Q3 deck – iPad", capture: CaptureSetup(), app: nil, date: Date().addingTimeInterval(100)))
         #expect(s.load("Q3 deck – iPad")?.created == created)
 
+        // A partial name finds a preset to load, but never deletes one or lends its date to a new one.
+        #expect(throws: PresetError.self) { try s.delete("q3") }
+        try s.save(SettingsPreset(name: "Q3", capture: CaptureSetup(), app: nil, date: Date().addingTimeInterval(200)))
+        #expect(s.load("Q3")?.created != created)
+        try s.delete("q3")
+        #expect(s.load("Q3 deck – iPad") != nil)
+
         try s.delete("demo")
         #expect(s.list().map(\.name) == ["Q3 deck – iPad"])
         #expect(throws: PresetError.self) { try s.delete("nope") }

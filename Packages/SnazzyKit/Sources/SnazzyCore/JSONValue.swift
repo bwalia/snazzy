@@ -67,7 +67,8 @@ public extension JSONValue {
 
     var stringValue: String? { if case .string(let s) = self { return s }; return nil }
     var doubleValue: Double? { if case .number(let n) = self { return n }; return nil }
-    var intValue: Int? { doubleValue.map { Int($0) } }
+    /// Nil for numbers an Int can't hold (a model may send 1e300), instead of crashing.
+    var intValue: Int? { doubleValue.flatMap { Int(exactly: $0.rounded(.towardZero)) } }
     var boolValue: Bool? { if case .bool(let b) = self { return b }; return nil }
     var arrayValue: [JSONValue]? { if case .array(let a) = self { return a }; return nil }
     var objectValue: [String: JSONValue]? { if case .object(let o) = self { return o }; return nil }

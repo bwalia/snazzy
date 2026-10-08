@@ -247,7 +247,7 @@ struct ChatSettings: View {
             }
             Section("Session record") {
                 Toggle("Keep a record of each session", isOn: $model.settings.recordSessions)
-                Text("Messages, tool calls, builder steps and voice clips are saved with timestamps in Movies › Snazzy Pro › Sessions. Screen and camera video of sessions are added with recording (phase 4).")
+                Text("Messages, tool calls, builder steps and voice clips are saved with timestamps in Movies › Snazzy Pro › Sessions. Screen and camera video of a session aren't included; use Record for that.")
                     .font(.caption).foregroundStyle(.secondary)
                 Button("Show Sessions Folder") {
                     try? FileManager.default.createDirectory(at: SessionLog.root, withIntermediateDirectories: true)

@@ -199,23 +199,23 @@ final class AppModel {
     /// UI uses and returns the new state.
     /// The tools for a chat turn answered by `provider`.
     func makeToolRegistry(for provider: ProviderKind) -> ToolRegistry {
-        AssistantTools.registry(app: self, offMac: provider.isLocal ? nil : provider.displayName)
+        AssistantTools.registry(app: self, offMac: settings.runsOnThisMac(provider) ? nil : settings.recipientName(provider))
     }
 
     func modelsJSON() async -> JSONValue {
         var providers: [String: JSONValue] = [:]
         for kind in ProviderKind.allCases {
             if let reason = unavailableReason(kind) {
-                providers[kind.rawValue] = ["available": false, "reason": .string(reason), "local": .bool(kind.isLocal),
+                providers[kind.rawValue] = ["available": false, "reason": .string(reason), "local": .bool(settings.runsOnThisMac(kind)),
                                             "suggested": .array(kind.suggestedModels.map { .string($0) })]
                 continue
             }
             switch await testConnection(kind) {
             case .success(let models):
-                providers[kind.rawValue] = ["available": true, "local": .bool(kind.isLocal),
+                providers[kind.rawValue] = ["available": true, "local": .bool(settings.runsOnThisMac(kind)),
                     "models": .array(models.prefix(40).map { ["id": .string($0.id), "tools": $0.supportsTools.map(JSONValue.bool) ?? .null] })]
             case .failure(let error):
-                providers[kind.rawValue] = ["available": false, "reason": .string(error.localizedDescription), "local": .bool(kind.isLocal)]
+                providers[kind.rawValue] = ["available": false, "reason": .string(error.localizedDescription), "local": .bool(settings.runsOnThisMac(kind))]
             }
         }
         return ["providers": .object(providers), "active_task": .string(settings.activeTask.rawValue),
@@ -246,7 +246,7 @@ final class AppModel {
             "active_task": .string(settings.activeTask.rawValue),
             "models": .object(Dictionary(uniqueKeysWithValues: AssistantTask.allCases.map { task in
                 let s = settings.selection(for: task)
-                return (task.rawValue, ["provider": .string(s.provider.rawValue), "model": .string(s.model), "local": .bool(s.provider.isLocal)] as JSONValue)
+                return (task.rawValue, ["provider": .string(s.provider.rawValue), "model": .string(s.model), "local": .bool(settings.runsOnThisMac(s.provider))] as JSONValue)
             })),
             "anthropic": ["effort": .string(settings.anthropicEffort), "base_url": .string(settings.anthropicBaseURL),
                           "api_key": .string(storedKeys.contains(.anthropic) ? "stored in Keychain" : "missing")],
@@ -279,7 +279,7 @@ final class AppModel {
                 "task": .string(settings.activeTask.rawValue),
                 "provider": .string(selection.provider.rawValue),
                 "model": .string(selection.model),
-                "local": .bool(selection.provider.isLocal),
+                "local": .bool(settings.runsOnThisMac(selection.provider)),
             ],
             "online": .bool(isOnline),
             "capture": capture.stateJSON(),
@@ -289,7 +289,6 @@ final class AppModel {
                 let s = settings.selection(for: task)
                 return (task.rawValue, ["provider": .string(s.provider.rawValue), "model": .string(s.model)] as JSONValue)
             })),
-            "slides": [],
             "recording": capture.recordingJSON(),
         ]
     }

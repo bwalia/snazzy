@@ -18,7 +18,7 @@ struct ChatHeader: View {
                 }
                 .labelsHidden()
                 .fixedSize()
-                .help("Which model setting the chat uses (⌥⌘1–3)")
+                .help("Which model setting the chat uses (⌥⌘1–4)")
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(selection.model).font(.callout.weight(.medium)).lineLimit(1)
@@ -67,22 +67,24 @@ struct ChatHeader: View {
 }
 
 struct LocationBadge: View {
+    @Environment(AppModel.self) private var model
     let provider: ProviderKind
     let sending: Bool
 
     var body: some View {
-        let local = provider.isLocal
+        let local = model.settings.runsOnThisMac(provider)
+        let name = model.settings.recipientName(provider)
         HStack(spacing: 4) {
             Image(systemName: local ? "desktopcomputer" : (sending ? "icloud.and.arrow.up.fill" : "cloud"))
                 .symbolEffect(.pulse, isActive: sending && !local)
-            Text(local ? "Local" : (sending ? "Sending to \(provider.displayName)" : "Cloud"))
+            Text(local ? "Local" : (sending ? "Sending to \(name)" : (provider == .ollama ? "Network" : "Cloud")))
         }
         .font(.caption.weight(.semibold))
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(Capsule().fill(local ? Color.green.opacity(0.18) : Color.orange.opacity(sending ? 0.35 : 0.18)))
         .foregroundStyle(local ? .green : .orange)
-        .help(local ? "Runs on this Mac; nothing leaves the computer." : "Messages are sent to \(provider.displayName).")
+        .help(local ? "Runs on this Mac; nothing leaves the computer." : "Messages are sent to \(name).")
         .accessibilityLabel(local ? "Local model" : (sending ? "Sending to cloud provider" : "Cloud model"))
     }
 }

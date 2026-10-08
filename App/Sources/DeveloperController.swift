@@ -226,8 +226,8 @@ final class DeveloperController {
             Transcript:
             \(transcript)
             """
-        if !selection.provider.isLocal {
-            guard CloudReview.confirm(provider: selection.provider.displayName, what: "this transcript", text: prompt,
+        if !app.settings.runsOnThisMac(selection.provider) {
+            guard CloudReview.confirm(provider: app.settings.recipientName(selection.provider), what: "this transcript", text: prompt,
                                       note: "Summaries use your Writing model (\(selection.model)). Choose a local model in Settings › Models to keep it on this Mac.")
             else { throw CaptureActionError(message: "Not sent. The summary was cancelled.") }
         }

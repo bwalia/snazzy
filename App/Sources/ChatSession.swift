@@ -111,7 +111,7 @@ final class ChatSession {
         You can only change the app through the tools you are given; never claim to have done something a tool did not do. \
         Use get_project_state or list_devices to see what is set up before changing it, and pick devices by the names those tools return. \
         iPad/iPhone screens connected by USB can take up to 30 seconds to appear; tell the user when you are waiting. \
-        If a capability has no tool yet (recording and video export come later), say so plainly and explain what the user can do instead. \
+        If a capability has no tool yet (for example changing the layout of a finished recording), say so plainly and explain what the user can do instead. \
         Keep replies short and practical; use Markdown.
 
         Settings: get_settings shows every setting; update_settings changes app options. Presets save and load whole setups \
@@ -230,11 +230,13 @@ final class ChatSession {
         return sent
     }
 
-    /// Sends plain text (used by tests and quick actions).
+    /// Sends plain text without touching the composer (quick actions, the remote):
+    /// what the user is typing, attachments and an edit in progress stay as they are.
     @discardableResult
     func send(_ text: String) -> Bool {
-        draft = text
-        return sendDraft()
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return false }
+        return send(.user(text), attachmentNames: [], viaVoice: false)
     }
 
     /// Re-runs the last user turn.

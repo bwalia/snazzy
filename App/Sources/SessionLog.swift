@@ -4,7 +4,7 @@ import SnazzyCore
 /// A timestamped record of a working session with the assistant: messages,
 /// tool calls, builder steps and voice clips, in
 /// `~/Movies/Snazzy Pro/Sessions/<date> <title>/`. Screen and camera video of
-/// the session come with the recorder (phase 4).
+/// the session aren't included (use the recorder).
 @MainActor
 final class SessionLog {
     private(set) var folder: URL?

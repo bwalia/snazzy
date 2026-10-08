@@ -186,7 +186,9 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
   field needs a default.
 - **Secrets go only through `SecretStore`/Keychain.** Never put them in UserDefaults, files,
   logs, tool results or chat. Log with `Log.<category>` (os.Logger, subsystem `com.snazzy.pro`).
-- **Ask before anything leaves the Mac:**
+- **Ask before anything leaves the Mac.** Decide whether something leaves with
+  `AppSettings.runsOnThisMac(kind)`, never `ProviderKind.isLocal`: Ollama can run on another
+  computer. The checks are:
   - cloud-provider consent (`ChatSession`);
   - `CloudReview.confirm` for text sent to a cloud model, with `SecretRedactor` applied
     to screen text first;
