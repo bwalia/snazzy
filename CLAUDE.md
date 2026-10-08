@@ -146,7 +146,8 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 
   Session logs go to `~/Movies/Snazzy Pro/Sessions/`.
 
-  **New Layout** (`CaptureEngine/Relayout.swift`) re-renders a recording from `raw/` and
+  **New Layout** (`CaptureEngine/Relayout.swift`, also vertical clips via `CompositeSpec.arrangement
+  = .stacked` and parts via `Options.range`) re-renders a recording from `raw/` and
   `timeline.json`. Anything a re-layout needs has to be saved in `timeline.json`
   (`Recorder.writeTimeline`): layout, profile, background, `camera_latency_ms`, markers.
   The output is written under a hidden `.partial` name and moved into place at the end.
