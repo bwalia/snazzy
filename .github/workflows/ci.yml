@@ -40,7 +40,16 @@ jobs:
       - uses: actions/checkout@v7
       - run: brew install xcodegen
       - name: watchOS platform (the iPhone app embeds the Watch app)
-        run: xcodebuild -downloadPlatform watchOS
+        # The simulator service can be slow to start on a fresh runner ("Unable to connect
+        # to simulator"): wake it first, and try the download a few times.
+        run: |
+          for attempt in 1 2 3; do
+            xcrun simctl list runtimes > /dev/null 2>&1 || true
+            xcodebuild -downloadPlatform watchOS && exit 0
+            echo "Download failed (attempt $attempt); trying again in 20 s"
+            sleep 20
+          done
+          exit 1
       - name: Build, unsigned
         run: |
           xcodegen
