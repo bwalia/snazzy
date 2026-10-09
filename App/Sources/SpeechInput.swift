@@ -1,11 +1,13 @@
 @preconcurrency import AVFoundation
+import CaptureEngine
 import Foundation
 import Observation
 import SnazzyCore
 @preconcurrency import Speech
 
-/// Push-to-talk: records the chosen mic, transcribes on-device with the Speech
-/// framework, and keeps the audio (for the session log).
+/// Push-to-talk and Voice Mode: records the chosen mic, transcribes with the
+/// Speech framework, and keeps the audio (for the session log). Speech is only
+/// ever turned into text on this Mac, never on Apple's servers.
 @MainActor @Observable
 final class SpeechInput {
     enum State: Equatable {
@@ -15,7 +17,7 @@ final class SpeechInput {
         case failed(String)
     }
 
-    struct Result {
+    struct Result: Sendable {
         var text: String
         var audioURL: URL?
         var duration: TimeInterval
@@ -25,7 +27,6 @@ final class SpeechInput {
     private(set) var partial = ""
     /// 0…1 input level for the meter.
     private(set) var level: Double = 0
-    private(set) var onDevice = false
 
     @ObservationIgnored private var session: AVCaptureSession?
     @ObservationIgnored private var tap: AudioTap?
@@ -34,14 +35,41 @@ final class SpeechInput {
     @ObservationIgnored private var finalText: String?
     @ObservationIgnored private var started = Date()
     @ObservationIgnored private var audioURL: URL?
+    /// Which start the recognizer's results belong to (late results from an old one are dropped).
+    @ObservationIgnored private var generation = 0
+    @ObservationIgnored private var lastStep: Task<Void, Never>?
 
     var isListening: Bool { state == .listening }
 
     /// Starts listening on the given mic (or the system default).
     func start(micID: String?, saveAudioTo directory: URL?) async {
+        await serially { await self.begin(micID: micID, saveAudioTo: directory) }
+    }
+
+    /// Stops listening and returns the transcript (waits briefly for the final result).
+    func stop() async -> Result? {
+        await serially { await self.end() }
+    }
+
+    /// Starts and stops run one at a time, in the order asked: a stop pressed
+    /// while it's still starting stops what started, and a quick off-and-on
+    /// can't stop the new session.
+    private func serially<T: Sendable>(_ step: @escaping @MainActor () async -> T) async -> T {
+        let previous = lastStep
+        let task = Task { @MainActor in
+            await previous?.value
+            return await step()
+        }
+        lastStep = Task { _ = await task.value }
+        return await task.value
+    }
+
+    private func begin(micID: String?, saveAudioTo directory: URL?) async {
         guard state != .listening else { return }
         partial = ""
         finalText = nil
+        generation += 1
+        let current = generation
         guard await Self.authorize() else {
             state = .failed("Allow Microphone and Speech Recognition for Snazzy Pro in System Settings → Privacy & Security.")
             return
@@ -49,6 +77,12 @@ final class SpeechInput {
         guard let recognizer = SFSpeechRecognizer(locale: Locale.current) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-US")),
               recognizer.isAvailable else {
             state = .failed("Speech recognition isn't available for \(Locale.current.identifier).")
+            return
+        }
+        guard recognizer.supportsOnDeviceRecognition else {
+            let language = Locale.current.localizedString(forIdentifier: recognizer.locale.identifier) ?? recognizer.locale.identifier
+            state = .failed("Snazzy Pro only turns speech into text on this Mac, and this Mac can't do that for \(language) yet. " +
+                            "Turn on Dictation for \(language) in System Settings › Keyboard to download it.")
             return
         }
         guard let mic = micID.flatMap(AVCaptureDevice.init(uniqueID:)) ?? AVCaptureDevice.default(for: .audio) else {
@@ -59,8 +93,7 @@ final class SpeechInput {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         request.addsPunctuation = true
-        onDevice = recognizer.supportsOnDeviceRecognition
-        if onDevice { request.requiresOnDeviceRecognition = true }
+        request.requiresOnDeviceRecognition = true
 
         var fileURL: URL?
         if let directory {
@@ -93,7 +126,7 @@ final class SpeechInput {
             let isFinal = result?.isFinal ?? false
             let failed = error != nil && result == nil
             Task { @MainActor in
-                guard let self else { return }
+                guard let self, self.generation == current else { return }
                 if let text { self.partial = text }
                 if isFinal || failed { self.finalText = text ?? self.partial }
             }
@@ -107,8 +140,7 @@ final class SpeechInput {
         await Task.detached { session.startRunning() }.value
     }
 
-    /// Stops listening and returns the transcript (waits briefly for the final result).
-    func stop() async -> Result? {
+    private func end() async -> Result? {
         guard state == .listening, let session else { return nil }
         state = .finishing
         await Task.detached { session.stopRunning() }.value
@@ -176,11 +208,13 @@ final class AudioTap: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, @u
     }
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        request.appendAudioSampleBuffer(sampleBuffer)
-        write(sampleBuffer)
+        // Silence while Snazzy Pro is speaking, so it doesn't hear itself.
+        let buffer = MicMute.apply(sampleBuffer)
+        request.appendAudioSampleBuffer(buffer)
+        write(buffer)
         if Date().timeIntervalSince(lastLevel) > 0.05 {
             lastLevel = Date()
-            onLevel(Self.level(sampleBuffer))
+            onLevel(Self.level(buffer))
         }
     }
 

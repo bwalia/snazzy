@@ -282,6 +282,7 @@ enum AppleToolPolicy {
         "open_preview", "close_preview", "start_recording", "stop_recording", "pause_recording", "resume_recording",
         "load_preset", "save_preset", "list_presets", "list_devices", "get_project_state",
         "create_project", "write_file", "check_preview", "show_slide", "update_settings", "set_model",
+        "set_prompter", "get_prompter",
     ]
 
     static func order(_ tools: [ToolDefinition]) -> [ToolDefinition] {

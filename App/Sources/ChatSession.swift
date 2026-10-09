@@ -244,6 +244,12 @@ final class ChatSession {
 
     static let contextPrefix = "Context (from the app, not typed by the user): "
 
+    /// The hidden "what's on screen" part Voice Mode adds to a message.
+    static func isContext(_ part: ContentPart) -> Bool {
+        if case .text(let t) = part { return t.hasPrefix("\n\n" + contextPrefix) }
+        return false
+    }
+
     /// A line in the chat about what Voice Mode did ("next slide", "recording started").
     func voiceNote(_ text: String, isError: Bool = false) { notice(text, isError: isError) }
 
@@ -251,7 +257,9 @@ final class ChatSession {
     func retryLast() {
         guard !isRunning, let last = conversation.messages.last(where: { $0.role == .user && $0.parts.contains(where: Self.isUserContent) }) else { return }
         let item = transcript.first { $0.messageID == last.id }
-        send(ChatMessage(role: .user, parts: last.parts), attachmentNames: item?.attachmentNames ?? [], viaVoice: false, replacing: last.id)
+        // Without the old screen context: it describes the screen as it was then.
+        send(ChatMessage(role: .user, parts: last.parts.filter { !Self.isContext($0) }), attachmentNames: item?.attachmentNames ?? [],
+             viaVoice: false, replacing: last.id)
     }
 
     /// Loads a user message into the composer to edit it.
@@ -259,7 +267,7 @@ final class ChatSession {
         guard !isRunning, let message = conversation.messages.first(where: { $0.id == messageID }) else { return }
         editingMessageID = messageID
         draft = message.parts.compactMap { part -> String? in
-            if case .text(let t) = part, !t.hasPrefix("Attached file ") { return t }
+            if case .text(let t) = part, !t.hasPrefix("Attached file "), !Self.isContext(part) { return t }
             return nil
         }.joined()
         attachments = []
@@ -525,7 +533,7 @@ final class ChatSession {
 
     static func displayText(_ message: ChatMessage) -> String {
         message.parts.compactMap { part -> String? in
-            if case .text(let t) = part, !t.hasPrefix("Attached file "), !t.hasPrefix("\n\n" + contextPrefix) { return t }
+            if case .text(let t) = part, !t.hasPrefix("Attached file "), !isContext(part) { return t }
             return nil
         }.joined()
     }
@@ -592,17 +600,22 @@ final class ChatSession {
     /// Before anything goes to a cloud AI provider for the first time, explain
     /// what is shared and ask (App Store guideline 5.1.2). Local models never ask.
     static func hasCloudConsent(_ provider: ProviderKind, app: AppModel) -> Bool {
-        guard !provider.isLocal else { return true }
+        // Ollama can run on another computer: that's leaving the Mac too.
+        guard !app.settings.runsOnThisMac(provider) else { return true }
         if app.settings.cloudConsent.contains(provider.rawValue) { return true }
+        let recipient = app.settings.recipientName(provider)
         let alert = NSAlert()
-        alert.messageText = "Send your messages to \(provider.displayName)?"
+        alert.messageText = "Send your messages to \(recipient)?"
+        let terms = provider == .ollama
+            ? "Whoever runs that computer can see them."
+            : "\(provider.displayName) handles this data under its own terms and privacy policy, using your API key."
         alert.informativeText = """
-            To answer with a cloud model, Snazzy Pro sends \(provider.displayName) your messages, any files or images you attach, \
+            To answer, Snazzy Pro sends \(recipient) your messages, any files or images you attach, \
             and what the assistant's tools return (for example device names, your settings, and the files of projects it builds). \
             Recordings, camera and screen video are never sent.
 
-            \(provider.displayName) handles this data under its own terms and privacy policy, using your API key. \
-            To keep everything on this Mac, choose a local model (Ollama) instead. You can withdraw this in Settings › Chat & Voice.
+            \(terms) \
+            To keep everything on this Mac, choose a model that runs here instead. You can withdraw this in Settings › Chat & Voice.
             """
         alert.addButton(withTitle: "Allow")
         alert.addButton(withTitle: "Not Now")

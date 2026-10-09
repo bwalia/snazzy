@@ -440,7 +440,11 @@ enum AssistantTools {
                     "display": ["type": "string", "description": "Move it to the top of this display (a name from get_prompter's displays), e.g. the one with the camera."],
                 ], required: [])
             ) { @Sendable args in
-                await MainActor.run {
+                try await MainActor.run {
+                    // Checked first, so a bad name changes nothing.
+                    if let name = args["display"]?.stringValue, !prompter.screenNames.contains(where: { $0.localizedCaseInsensitiveContains(name) }) {
+                        throw CaptureActionError(message: "No display called “\(name)”. Displays: \(prompter.screenNames.joined(separator: ", ")).")
+                    }
                     if let script = args["script"]?.stringValue {
                         prompter.settings.script = script
                         prompter.settings.source = .script
@@ -460,9 +464,7 @@ enum AssistantTools {
                     if let visible = args["visible"]?.boolValue { visible ? prompter.show() : prompter.hide() }
                     if let name = args["display"]?.stringValue {
                         prompter.show()
-                        guard prompter.move(toDisplayNamed: name) else {
-                            return ["error": .string("No display called \(name). Displays: \(prompter.screenNames.joined(separator: ", "))")] as JSONValue
-                        }
+                        _ = prompter.move(toDisplayNamed: name)
                     }
                     if args["restart"]?.boolValue == true { prompter.restart() }
                     if let scrolling = args["scrolling"]?.boolValue {

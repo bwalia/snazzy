@@ -48,8 +48,10 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 
 ## Build gotchas
 
-- **Never edit `SnazzyPro.xcodeproj`, `App/Info.plist`, `*.entitlements`, `iOS/Info.plist`
-  or `watchOS/Info.plist` by hand.** They are generated from `project.yml` and git-ignored.
+- **Never edit `SnazzyPro.xcodeproj`, `App/Info.plist`, `App/SnazzyPro.entitlements`, `iOS/Info.plist`
+  or `watchOS/Info.plist` by hand.** They are generated from `project.yml`. The project is
+  git-ignored; the Info.plists and entitlements are committed, so run `xcodegen` and commit
+  them with every `project.yml` change.
 - **Warnings are errors** (`SWIFT_TREAT_WARNINGS_AS_ERRORS`). Swift 6 language mode,
   strict concurrency.
 - **Signing:** `Config/Local.xcconfig` (git-ignored) holds the signing identity and team.
@@ -216,6 +218,10 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
   `@preconcurrency`.
 - **Persisted structs decode tolerantly** (`decodeIfPresent … ?? default`). Every new
   field needs a default.
+- **Speech becomes text only on this Mac.** `SpeechInput` requires on-device recognition and
+  fails with a message rather than using Apple's servers. Voice Mode (`VoiceMode.swift`) sends
+  something to the assistant, or starts a recording, only when it begins with the wake word;
+  while it speaks, `MicMute` silences every mic path, the recognizer included.
 - **Secrets go only through `SecretStore`/Keychain.** Never put them in UserDefaults, files,
   logs, tool results or chat. Log with `Log.<category>` (os.Logger, subsystem `com.snazzy.pro`).
 - **Ask before anything leaves the Mac.** Decide whether something leaves with

@@ -57,9 +57,9 @@
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Snazzy Pro connects to AI models on other computers on your network (such as Ollama on a Mac Studio), and hosts live rooms that people on your Wi-Fi join from their browser.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Snazzy Pro records your microphone for presentation voice-over and on-device captions.</string>
+	<string>Snazzy Pro records your microphone for your presentations, and listens for voice messages and Voice Mode when you turn them on.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Snazzy Pro creates captions from your recording using on-device speech recognition.</string>
+	<string>Snazzy Pro turns speech into text on this Mac, for captions, voice messages and Voice Mode. Your voice isn't sent to Apple for this.</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

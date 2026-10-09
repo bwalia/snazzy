@@ -6,6 +6,7 @@ public enum VoiceCommand: Equatable, Sendable {
     case nextSlide
     case previousSlide
     case goToSlide(Int)  // 1-based, as people say it
+    case lastSlide
     case startRecording
     case stopRecording
     case pauseRecording
@@ -17,16 +18,24 @@ public enum VoiceCommand: Equatable, Sendable {
 }
 
 public enum VoiceCommands {
+    public static let defaultWakeWord = "Snazzy"
+
+    /// The wake word in use: an empty setting doesn't turn the check off.
+    public static func wakeWord(_ setting: String) -> String {
+        let w = setting.trimmingCharacters(in: .whitespacesAndNewlines)
+        return w.isEmpty ? defaultWakeWord : w
+    }
+
     /// The text after the wake word, if the utterance starts with it
     /// ("Snazzy, next slide", "Hey Snazzy next slide", "OK Snazzy…"). Nil if it doesn't.
-    public static func afterWakeWord(_ text: String, wakeWord: String = "Snazzy") -> String? {
-        let wake = normalize(wakeWord)
-        guard !wake.isEmpty else { return text }
+    public static func afterWakeWord(_ text: String, wakeWord: String = defaultWakeWord) -> String? {
+        let greetings: Set<String> = ["hey", "ok", "okay", "hi"]
         var words = normalize(text).split(separator: " ").map(String.init)
-        if let first = words.first, ["hey", "ok", "okay", "hi"].contains(first) { words.removeFirst() }
-        let wakeWords = wake.split(separator: " ").map(String.init)
-        // Recognisers sometimes split or merge it ("snazzy" / "snazzie" / "snazy").
-        guard words.count >= wakeWords.count,
+        var wakeWords = normalize(Self.wakeWord(wakeWord)).split(separator: " ").map(String.init)
+        if let first = words.first, greetings.contains(first) { words.removeFirst() }
+        if wakeWords.count > 1, let first = wakeWords.first, greetings.contains(first) { wakeWords.removeFirst() }
+        // Recognisers sometimes spell it differently ("snazzie", "snazy").
+        guard !wakeWords.isEmpty, words.count >= wakeWords.count,
               zip(words, wakeWords).allSatisfy({ similar($0, $1) }) else { return nil }
         words.removeFirst(wakeWords.count)
         return words.joined(separator: " ")
@@ -41,7 +50,8 @@ public enum VoiceCommands {
         guard !s.isEmpty, words.count <= 5 else { return nil }
         switch s {
         case "next", "next slide", "forward", "slide forward", "advance": return .nextSlide
-        case "back", "previous", "previous slide", "last slide", "slide back", "back one slide": return .previousSlide
+        case "back", "previous", "previous slide", "slide back", "back one slide": return .previousSlide
+        case "last slide", "final slide": return .lastSlide
         case "start recording", "record", "begin recording", "start record", "start the recording": return .startRecording
         case "stop recording", "end recording", "finish recording", "stop record", "stop and save": return .stopRecording
         case "pause recording", "pause", "hold recording": return .pauseRecording
@@ -51,7 +61,12 @@ public enum VoiceCommands {
         case "stop listening", "voice mode off", "stop voice mode", "goodbye", "that's all", "thats all": return .stopListening
         default: break
         }
-        // "slide 5", "first slide", "slide number three"
+        // "slide 5", "first slide", "slide number three"; "go to slide to" is slide two.
+        let heard = normalize(text).split(separator: " ").map(String.init)
+        if let i = heard.lastIndex(of: "slide") {
+            let rest = heard[(i + 1)...].filter { $0 != "number" }
+            if rest.count == 1, let n = number(rest[rest.startIndex]) { return .goToSlide(n) }
+        }
         let slideWords = words.filter { $0 != "slide" && $0 != "number" }
         if words.contains("slide"), slideWords.count == 1, let n = number(slideWords[0]) { return .goToSlide(n) }
         if words == ["first"] || s == "first slide" || s == "beginning" { return .goToSlide(1) }
@@ -97,10 +112,22 @@ public enum VoiceCommands {
             .split(separator: " ").joined(separator: " ")
     }
 
+    /// Spelled differently but said the same ("snazzie", "snazy" for "snazzy");
+    /// a different word isn't ("snappy"). Long wake words allow one slip.
     static func similar(_ a: String, _ b: String) -> Bool {
-        if a == b { return true }
-        guard abs(a.count - b.count) <= 2, a.first == b.first, a.count >= 4 else { return false }
-        return distance(a, b) <= 2
+        let (x, y) = (sound(a), sound(b))
+        if x == y { return true }
+        return y.count >= 7 && x.first == y.first && distance(x, y) <= 1
+    }
+
+    /// Doubled letters as one, and an "ie"/"ey"/"i" ending as "y".
+    static func sound(_ word: String) -> String {
+        var out = ""
+        for c in word where c != out.last { out.append(c) }
+        for ending in ["ie", "ey", "i"] where out.count > ending.count + 2 && out.hasSuffix(ending) {
+            return String(out.dropLast(ending.count)) + "y"
+        }
+        return out
     }
 
     static func distance(_ a: String, _ b: String) -> Int {

@@ -222,8 +222,20 @@ MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
   each write the agent gets console errors and a page summary back, so it can
   fix its own mistakes. Paths are confined to the project folder.
 - **Voice:** the mic button (⇧⌘L) records the mic chosen in Sources and
-  transcribes it on-device with the Speech framework. The text goes into the
-  message box, or is sent straight away if "auto-send" is on.
+  transcribes it on this Mac with the Speech framework (never on Apple's
+  servers). The text goes into the message box, or is sent straight away if
+  "auto-send" is on.
+- **Voice Mode** (⌥⌘V): a hands-free conversation. Short commands ("next
+  slide", "go to slide 3", "stop recording") run straight away, even with no
+  AI set up. Questions for the assistant, and starting a recording, begin with
+  the wake word ("Snazzy, …"), so talk in the room isn't sent to the AI or
+  recorded; while recording or live, every command needs it. Replies are
+  spoken with the Mac's voices, and while it speaks the mic is muted in the
+  recording, the live room and streams.
+- **Camera Prompter:** your speaker notes or a script in a strip right under
+  the camera, scrolling at your reading speed, so you can read while looking at
+  the lens. It's left out of every recording and stream, follows the slides,
+  and can start and pause with the recording.
 - **Session record:** with "Keep a record of each session" on (default),
   messages, tool calls, builder steps and voice clips (`.m4a`) are written with
   timestamps to `~/Movies/Snazzy Pro/Sessions/<date> <title>/session.jsonl`.

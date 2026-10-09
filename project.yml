@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "0.2.5"
-    CURRENT_PROJECT_VERSION: "7"
+    MARKETING_VERSION: "0.2.6"
+    CURRENT_PROJECT_VERSION: "8"
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
     GCC_TREAT_WARNINGS_AS_ERRORS: YES
 packages:
@@ -83,8 +83,8 @@ targets:
         # Bonjour: the iPhone/iPad remote finds this Mac.
         NSBonjourServices: [_snazzyremote._tcp]
         NSCameraUsageDescription: Snazzy Pro records your camera (including an iPad or iPhone connected by USB) as an inset in your presentation videos.
-        NSMicrophoneUsageDescription: Snazzy Pro records your microphone for presentation voice-over and on-device captions.
-        NSSpeechRecognitionUsageDescription: Snazzy Pro creates captions from your recording using on-device speech recognition.
+        NSMicrophoneUsageDescription: Snazzy Pro records your microphone for your presentations, and listens for voice messages and Voice Mode when you turn them on.
+        NSSpeechRecognitionUsageDescription: Snazzy Pro turns speech into text on this Mac, for captions, voice messages and Voice Mode. Your voice isn't sent to Apple for this.
     entitlements:
       path: App/SnazzyPro.entitlements
       properties:
@@ -116,7 +116,8 @@ targets:
         # Recording, camera and mic permission to the app ID *and* its signature;
         # a debug build sharing com.snazzy.pro took over the installed app's
         # permission (switched on in System Settings, but refused). Separate IDs
-        # also keep self-tests out of the real app's settings and Keychain.
+        # also keep self-tests out of the real app's settings. The Keychain items
+        # are shared (same service name), so macOS may ask before a Dev build reads them.
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: com.snazzy.pro.dev
           APP_DISPLAY_NAME: Snazzy Pro Dev

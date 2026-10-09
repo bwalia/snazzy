@@ -111,7 +111,7 @@ struct Composer: View {
                     Text(chat.speech.partial.isEmpty ? "Listening…" : chat.speech.partial)
                         .font(.callout).foregroundStyle(.secondary).lineLimit(3)
                     Spacer()
-                    if chat.speech.onDevice { Text("on-device").font(.caption2).foregroundStyle(.tertiary) }
+                    Text("on-device").font(.caption2).foregroundStyle(.tertiary)
                 }
             }
             HStack(alignment: .bottom, spacing: 8) {
