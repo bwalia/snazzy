@@ -5,8 +5,8 @@ import Foundation
 /// welcome screen asks again.
 public enum Legal {
     public static let termsVersion = 1
-    public static let termsURL = URL(string: "https://bwalia.github.io/snazzy/terms.html")!
-    public static let privacyURL = URL(string: "https://bwalia.github.io/snazzy/privacy.html")!
+    public static let termsURL = URL(string: "https://www.snazzy.pro/terms.html")!
+    public static let privacyURL = URL(string: "https://www.snazzy.pro/privacy.html")!
     static let acceptedKey = "SnazzyPro.acceptedTermsVersion"
     static let acceptedDateKey = "SnazzyPro.acceptedTermsDate"
 

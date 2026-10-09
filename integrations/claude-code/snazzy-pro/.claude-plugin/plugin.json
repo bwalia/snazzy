@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Drive Snazzy Pro (Mac presentation studio) from Claude Code: build HTML decks and prototypes, set up microphone, screen, camera inset and background, and record videos.",
   "author": { "name": "Snazzy Pro" },
-  "homepage": "https://bwalia.github.io/snazzy/",
+  "homepage": "https://www.snazzy.pro/",
   "repository": "https://github.com/bwalia/snazzy",
   "keywords": ["presentations", "slides", "video", "recording", "mcp"]
 }
