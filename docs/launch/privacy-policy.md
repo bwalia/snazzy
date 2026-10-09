@@ -1,20 +1,30 @@
 <!-- Published version: site/privacy.html -->
 # Snazzy Pro privacy policy
 
-*Last updated: 7 October 2026*
+*Last updated: 9 October 2026*
 
 Snazzy Pro is a Mac app for planning, building and recording presentations.
 This policy explains what happens to your information.
 
 ## The short version
 
-- We (the makers of Snazzy Pro) **don't collect any data**: no analytics, no
-  tracking, no accounts and no servers.
+- The Snazzy Pro **app** doesn't collect data: no accounts, no analytics and
+  no servers of ours.
 - Your recordings, projects, conversations, settings and session records stay
   **on your Mac**.
 - If you choose a **cloud AI provider** (such as Anthropic), the content you
   send to the assistant goes **directly from your Mac to that provider**, using
   your own API key, and only after you agree.
+- This **website** (snazzy.pro) uses Google Analytics for visit metrics (see
+  below). That applies only to the site, not the Mac app.
+
+## This website
+
+snazzy.pro uses Google Analytics (gtag.js, measurement ID `G-6MRQDWE4SQ`) to
+measure page views and traffic. Google may set cookies or use similar
+identifiers and process data under Google's privacy policy at
+https://policies.google.com/privacy. This applies only to the website, not to
+the Mac app.
 
 ## What stays on your Mac
 
