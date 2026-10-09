@@ -100,7 +100,29 @@ and adds polish.
 2. A private `SnazzyProFeatures` Swift package containing the Pro features and
    StoreKit purchase UI. `project.yml` includes it only when it's present
    (official builds).
-3. A StoreKit configuration file for local testing and TestFlight, with
-   products created in App Store Connect (see `docs/launch/APP_STORE_CONNECT_SETUP.md`).
-4. A paywall sheet that shows both tiers clearly, with Restore Purchases, Terms
-   of Use (Apple's standard EULA) and Privacy links (required by App Review).
+3. **Done:** StoreKit 2 (`App/Sources/PurchaseController.swift`).
+   - It reads verified, unrefunded purchases from `Transaction.all` into the
+     Entitlements rules, so stacked years count, and listens for new ones.
+   - It handles purchase results (including Ask to Buy) and Restore
+     Purchases (`AppStore.sync()`).
+   - While the policy is `freeBeta` it does nothing at all.
+   - `App/Resources/SnazzyPro.storekit` is a local App Store with both products
+     ($49, $99), used by the Xcode scheme and by `--store-test`. It's left out
+     of Release builds.
+   - The real products are created in App Store Connect with the same IDs (see
+     `docs/launch/APP_STORE_CONNECT_SETUP.md`).
+4. **Done:** the Pro screen (`Views/ProView.swift`), shown as a Settings tab
+   once Pro is enforced.
+   - It lists what Pro adds, with what you have unlocked.
+   - It shows both tiers with App Store prices, and "Purchased" on a lifetime
+     tier you already own.
+   - It has Restore Purchases, Terms of Use (Apple's standard EULA) and the
+     Privacy Policy, as App Review requires.
+   - Try it in a debug build with `-SnazzyPro.enforcePro YES`, run from Xcode
+     so the local App Store is used.
+5. To do at launch:
+   - Switch `PurchaseController.policy` to `.enforced`.
+   - Check `isUnlocked` before each Pro feature, and offer the Pro screen when
+     it's locked.
+   - Sell direct-download licences through OpsAPI (StoreKit only works in the
+     Mac App Store build).

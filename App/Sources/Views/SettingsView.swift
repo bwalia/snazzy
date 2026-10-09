@@ -3,8 +3,15 @@ import SnazzyCore
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
         TabView {
+            // Hidden while Snazzy Pro is a free beta (nothing is sold yet).
+            if model.purchases.isSelling {
+                ProView(store: model.purchases)
+                    .tabItem { Label("Pro", systemImage: "star") }
+            }
             ModelsSettings()
                 .tabItem { Label("Models", systemImage: "cpu") }
             ProvidersSettings()

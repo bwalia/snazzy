@@ -122,6 +122,30 @@ Scripts/archive-appstore.sh --upload
 
 ---
 
+## Later: Snazzy Pro in-app purchases (when Pro launches)
+
+The app side is built: `PurchaseController` and the Pro screen. It stays hidden
+while Snazzy Pro is a free beta (`docs/business/PRO.md`). To sell Pro:
+
+1. **Agreements, Tax and Banking:** the Paid Apps agreement must be active, with
+   tax and bank details, before any purchase works.
+2. **The app › Monetization › In-App Purchases:** create two products. The IDs must
+   match `pro-features.json` exactly.
+
+   | Type | Product ID | Reference name | Price |
+   |---|---|---|---|
+   | Non-Consumable | `com.snazzy.pro.pro.lifetime` | Snazzy Pro | $49 |
+   | Non-Renewing Subscription | `com.snazzy.pro.pro.updates` | Pro + 1 year of new features | $99 |
+
+   Each needs a display name, a description, and a review screenshot of the Pro
+   screen (Settings › Pro).
+3. **Submit them with an app version** that has `PurchaseController.policy` set
+   to `.enforced`, and say in the review notes where the Pro screen is.
+4. **Test before submitting:**
+   - locally, from Xcode (the scheme uses `App/Resources/SnazzyPro.storekit`) or with
+     `--self-test --store-test`;
+   - then in TestFlight, with a Sandbox Apple Account.
+
 ## Later: iPhone, iPad and Apple Watch (phases 9–13)
 
 | When | In App Store Connect | In the project |

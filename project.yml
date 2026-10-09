@@ -49,6 +49,8 @@ targets:
         product: Broadcast
       - package: SnazzyKit
         product: Remote
+      - package: SnazzyKit
+        product: Entitlements
     info:
       path: App/Info.plist
       properties:
@@ -121,6 +123,15 @@ targets:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: com.snazzy.pro.dev
           APP_DISPLAY_NAME: Snazzy Pro Dev
+          # The --store-test self-test buys from a local App Store (StoreKitTest, from Xcode).
+          FRAMEWORK_SEARCH_PATHS: $(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks
+          LD_RUNPATH_SEARCH_PATHS: $(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks
+          OTHER_LDFLAGS: $(inherited) -weak_framework StoreKitTest
+          # StoreKitTest's own header uses an API deprecated in macOS 15; don't fail on it.
+          OTHER_SWIFT_FLAGS: $(inherited) -Xcc -Wno-deprecated-declarations
+        Release:
+          # The local App Store's products are for testing only.
+          EXCLUDED_SOURCE_FILE_NAMES: SnazzyPro.storekit
   # Snazzy Pro for iPhone and iPad: a remote for the Mac app. Same bundle ID
   # as the Mac app, so one App Store record covers both (Universal Purchase).
   SnazzyProiOS:
@@ -239,6 +250,8 @@ schemes:
         SnazzyPro: all
     run:
       config: Debug
+      # Local App Store for trying purchases from Xcode (the products in pro-features.json).
+      storeKitConfiguration: App/Resources/SnazzyPro.storekit
     test:
       config: Debug
       targets:

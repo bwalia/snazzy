@@ -1,0 +1,48 @@
+{
+  "identifier" : "4C0E7B52-2F7D-4C8E-9C43-7A9F1D8E6B21",
+  "nonRenewingSubscriptions" : [
+    {
+      "displayPrice" : "99.0",
+      "familyShareable" : false,
+      "internalID" : "6739000002",
+      "localizations" : [
+        {
+          "description" : "Pro, plus every new Pro feature released in the next 12 months, yours for good.",
+          "displayName" : "Pro + 1 year of new features",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.snazzy.pro.pro.updates",
+      "referenceName" : "Pro + 1 year of new features",
+      "type" : "NonRenewingSubscription"
+    }
+  ],
+  "products" : [
+    {
+      "displayPrice" : "49.0",
+      "familyShareable" : false,
+      "internalID" : "6739000001",
+      "localizations" : [
+        {
+          "description" : "Every Pro feature available today, yours for good, with fixes.",
+          "displayName" : "Snazzy Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.snazzy.pro.pro.lifetime",
+      "referenceName" : "Snazzy Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [ ]
+  },
+  "subscriptionGroups" : [ ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
