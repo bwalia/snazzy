@@ -5,6 +5,7 @@ import SwiftUI
 /// inline formatting. Tables are shown as monospaced text.
 struct MarkdownView: View {
     let text: String
+    @Environment(\.chatTextSize) private var size
 
     enum Block: Hashable {
         case heading(level: Int, text: String)
@@ -28,7 +29,7 @@ struct MarkdownView: View {
     @ViewBuilder private func view(for block: Block) -> some View {
         switch block {
         case .heading(let level, let t):
-            Text(inline(t)).font(level == 1 ? .title2.bold() : level == 2 ? .title3.bold() : .headline)
+            Text(inline(t)).font(.system(size: size * (level == 1 ? 1.4 : level == 2 ? 1.22 : 1.08), weight: .bold))
                 .padding(.top, 4)
         case .paragraph(let t):
             Text(inline(t))
@@ -46,7 +47,7 @@ struct MarkdownView: View {
             CodeBlock(language: language, code: code)
         case .table(let t):
             ScrollView(.horizontal) {
-                Text(t).font(.system(.callout, design: .monospaced)).fixedSize()
+                Text(t).font(.system(size: size - 1, design: .monospaced)).fixedSize()
             }
         case .rule:
             Divider()
@@ -136,6 +137,7 @@ struct MarkdownView: View {
 private struct CodeBlock: View {
     let language: String
     let code: String
+    @Environment(\.chatTextSize) private var size
     @State private var copied = false
 
     var body: some View {
@@ -155,7 +157,7 @@ private struct CodeBlock: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             ScrollView(.horizontal) {
-                Text(code).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).fixedSize().padding(8)
+                Text(code).font(.system(size: max(11, size - 2), design: .monospaced)).textSelection(.enabled).fixedSize().padding(8)
             }
         }
         .background(RoundedRectangle(cornerRadius: 6).fill(.quaternary.opacity(0.5)))

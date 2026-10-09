@@ -52,6 +52,21 @@ public enum TextToolCalls {
         return (cleaned.trimmingCharacters(in: .whitespacesAndNewlines), calls)
     }
 
+    /// A reply with a tool-call tag but no usable call (the model started one and
+    /// stopped): drop the tags and anything unfinished after an opening one.
+    public static func withoutStrayMarkup(_ text: String) -> String {
+        guard text.contains("<tool_call>") || text.contains("</tool_call>") || text.contains("<function=") else { return text }
+        var t = text
+        if let open = t.range(of: "<tool_call>", options: .backwards), t.range(of: "</tool_call>", range: open.upperBound..<t.endIndex) == nil {
+            t = String(t[..<open.lowerBound])
+        }
+        if let open = t.range(of: "<function=", options: .backwards), t.range(of: "</function>", range: open.upperBound..<t.endIndex) == nil {
+            t = String(t[..<open.lowerBound])
+        }
+        t = t.replacingOccurrences(of: #"</?tool_call>"#, with: "", options: .regularExpression)
+        return t.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Parameter text → JSON (numbers, booleans, arrays and objects stay typed).
     static func value(_ raw: String) -> JSONValue {
         let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)

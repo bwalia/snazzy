@@ -173,6 +173,48 @@ enum SelfTest {
             report("remote tour host", true, "paired \(paired), \(recordings.count) test recording(s) deleted")
             return ok
         }
+        if arguments.contains("--voice-test") {
+            // Voice Mode without the mic: commands, the wake word, and the mic
+            // muted while it speaks (silently).
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let savedSettings = app.settings
+            let projectsBefore = Set(app.builder.workspace.listProjects().map(\.name))
+            guard let sample = SampleDeck.all.first(where: { $0.id == "sales-demo" }) else { return ok }
+            _ = try? app.builder.openSample(sample)
+            try? await Task.sleep(for: .seconds(2))
+            let voice = app.voice!
+            voice.startScripted()
+            app.builder.goToSlide(0)
+            await voice.say("Next slide", wordsPerSecond: 50)
+            try? await Task.sleep(for: .milliseconds(700))
+            report("next slide", app.builder.currentSlide == 1, "slide \(app.builder.currentSlide + 1) of \(app.builder.deckSlides.count)")
+            await voice.say("Go to slide four", wordsPerSecond: 50)
+            try? await Task.sleep(for: .milliseconds(700))
+            report("go to slide 4", app.builder.currentSlide == 3, "slide \(app.builder.currentSlide + 1)")
+            // While recording or live, only wake-word lines count.
+            app.settings.alwaysNeedWakeWord = true
+            await voice.say("So the next slide shows our results", wordsPerSecond: 50)
+            try? await Task.sleep(for: .milliseconds(700))
+            report("audience talk ignored", app.builder.currentSlide == 3 && voice.lastAction.hasPrefix("Ignored"), voice.lastAction)
+            await voice.say("Snazzy, previous slide", wordsPerSecond: 50)
+            try? await Task.sleep(for: .milliseconds(700))
+            report("wake word obeyed", app.builder.currentSlide == 2, "slide \(app.builder.currentSlide + 1)")
+            // Speaking mutes the mic everywhere, then unmutes.
+            voice.speakVolume = 0
+            var mutedWhileSpeaking = false
+            let watcher = Task { @MainActor in
+                while !Task.isCancelled { if MicMute.isMuted { mutedWhileSpeaking = true }; try? await Task.sleep(for: .milliseconds(50)) }
+            }
+            await voice.speak("This is a quiet test of the speaking voice.")
+            watcher.cancel()
+            report("mic muted while speaking", mutedWhileSpeaking && !MicMute.isMuted, "muted during speech, open again after")
+            await voice.say("Snazzy, stop listening", wordsPerSecond: 50)
+            report("stop listening", !voice.isOn, "")
+            app.settings = savedSettings
+            for p in app.builder.workspace.listProjects() where !projectsBefore.contains(p.name) { try? app.builder.workspace.deleteProject(p.name) }
+            return ok
+        }
         if arguments.contains("--prompter-test") {
             // The camera prompter: shows a script, scrolls at reading speed, is
             // hidden from capture, follows the recording, and saves a picture of itself.

@@ -194,6 +194,8 @@ public struct OllamaStreamParser {
         if toolCalls.isEmpty, let found = TextToolCalls.extract(from: text) {
             text = found.text
             toolCalls = found.calls.map { ToolCall(id: "call_\(UUID().uuidString.prefix(8).lowercased())", name: $0.name, arguments: $0.arguments) }
+        } else {
+            text = TextToolCalls.withoutStrayMarkup(text)
         }
         var parts: [ContentPart] = []
         if !text.isEmpty { parts.append(.text(text)) }

@@ -92,6 +92,21 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var voiceAutoSend: Bool
     /// Keep a timestamped log of each session (messages, agent steps, voice audio) in ~/Movies/Snazzy Pro/Sessions.
     public var recordSessions: Bool
+    /// Chat text size in points (Settings › Chat, or ⌘+ / ⌘− in the chat).
+    public var chatTextSize: Double = 14
+    /// Voice Mode: say the assistant's replies out loud (the mic is muted while it speaks).
+    public var speakReplies = true
+    /// Voice Mode: while recording, live or streaming, only lines starting with this
+    /// word are for the assistant ("Snazzy, next slide"), so talking to the audience isn't.
+    public var wakeWord = "Snazzy"
+    /// Voice Mode: need the wake word all the time, not just while recording or live.
+    public var alwaysNeedWakeWord = false
+    /// The system voice for replies (empty: the best voice for the language).
+    public var voiceIdentifier = ""
+    /// Speaking rate, 0…1 (0.5 is normal).
+    public var speechRate = 0.5
+
+    public static let chatTextSizes: ClosedRange<Double> = 11...24
     /// Cloud providers the user has agreed to send content to (App Store 5.1.2).
     public var cloudConsent: [String] = []
 
@@ -136,6 +151,12 @@ public struct AppSettings: Codable, Hashable, Sendable {
         building = try c.decodeIfPresent(ModelSelection.self, forKey: .building) ?? d.building
         voiceAutoSend = try c.decodeIfPresent(Bool.self, forKey: .voiceAutoSend) ?? d.voiceAutoSend
         recordSessions = try c.decodeIfPresent(Bool.self, forKey: .recordSessions) ?? d.recordSessions
+        chatTextSize = min(max(try c.decodeIfPresent(Double.self, forKey: .chatTextSize) ?? d.chatTextSize, Self.chatTextSizes.lowerBound), Self.chatTextSizes.upperBound)
+        speakReplies = try c.decodeIfPresent(Bool.self, forKey: .speakReplies) ?? d.speakReplies
+        wakeWord = try c.decodeIfPresent(String.self, forKey: .wakeWord) ?? d.wakeWord
+        alwaysNeedWakeWord = try c.decodeIfPresent(Bool.self, forKey: .alwaysNeedWakeWord) ?? d.alwaysNeedWakeWord
+        voiceIdentifier = try c.decodeIfPresent(String.self, forKey: .voiceIdentifier) ?? d.voiceIdentifier
+        speechRate = min(max(try c.decodeIfPresent(Double.self, forKey: .speechRate) ?? d.speechRate, 0.1), 0.9)
         cloudConsent = try c.decodeIfPresent([String].self, forKey: .cloudConsent) ?? []
         quickCommands = try c.decodeIfPresent(ModelSelection.self, forKey: .quickCommands) ?? d.quickCommands
         activeTask = try c.decodeIfPresent(AssistantTask.self, forKey: .activeTask) ?? d.activeTask
