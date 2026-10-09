@@ -20,7 +20,7 @@ xcodegen                                   # regenerate SnazzyPro.xcodeproj; run
 xcodebuild -scheme SnazzyPro -derivedDataPath build/DerivedData build
 open build/DerivedData/Build/Products/Debug/SnazzyPro.app
 
-swift test --package-path Packages/SnazzyKit                      # all package tests (~130, a few seconds)
+swift test --package-path Packages/SnazzyKit                      # all package tests (~175, a few seconds)
 swift test --package-path Packages/SnazzyKit --filter RemoteTests  # one suite
 
 # Opt-in tests that touch real resources
@@ -98,6 +98,7 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 | `Live` | `LiveServer` (NWListener HTTP: viewer page, fMP4 segments, SSE), `LiveSegments`, `LiveViewerPage` (inline HTML/JS), `BrainstormBoard` |
 | `Broadcast` | `Broadcaster`: one HaishinKit RTMP pipeline per destination |
 | `Remote` | `RemoteHost`/`RemoteClient`/`RemoteLink`, `RemoteProtocol` (length-prefixed JSON), `RemoteSecurity` (TLS 1.2 PSK), `WatchLink`. No SnazzyCore dependency; it builds for iOS and watchOS |
+| `Entitlements` | Pro features and purchases: `ProCatalogue` (Pro features with release dates and the App Store product ids, as data in `pro-features.json`), `Entitlements.isUnlocked`/`limit` (policy `freeBeta` unlocks everything and is the default), `Licence.verify` (offline check of OpsAPI licence files, format v1 in OpsAPI's `docs/LICENCE_FORMAT.md`, tested against OpsAPI's published vectors; callers save `highWater` between checks), `MachineFingerprint`. Not linked into the app yet |
 
 ## Architecture essentials
 

@@ -1,6 +1,19 @@
 # Free and Pro: licensing and pricing plan
 
-*Status: proposal. The free/Pro split and the exact App Store products need sign-off.*
+*Status: decided, not yet enforced. Snazzy Pro is a free beta, so every feature
+stays unlocked until launch.*
+
+**Decisions (October 2026):**
+- The bundle ID stays `com.snazzy.pro`, so the products are
+  `com.snazzy.pro.pro.lifetime` and `com.snazzy.pro.pro.updates`.
+- The $99 tier is a non-renewing purchase, bought again by hand.
+- The Pro features are the split below. The list, with each feature's
+  release date, is data in
+  `Packages/SnazzyKit/Sources/Entitlements/Resources/pro-features.json`.
+- Direct-download licences come from OpsAPI: licence files in its format v1
+  (ES256 compact JWS, keys rotated through a JWKS), checked offline. The OpsAPI
+  app's feature keys must be the ids in `pro-features.json`, and the app keeps
+  the licence's `highWater` so turning the clock back doesn't extend it.
 
 ## Model: open core
 
@@ -49,22 +62,18 @@ The App Store requires in-app purchase to unlock features in an App Store app
 
 Rule in the app: each Pro feature has a release date. It's unlocked if any
 purchase "covers" that date: a lifetime purchase covers dates up to its purchase
-date; an updates purchase covers dates up to its purchase date plus 365 days.
-Purchases are read with `Transaction.currentEntitlements` / `Transaction.all`;
+date; an updates purchase covers one year from its purchase date, or from the
+end of the year already bought if that's later.
+Purchases are read with `Transaction.all` (`currentEntitlements` only has the
+latest non-renewing transaction, which would lose stacked years);
 **Restore Purchases** is in Settings. One purchase also covers the future
 iPhone/iPad app (Universal Purchase).
 
-**Things to confirm:**
-1. **Is "1 year of updates" a non-renewing purchase (bought again by hand), or
-   an auto-renewing $99/year subscription?** Auto-renewing earns more and is
-   less friction, but subscriptions get more App Review scrutiny and must
-   provide ongoing value.
-2. **Should buyers of the $49 tier get an upgrade price to the $99 tier?**
-   The App Store has no native upgrade pricing; it's usually done with a
-   separate discounted product or offer codes.
-3. **Which features are Pro** (below).
+**Still to decide:** should buyers of the $49 tier get an upgrade price to the
+$99 tier? The App Store has no native upgrade pricing; it's usually done with a
+separate discounted product or offer codes.
 
-## Suggested split (draft)
+## The split
 
 | Free (open source) | Pro |
 |---|---|
@@ -81,9 +90,13 @@ and adds polish.
 
 ## Implementation plan
 
-1. A small `Entitlements` module in the open core: `ProFeature` with release
-   dates, plus `isUnlocked(_:)`. The open-source build always says "locked" and
-   simply doesn't contain the Pro code paths.
+1. **Done:** the `Entitlements` module in SnazzyKit.
+   - The catalogue and the coverage rules: lifetime, plus update years that
+     stack.
+   - `isUnlocked(_:)` and `limit(_:)`.
+   - The licence verifier and the machine fingerprint.
+   - Its policy is `freeBeta` (everything unlocked) until launch. At launch
+     the app checks it before each Pro feature and switches it to `enforced`.
 2. A private `SnazzyProFeatures` Swift package containing the Pro features and
    StoreKit purchase UI. `project.yml` includes it only when it's present
    (official builds).
