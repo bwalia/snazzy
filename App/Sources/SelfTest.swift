@@ -9,6 +9,8 @@ import CoreImage
 import Foundation
 import ImageIO
 import SnazzyCore
+import StoreKit
+import StoreKitTest
 import SwiftUI
 
 /// Headless checks run inside the sandboxed app:
@@ -183,6 +185,69 @@ enum SelfTest {
             for r in recordings { for u in [r.composite, Chapters.url(forMovie: r.composite), r.rawFolder] { try? FileManager.default.removeItem(at: u) } }
             app.capture.apply(savedSetup)
             report("remote tour host", true, "paired \(paired), \(recordings.count) test recording(s) deleted")
+            return ok
+        }
+        if arguments.contains("--store-test") {
+            // Snazzy Pro purchases against a local App Store (StoreKitTest with
+            // SnazzyPro.storekit): products, buying, stacking years, refunds.
+            do {
+                guard let url = Bundle.main.url(forResource: "SnazzyPro", withExtension: "storekit") else {
+                    report("store configuration", false, "SnazzyPro.storekit isn't in the app")
+                    return ok
+                }
+                let session = try SKTestSession(contentsOf: url)
+                session.disableDialogs = true
+                session.clearTransactions()
+                defer { session.clearTransactions() }
+                let store = PurchaseController(policy: .enforced)
+                await store.loadProducts()
+                report("products", store.products.count == 2, store.products.map { "\($0.id) \($0.displayPrice)" }.joined(separator: ", "))
+                guard let lifetime = store.products.first(where: { $0.type == .nonConsumable }),
+                      let year = store.products.first(where: { $0.type == .nonRenewable }) else { return ok }
+                await store.refresh()
+                report("nothing owned yet", store.owned == nil && !store.isUnlocked("relayout"), "")
+                // On macOS a purchase is confirmed in a window (the Pro screen's SwiftUI action finds its own).
+                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 260), styleMask: [.titled], backing: .buffered, defer: false)
+                window.title = "Store test"
+                window.center()
+                window.orderFront(nil)
+                defer { window.close() }
+                func buy(_ product: Product) async {
+                    await store.buy {
+                        if #available(macOS 15.2, *) { try await product.purchase(confirmIn: window) } else { try await product.purchase() }
+                    }
+                }
+                await buy(lifetime)
+                report("buying Pro unlocks it", store.isUnlocked("relayout"), store.coverSummary ?? store.message ?? "")
+                // The test store drops a repeat purchase made within a second or two: space them out.
+                await buy(year)
+                for attempt in 0..<3 where session.allTransactions().count < 3 {
+                    try? await Task.sleep(for: .seconds(2 + Double(attempt)))
+                    await buy(year)
+                }
+                let days = (store.owned?.updatesUntil?.timeIntervalSinceNow ?? 0) / 86_400
+                report("two years of updates stack", days > 725, "\(store.coverSummary ?? "") (\(session.allTransactions().count) purchases)")
+                // A picture of the Pro screen with Pro owned (screenshots need permission; this doesn't).
+                let pro = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 640), styleMask: [.titled], backing: .buffered, defer: false)
+                let host = NSHostingView(rootView: ProView(store: store).background(Color(nsColor: .windowBackgroundColor)))
+                host.appearance = NSAppearance(named: .aqua)
+                pro.contentView = host
+                pro.orderFront(nil)
+                try? await Task.sleep(for: .seconds(1.5))
+                if let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) {
+                    host.cacheDisplay(in: host.bounds, to: rep)
+                    let out = Recorder.defaultFolder.deletingLastPathComponent().appending(path: "pro-selftest.png")
+                    try? rep.representation(using: .png, properties: [:])?.write(to: out)
+                    print("picture: \(out.path)")
+                }
+                pro.close()
+                for t in session.allTransactions() { try session.refundTransaction(identifier: t.identifier) }
+                // Refunds arrive as transaction updates.
+                for _ in 0..<30 where store.owned != nil { try? await Task.sleep(for: .milliseconds(100)) }
+                report("refunds take Pro away", store.owned == nil && !store.isUnlocked("relayout"), "")
+            } catch {
+                report("store test", false, error.localizedDescription)
+            }
             return ok
         }
         if arguments.contains("--title-slide-test") {
