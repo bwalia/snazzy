@@ -305,7 +305,6 @@ enum SelfTest {
             }
             // Slide notes: at the end of one slide's notes it waits, then carries on with the next slide's.
             let projectsBefore = Set(app.builder.workspace.listProjects().map(\.name))
-            // This sample has notes on slides 1 and 3, and none on slide 2.
             if let sample = SampleDeck.all.first(where: { $0.id == "lesson-photosynthesis" }), (try? app.builder.openSample(sample)) != nil {
                 await deckAnswers(app)
                 p.settings.source = .notes
@@ -314,7 +313,7 @@ enum SelfTest {
                 p.offset = max(0, p.contentHeight - 1)
                 try? await Task.sleep(for: .milliseconds(300))
                 let waiting = p.isScrolling && p.offset >= p.contentHeight - 0.5
-                // Through slides without notes (it stays on), to the next one with notes (it scrolls).
+                // On to the next slide with notes (through any without, where it stays on and waits).
                 let next = app.builder.deckSlides.indices.first { $0 > 0 && !app.builder.deckSlides[$0].notes.isEmpty } ?? 1
                 for target in 1...next {
                     app.builder.goToSlide(target)

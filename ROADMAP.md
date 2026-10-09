@@ -35,9 +35,10 @@ original spec listed an iOS/iPadOS app as out of scope.
      ("next slide") and later the iPhone/iPad remote and Watch.
    - Done: slide changes saved as timeline markers and a `.chapters.vtt` next
      to the movie.
-   - Next: speaker notes for every sample slide; outline → slides → script from
-     chat as a guided flow; camera big on title slides, small on content slides
-     (phase 7 re-layout using the slide markers); embed chapters in the .mov.
+   - Done: speaker notes on every sample slide (read by the Present view and the
+     Camera Prompter; `SampleDeckTests` requires them).
+   - Next: outline → slides → script from chat as a guided flow; embed
+     chapters in the .mov. (Camera big on title slides: done in phase 7.)
 7. **Post** (in progress): ✅ trim (keeps chapters), ✅ captions, ✅ **New Layout**: re-render a recording from its raw tracks with the camera moved, resized, re-cropped, a new background or lip sync, hidden, or in 4K (`Relayout`, Recordings › New Layout…, `relayout_recording`); ✅ vertical 9:16 clips (screen on top, camera below) and parts of a recording, with their captions and chapters. ✅ layout over time: the camera bigger on title slides, live and in New Layout (`TitleSlides`). Next: a timeline editor.
 
 8. **Mac App Store launch** (in progress, see `docs/launch/APP_STORE.md`):

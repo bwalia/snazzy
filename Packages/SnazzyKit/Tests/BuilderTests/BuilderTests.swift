@@ -80,8 +80,11 @@ import SnazzyCore
             #expect(deck.slides.first?.layout == .title, "\(deck.id)")
             #expect(!deck.prompt.isEmpty && !deck.setup.isEmpty, "\(deck.id)")
             for s in deck.slides where s.layout == .stats { #expect(s.items.count % 2 == 0, "\(deck.id): \(s.heading)") }
+            // Speaker notes on every slide: the Present view and the Camera Prompter read them.
+            for s in deck.slides { #expect(!s.notes.isEmpty && s.notes.count <= 300, "\(deck.id): \(s.heading)") }
             let html = deck.html()
             #expect(html.components(separatedBy: "<section class=\"slide").count - 1 == deck.slides.count)
+            #expect(html.components(separatedBy: "<aside class=\"notes\">").count - 1 == deck.slides.count)
         }
     }
 
