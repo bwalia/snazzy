@@ -162,7 +162,7 @@ enum AssistantTools {
                 description: "List the camera backgrounds available (built-ins and the user's images) and which is active.",
                 inputSchema: emptySchema
             ) { @Sendable _ in await capture.backgroundsJSON() },
-        ] + recordingTools(capture) + builderTools(builder, sharing: app.sharing) + modelTools(app) + settingsTools(app) + liveTools(app.live) + broadcastTools(app.broadcast)
+        ] + recordingTools(capture) + builderTools(builder, sharing: app.sharing) + modelTools(app) + settingsTools(app) + liveTools(app.live) + broadcastTools(app.broadcast) + prompterTools(app.prompter)
           + DeveloperTools.tools(app.developer, offMac: offMac)
           + (includeMCP ? app.mcp.registeredTools() : []))
     }
@@ -420,6 +420,62 @@ enum AssistantTools {
                     return live.brainstormJSON()
                 }
             },
+        ]
+    }
+
+    static func prompterTools(_ prompter: PrompterController) -> [RegisteredTool] {
+        [
+            RegisteredTool(
+                name: "set_prompter",
+                description: "Control the camera prompter: large text right under the camera so the user can read while looking at the lens (never recorded or streamed). Show or hide it, choose what it shows (the current slide's speaker notes, or a script), put a script on it, start or pause scrolling, and set the speed (words per minute) and text size. Write scripts as spoken words, in short paragraphs. Every field is optional.",
+                inputSchema: object([
+                    "visible": ["type": "boolean"],
+                    "source": ["type": "string", "enum": ["notes", "script"]],
+                    "script": ["type": "string", "maxLength": .number(Double(PrompterSettings.maxScript))],
+                    "scrolling": ["type": "boolean", "description": "Start (true) or pause (false) scrolling."],
+                    "restart": ["type": "boolean", "description": "Back to the start of the text."],
+                    "words_per_minute": ["type": "number", "minimum": 60, "maximum": 260],
+                    "font_size": ["type": "number", "minimum": 16, "maximum": 72],
+                    "follows_recording": ["type": "boolean", "description": "Start and pause with the recording."],
+                    "display": ["type": "string", "description": "Move it to the top of this display (a name from get_prompter's displays), e.g. the one with the camera."],
+                ], required: [])
+            ) { @Sendable args in
+                await MainActor.run {
+                    if let script = args["script"]?.stringValue {
+                        prompter.settings.script = script
+                        prompter.settings.source = .script
+                        prompter.restart()
+                    }
+                    if let source = args["source"]?.stringValue.flatMap(PrompterSettings.Source.init(rawValue:)) {
+                        prompter.settings.source = source
+                        prompter.restart()
+                    }
+                    if let wpm = args["words_per_minute"]?.doubleValue {
+                        prompter.settings.wordsPerMinute = min(max(wpm, PrompterSettings.speedRange.lowerBound), PrompterSettings.speedRange.upperBound)
+                    }
+                    if let size = args["font_size"]?.doubleValue {
+                        prompter.settings.fontSize = min(max(size, PrompterSettings.fontRange.lowerBound), PrompterSettings.fontRange.upperBound)
+                    }
+                    if let follows = args["follows_recording"]?.boolValue { prompter.settings.followsRecording = follows }
+                    if let visible = args["visible"]?.boolValue { visible ? prompter.show() : prompter.hide() }
+                    if let name = args["display"]?.stringValue {
+                        prompter.show()
+                        guard prompter.move(toDisplayNamed: name) else {
+                            return ["error": .string("No display called \(name). Displays: \(prompter.screenNames.joined(separator: ", "))")] as JSONValue
+                        }
+                    }
+                    if args["restart"]?.boolValue == true { prompter.restart() }
+                    if let scrolling = args["scrolling"]?.boolValue {
+                        if scrolling { prompter.show(); prompter.start() } else { prompter.pause() }
+                    }
+                    return prompter.stateJSON()
+                }
+            },
+            RegisteredTool(
+                name: "get_prompter",
+                description: "The camera prompter's state: visible, scrolling, source (notes or script), words, speed and text size.",
+                inputSchema: object([:], required: [])
+            ) { @Sendable _ in await MainActor.run { prompter.stateJSON() } },
         ]
     }
 

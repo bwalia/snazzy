@@ -37,6 +37,8 @@ $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj
 #       --share-roundtrip --s3-test --zoom-test --preset-roundtrip --builder-errors
 #       --relayout-test [--show-sheet]   (New Layout through the app on a made-up recording)
 #       --title-slide-test               (bigger camera on title slides, live, with a sample deck)
+#       --voice-test (Voice Mode: commands, wake word, mic muted while speaking) | --prompter-test
+# Tours (films the app window): -SnazzyPro.tour <name>, e.g. voice-presenter, agent-classroom (Tours.all)
 
 Scripts/archive-appstore.sh [--upload]             # runs the tests, then archives a Release build for the Mac App Store
 ```
@@ -174,6 +176,17 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
     with a CSP that allows only their own files, so there's no internet access until the user
     clicks "Allow Internet".
   - `NavigationGuard` keeps every page on its project. External links open in the browser.
+- **Voice Mode** (`App/Sources/VoiceMode.swift`): hands-free conversation. Short commands
+  (`SnazzyCore/VoiceCommands.swift`) run without the AI; everything else goes to the chat with a
+  hidden context part (current slide, notes, recording/live state). Replies are spoken with
+  `AVSpeechSynthesizer`; while it speaks `CaptureEngine.MicMute` turns the mic into silence in
+  the recorder, live encoder and broadcaster. While recording/live, only wake-word lines count.
+- **Human in the loop:** irreversible or public actions go through `Confirm.ask` (a sheet on the
+  main window; Voice Mode announces it). Used by tool confirmations, MCP agent calls, the live
+  room and streams.
+- **Debug builds are "Snazzy Pro Dev" (`com.snazzy.pro.dev`).** macOS ties Screen Recording,
+  camera, mic and Local Network permission to the app ID and signature; sharing an ID with the
+  Developer ID download made the download's permission go to the debug build.
 - **Remote:**
   - Discovery is Bonjour `_snazzyremote._tcp`, over TLS 1.2 PSK.
   - Pairing is a QR code holding a one-time 256-bit secret. Each device then gets its own key.

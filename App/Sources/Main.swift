@@ -209,6 +209,12 @@ struct AppCommands: Commands {
             Button("Open Present Window") { model.builder.openPopOut() }
                 .disabled(!model.builder.isDeckOpen)
             Divider()
+            Button(model.prompter.isShown ? "Hide Camera Prompter" : "Show Camera Prompter") { model.prompter.toggle() }
+                .keyboardShortcut("t", modifiers: [.command, .option])
+            Button(model.prompter.isScrolling ? "Pause Prompter" : "Start Prompter") { model.prompter.toggleScrolling() }
+                .keyboardShortcut("p", modifiers: [.command, .option])
+                .disabled(!model.prompter.isShown)
+            Divider()
             Button("Reset Zoom") { model.capture.animateZoom(to: nil) }
                 .keyboardShortcut("0", modifiers: [.command, .option])
                 .disabled(model.capture.screenZoom == nil)
@@ -221,6 +227,18 @@ struct AppCommands: Commands {
             Button("Stop Generating") { model.chat.stop() }
                 .keyboardShortcut(".")
                 .disabled(!model.chat.isRunning)
+            Divider()
+            Button(model.voice.isOn ? "Turn Off Voice Mode" : "Voice Mode") { model.voice.toggle() }
+                .keyboardShortcut("v", modifiers: [.command, .option])
+            Button("Stop Talking") { model.voice.stopTalking() }
+                .disabled(model.voice.state != .speaking)
+            Divider()
+            Button("Larger Chat Text") { model.settings.chatTextSize = min(AppSettings.chatTextSizes.upperBound, model.settings.chatTextSize + 1) }
+                .keyboardShortcut("+", modifiers: .command)
+            Button("Smaller Chat Text") { model.settings.chatTextSize = max(AppSettings.chatTextSizes.lowerBound, model.settings.chatTextSize - 1) }
+                .keyboardShortcut("-", modifiers: .command)
+            Button("Actual Size Chat Text") { model.settings.chatTextSize = AppSettings.default.chatTextSize }
+                .keyboardShortcut("0", modifiers: .command)
             Divider()
             ForEach(Array(AssistantTask.allCases.enumerated()), id: \.element) { index, task in
                 Button("Use \(task.displayName) Model") { model.settings.activeTask = task }

@@ -208,6 +208,89 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--voice-test") {
+            // Voice Mode without the mic: commands, the wake word, and the mic
+            // muted while it speaks (silently).
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let savedSettings = app.settings
+            let projectsBefore = Set(app.builder.workspace.listProjects().map(\.name))
+            guard let sample = SampleDeck.all.first(where: { $0.id == "sales-demo" }) else { return ok }
+            _ = try? app.builder.openSample(sample)
+            try? await Task.sleep(for: .seconds(2))
+            let voice = app.voice!
+            voice.startScripted()
+            app.builder.goToSlide(0)
+            await voice.say("Next slide", wordsPerSecond: 50)
+            try? await Task.sleep(for: .milliseconds(700))
+            report("next slide", app.builder.currentSlide == 1, "slide \(app.builder.currentSlide + 1) of \(app.builder.deckSlides.count)")
+            await voice.say("Go to slide four", wordsPerSecond: 50)
+            try? await Task.sleep(for: .milliseconds(700))
+            report("go to slide 4", app.builder.currentSlide == 3, "slide \(app.builder.currentSlide + 1)")
+            // While recording or live, only wake-word lines count.
+            app.settings.alwaysNeedWakeWord = true
+            await voice.say("So the next slide shows our results", wordsPerSecond: 50)
+            try? await Task.sleep(for: .milliseconds(700))
+            report("audience talk ignored", app.builder.currentSlide == 3 && voice.lastAction.hasPrefix("Ignored"), voice.lastAction)
+            await voice.say("Snazzy, previous slide", wordsPerSecond: 50)
+            try? await Task.sleep(for: .milliseconds(700))
+            report("wake word obeyed", app.builder.currentSlide == 2, "slide \(app.builder.currentSlide + 1)")
+            // Speaking mutes the mic everywhere, then unmutes.
+            voice.speakVolume = 0
+            var mutedWhileSpeaking = false
+            let watcher = Task { @MainActor in
+                while !Task.isCancelled { if MicMute.isMuted { mutedWhileSpeaking = true }; try? await Task.sleep(for: .milliseconds(50)) }
+            }
+            await voice.speak("This is a quiet test of the speaking voice.")
+            watcher.cancel()
+            report("mic muted while speaking", mutedWhileSpeaking && !MicMute.isMuted, "muted during speech, open again after")
+            await voice.say("Snazzy, stop listening", wordsPerSecond: 50)
+            report("stop listening", !voice.isOn, "")
+            app.settings = savedSettings
+            for p in app.builder.workspace.listProjects() where !projectsBefore.contains(p.name) { try? app.builder.workspace.deleteProject(p.name) }
+            return ok
+        }
+        if arguments.contains("--prompter-test") {
+            // The camera prompter: shows a script, scrolls at reading speed, is
+            // hidden from capture, follows the recording, and saves a picture of itself.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let p = app.prompter!
+            let saved = p.settings
+            p.settings.source = .script
+            p.settings.script = "Hi, I'm recording this while looking at the camera. The prompter sits right under the lens, so my eyes stay up. " +
+                "It scrolls at my reading speed, and it never shows up in the recording, the live room or the stream. " +
+                String(repeating: "Here is some more of the script to read, line after line. ", count: 12)
+            p.settings.wordsPerMinute = 150
+            p.show()
+            p.placeUnderCamera()
+            try? await Task.sleep(for: .seconds(1))
+            let window = NSApp.windows.first { $0 is PrompterPanel }
+            print("prompter window: \(window.map { NSStringFromRect($0.frame) } ?? "none")")
+            report("hidden from capture", window?.sharingType == NSWindow.SharingType.none && window?.level == .floating, "sharingType none, floating")
+            let expected = Prompter.pointsPerSecond(text: p.text, contentHeight: p.contentHeight, wordsPerMinute: 150)
+            p.start()
+            try? await Task.sleep(for: .seconds(3))
+            let moved = p.offset
+            report("scrolls at reading speed", p.contentHeight > 100 && abs(moved - expected * 3) < expected * 0.6,
+                   String(format: "text %.0f pt tall, moved %.0f pt in 3 s (expected about %.0f)", p.contentHeight, moved, expected * 3))
+            p.pause()
+            try? await Task.sleep(for: .milliseconds(300))
+            let stopped = p.offset
+            try? await Task.sleep(for: .milliseconds(500))
+            report("pauses", p.offset == stopped && !p.isScrolling, "")
+            // A picture of the prompter (screenshots can't see it: it's hidden from capture).
+            if let view = window?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                view.cacheDisplay(in: view.bounds, to: rep)
+                let out = Recorder.defaultFolder.deletingLastPathComponent().appending(path: "prompter-selftest.png")
+                try? rep.representation(using: .png, properties: [:])?.write(to: out)
+                print("picture: \(out.path)")
+            }
+            p.restart()
+            p.hide()
+            p.settings = saved
+            return ok
+        }
         if arguments.contains("--relayout-test") {
             // New Layout through the app: a made-up recording in a temp folder, cancelled once, then made.
             let app = AppModel()

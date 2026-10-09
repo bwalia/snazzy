@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "0.2.1"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "0.2.5"
+    CURRENT_PROJECT_VERSION: "7"
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
     GCC_TREAT_WARNINGS_AS_ERRORS: YES
 packages:
@@ -52,8 +52,8 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: Snazzy Pro
-        CFBundleName: Snazzy Pro
+        CFBundleDisplayName: $(APP_DISPLAY_NAME)
+        CFBundleName: $(APP_DISPLAY_NAME)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.video
@@ -110,6 +110,16 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        APP_DISPLAY_NAME: Snazzy Pro
+      configs:
+        # Debug builds are a separate app ("Snazzy Pro Dev"). macOS keys Screen
+        # Recording, camera and mic permission to the app ID *and* its signature;
+        # a debug build sharing com.snazzy.pro took over the installed app's
+        # permission (switched on in System Settings, but refused). Separate IDs
+        # also keep self-tests out of the real app's settings and Keychain.
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.snazzy.pro.dev
+          APP_DISPLAY_NAME: Snazzy Pro Dev
   # Snazzy Pro for iPhone and iPad: a remote for the Mac app. Same bundle ID
   # as the Mac app, so one App Store record covers both (Universal Purchase).
   SnazzyProiOS:

@@ -16,7 +16,10 @@ import SnazzyCore
 /// screen, leave the camera off, and put settings back afterwards.
 @MainActor
 enum Tours {
-    static let all = ["deck-by-talking", "sample-decks", "present-and-record", "live-classroom", "share", "go-live"]
+    static let all = ["deck-by-talking", "sample-decks", "present-and-record", "live-classroom", "share", "go-live",
+                      "voice-presenter", "agent-classroom"]
+    /// Tours that film sound (the assistant speaking).
+    static let withSound: Set<String> = ["voice-presenter"]
 
     static var folder: URL {
         FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask)[0].appending(path: "Snazzy Pro/Tours", directoryHint: .isDirectory)
@@ -49,7 +52,7 @@ enum Tours {
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             try? FileManager.default.removeItem(at: url)
-            try await film.start(window: window, to: url)
+            try await film.start(window: window, to: url, sound: withSound.contains(name))
         } catch {
             print("TOUR \(name): can't film: \(error.localizedDescription)")
         }
@@ -62,6 +65,8 @@ enum Tours {
             case "live-classroom": try await liveClassroom(app)
             case "share": try await share(app)
             case "go-live": cleanUp.append(try await goLive(app))
+            case "voice-presenter": cleanUp.append(try await voicePresenter(app))
+            case "agent-classroom": cleanUp.append(try await agentClassroom(app))
             default: print("TOUR: unknown tour \(name). Tours: \(all.joined(separator: ", "))")
             }
         } catch {
@@ -170,6 +175,116 @@ enum Tours {
             if let r = result {
                 for u in [r.composite, Chapters.url(forMovie: r.composite), r.rawFolder] { try? FileManager.default.removeItem(at: u) }
             }
+        }
+    }
+
+    /// The assistant on the local model, so tours don't need a cloud key. Puts the
+    /// user's choice back afterwards.
+    static func useLocalModel(_ app: AppModel) -> () -> Void {
+        let saved = app.settings
+        let model = ProcessInfo.processInfo.environment["SNAZZY_TOUR_MODEL"] ?? "qwen3-coder:30b"
+        for task in AssistantTask.allCases { app.settings.setSelection(ModelSelection(provider: .ollama, model: model), for: task) }
+        return { app.settings = saved }
+    }
+
+    /// Voice Mode runs a talk: slides and the recording by voice, audience talk
+    /// ignored, and a question answered out loud with the mic muted.
+    static func voicePresenter(_ app: AppModel) async throws -> () async -> Void {
+        let restoreModel = useLocalModel(app)
+        try openSample("sales-demo", app: app)
+        app.capture.selectSlidesSource()
+        app.sidePanelTab = .slides
+        app.slidesMode = .present
+        try await pause(2)
+        app.builder.openPopOut()
+        try await pause(1)
+        NSApp.windows.first(where: { $0.title == "Snazzy Pro" })?.makeKeyAndOrderFront(nil)
+        let voice = app.voice!
+        voice.startScripted()
+        try await pause(2)
+        await voice.say("Go to the first slide")
+        try await pause(1.5)
+        await voice.say("Start recording")
+        while app.capture.recorder.state != .recording { try await pause(0.3) }
+        try await pause(1.5)
+        // Talking to the audience: not for the assistant.
+        await voice.say("Good morning everyone, thanks for joining. Today I'll show you how we cut onboarding from two weeks to two days.")
+        try await pause(2.5)
+        await voice.say("Snazzy, next slide")
+        try await pause(3)
+        await voice.say("Snazzy, next slide")
+        try await pause(2.5)
+        await voice.say("Snazzy, in one sentence, what's the key point of this slide?")
+        try await pause(1.5)
+        await voice.say("Snazzy, next slide")
+        try await pause(3)
+        await voice.say("Snazzy, stop recording")
+        while app.capture.recorder.isActive { try await pause(0.3) }
+        let result = app.capture.recorder.lastResult
+        try await pause(1.5)
+        await voice.say("Snazzy, stop listening")
+        app.builder.closePopOutIfOpen()
+        app.sidePanelTab = .recordings
+        try await pause(3)
+        return {
+            restoreModel()
+            if let r = result {
+                for u in [r.composite, Chapters.url(forMovie: r.composite), r.rawFolder] { try? FileManager.default.removeItem(at: u) }
+            }
+        }
+    }
+
+    /// The assistant runs a live lesson from the chat: opens the room (you
+    /// approve it), welcomes the class, seeds the board, then turns the
+    /// students' ideas into a deck.
+    static func agentClassroom(_ app: AppModel) async throws -> () async -> Void {
+        let restoreModel = useLocalModel(app)
+        Confirm.autoApproveAfter = 3
+        try openSample("lesson-photosynthesis", app: app)
+        app.capture.selectSlidesSource()
+        app.builder.openPopOut()
+        NSApp.windows.first(where: { $0.title == "Snazzy Pro" })?.makeKeyAndOrderFront(nil)
+        app.sidePanelTab = .live
+        try await pause(2)
+        // One request per message: local models do several-in-one less reliably.
+        try await type("Start a live room for my class to brainstorm “How could our school use less energy?”", app: app)
+        try await waitForAssistant(app)
+        try await pause(1.5)
+        try await type("Post a short welcome message to the students.", app: app)
+        try await waitForAssistant(app)
+        try await pause(1.5)
+        try await type("Add two starter ideas of your own to the board.", app: app)
+        try await waitForAssistant(app)
+        try await pause(2)
+        guard let url = app.live.joinURL, let base = URL(string: "/", relativeTo: url) else {
+            return { Confirm.autoApproveAfter = nil; restoreModel() }
+        }
+        let ideas = [("Turn off screens at the end of every lesson", "Maya"), ("Solar panels on the sports hall roof", "Leo"),
+                     ("An energy monitor display in the hall", "Priya"), ("Walk or cycle to school week", "Sam")]
+        for (i, idea) in ideas.enumerated() {
+            try await post("api/notes", ["text": .string(idea.0), "name": .string(idea.1)], client: "student-\(i)", base: base, code: app.live.code)
+            try await pause(1.4)
+        }
+        let noteIDs = app.live.board.ranked.map(\.id)
+        for v in 0..<8 {
+            if let id = noteIDs[safe: [1, 0, 1, 2, 1, 0, 3, 1][v]] {
+                try await post("api/vote", ["id": .string(id)], client: "voter-\(v)", base: base, code: app.live.code)
+            }
+            try await pause(0.4)
+        }
+        try await pause(1.5)
+        try await type("Tell the class that voting is closed.", app: app)
+        try await waitForAssistant(app)
+        try await pause(1.5)
+        try await type("Create a new presentation project with 3 slides from the top ideas on the board, with speaker notes.", app: app)
+        try await waitForAssistant(app)
+        app.sidePanelTab = .builder
+        try await pause(1.5)
+        try await showSlides(app, count: 3, each: 2.5)
+        return {
+            Confirm.autoApproveAfter = nil
+            app.live.stop()
+            restoreModel()
         }
     }
 
@@ -282,7 +397,7 @@ final class WindowFilm: NSObject, SCRecordingOutputDelegate, SCStreamDelegate, @
     private var finished: CheckedContinuation<Void, Never>?
 
     @MainActor
-    func start(window: NSWindow, to url: URL) async throws {
+    func start(window: NSWindow, to url: URL, sound: Bool = false) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
         guard let w = content.windows.first(where: { $0.windowID == CGWindowID(window.windowNumber) }) else {
             throw CaptureError("The window isn't available to capture.")
@@ -295,7 +410,9 @@ final class WindowFilm: NSObject, SCRecordingOutputDelegate, SCStreamDelegate, @
         config.minimumFrameInterval = CMTime(value: 1, timescale: 30)
         config.showsCursor = false
         config.scalesToFit = true
-        config.capturesAudio = false
+        // Sound: the app's own audio (the assistant's voice), not the mic.
+        config.capturesAudio = sound
+        config.excludesCurrentProcessAudio = false
         let out = SCRecordingOutputConfiguration()
         out.outputURL = url
         out.outputFileType = .mp4

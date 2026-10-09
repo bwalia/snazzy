@@ -83,7 +83,7 @@ final class LiveController {
             """
         alert.addButton(withTitle: "Start Live Room")
         alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard await Confirm.ask(alert) else { return }
         await start()
     }
 

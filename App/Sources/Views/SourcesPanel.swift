@@ -532,10 +532,29 @@ private struct PermissionBlock: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                Button("Quit & Reopen") { AppRelaunch.relaunch() }
+                Button("Quit & Reopen") {
+                    UserDefaults.standard.set(true, forKey: Self.reopenedKey)
+                    AppRelaunch.relaunch()
+                }
                 Button("Check Again") { Task { await capture.catalog.refreshScreenContent(); await capture.updateScreenFeed() } }
+            }
+            // Switched on but still refused: macOS remembers the permission for the
+            // exact copy that first asked (an older version, another build, or the
+            // App Store version vs the download). Removing the entry clears that.
+            if reopenedBefore {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Already switched on, and it still says this?", systemImage: "exclamationmark.triangle")
+                        .font(.callout.weight(.medium)).foregroundStyle(.orange)
+                    Text("macOS may be holding the permission for an older copy of Snazzy Pro. In System Settings › Privacy & Security › Screen & System Audio Recording, select Snazzy Pro, click the minus (−) button to remove it, then click Quit & Reopen here and allow it again when macOS asks.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 4)
             }
         }
         .padding(.vertical, 4)
     }
+
+    static let reopenedKey = "SnazzyPro.reopenedForScreenPermission"
+    private var reopenedBefore: Bool { UserDefaults.standard.bool(forKey: Self.reopenedKey) }
 }
