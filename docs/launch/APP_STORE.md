@@ -110,17 +110,30 @@ a browser.
 ## 5. Screenshots
 
 Mac requires at least one 16:10 screenshot. Use **2880×1800** (or 2560×1600 or
-1440×900). Up to 10. Suggested set:
+1440×900). Up to 10.
 
-1. Chat + Builder: a deck being built, with live code and preview ("Just say it.")
-2. Sources & Preview: camera framed with crop handles, recording preview
-3. Recording in progress with the toolbar timer and inset
-4. A finished prototype in the Builder
-5. Settings: local vs cloud models, presets
+The app makes them itself, from demo content (sample decks, a made-up chat and
+classroom), so no personal windows or names appear:
 
-Use a clean user account or demo content (no personal windows, names or faces
-you don't want public). Add a short headline above each in Manrope ExtraBold on
-the Ink background (`docs/brand/BRAND.md`).
+1. Allow **Screen & System Audio Recording** for **Snazzy Pro Dev** (the debug
+   build) in System Settings › Privacy & Security, once.
+2. Build the debug app and run
+   `build/DerivedData/Build/Products/Debug/SnazzyPro.app/Contents/MacOS/SnazzyPro -SnazzyPro.screenshots YES`.
+   It sets up each scene, captures the window, cleans up and quits (about 30 s).
+   The raw captures and `shots.json` go to `~/Movies/Snazzy Pro/Screenshots/raw`.
+   The conversation list is hidden, but Builder and Settings show your own
+   projects and settings: check the raw captures before uploading.
+3. `swift Scripts/frame-screenshots.swift` frames each one at 2880×1800: the
+   headline in Manrope ExtraBold on Ink with the Spotlight glow
+   (`docs/brand/BRAND.md`), the window below.
+
+The set (headlines in `App/Sources/Screenshots.swift`):
+
+1. "Just say it.": a deck built from one request, chat and Builder
+2. "Present and record in one place.": Present view with notes, recording
+3. "Run the show by voice.": Voice Mode hearing "Snazzy, next slide"
+4. "Teach a live room on your Wi‑Fi.": the room with its brainstorm board
+5. "On your Mac, or in the cloud.": Settings › Models
 
 ## 6. App Review notes (paste into App Store Connect)
 
