@@ -12,6 +12,9 @@ import Testing
         #expect(VoiceCommands.parse("Go to slide 5") == .goToSlide(5))
         #expect(VoiceCommands.parse("slide number three") == .goToSlide(3))
         #expect(VoiceCommands.parse("first slide") == .goToSlide(1))
+        #expect(VoiceCommands.parse("Go to slide to") == .goToSlide(2))
+        #expect(VoiceCommands.parse("Go to slide four") == .goToSlide(4))
+        #expect(VoiceCommands.parse("Last slide") == .lastSlide)
         #expect(VoiceCommands.parse("Start the teleprompter") == .startPrompter)
         #expect(VoiceCommands.parse("Stop listening") == .stopListening)
     }
@@ -26,8 +29,16 @@ import Testing
         #expect(VoiceCommands.afterWakeWord("Snazzy, next slide") == "next slide")
         #expect(VoiceCommands.afterWakeWord("Hey Snazzy next slide") == "next slide")
         #expect(VoiceCommands.afterWakeWord("Snazzie stop recording") == "stop recording")
+        #expect(VoiceCommands.afterWakeWord("Snazy, pause") == "pause")
         #expect(VoiceCommands.afterWakeWord("So the next slide shows our results") == nil)
-        #expect(VoiceCommands.afterWakeWord("next slide", wakeWord: "") == "next slide")
+        // A different word isn't the wake word.
+        #expect(VoiceCommands.afterWakeWord("Snappy answers win deals") == nil)
+        // An empty setting doesn't switch the check off.
+        #expect(VoiceCommands.afterWakeWord("next slide", wakeWord: " ") == nil)
+        #expect(VoiceCommands.afterWakeWord("Snazzy next slide", wakeWord: "") == "next slide")
+        // A wake word that starts with a greeting works with or without it.
+        #expect(VoiceCommands.afterWakeWord("Hey Computer, next slide", wakeWord: "Hey Computer") == "next slide")
+        #expect(VoiceCommands.afterWakeWord("Computer next slide", wakeWord: "Hey Computer") == "next slide")
     }
 
     @Test func speakableText() {

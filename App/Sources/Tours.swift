@@ -29,6 +29,7 @@ enum Tours {
         print("TOUR \(name): starting")
         let savedSetup = app.capture.setup
         let savedTab = app.sidePanelTab
+        let savedSettings = app.settings
         app.sessionLoggingSuspended = true
         app.hideConversations = true
         let projectsBefore = Set(app.builder.workspace.listProjects().map(\.name))
@@ -80,6 +81,9 @@ enum Tours {
         for p in app.builder.workspace.listProjects() where !projectsBefore.contains(p.name) && !p.name.hasPrefix("sample-") {
             try? app.builder.workspace.deleteProject(p.name)
         }
+        // Even if a step failed before its own clean-up was set up.
+        Confirm.autoApproveAfter = nil
+        app.settings = savedSettings
         app.capture.apply(savedSetup)
         app.sidePanelTab = savedTab
         app.hideConversations = false
@@ -204,7 +208,7 @@ enum Tours {
         try await pause(2)
         await voice.say("Go to the first slide")
         try await pause(1.5)
-        await voice.say("Start recording")
+        await voice.say("Snazzy, start recording")
         while app.capture.recorder.state != .recording { try await pause(0.3) }
         try await pause(1.5)
         // Talking to the audience: not for the assistant.

@@ -17,6 +17,18 @@ import SwiftUI
 /// the environment (self-test only; never persisted).
 @MainActor
 enum SelfTest {
+    /// Waits until a just-opened deck takes commands (it reports its slides
+    /// before it's ready to change them), and leaves it on the first slide.
+    static func deckAnswers(_ app: AppModel) async {
+        for _ in 0..<100 where app.builder.deckSlides.count < 2 { try? await Task.sleep(for: .milliseconds(100)) }
+        for target in [1, 0] {
+            for _ in 0..<30 where app.builder.currentSlide != target {
+                app.builder.goToSlide(target)
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+        }
+    }
+
     static func run(arguments: [String]) async -> Bool {
         var ok = true
         func report(_ name: String, _ passed: Bool, _ detail: String) {
@@ -193,11 +205,11 @@ enum SelfTest {
                 report("deck reports title slides", kinds.first == true && kinds.contains(false), "\(kinds.prefix(6))")
                 app.capture.setTitleSlideSize(0.5)
                 _ = try await app.builder.showSlide(0)
-                try? await Task.sleep(for: .milliseconds(700))
+                for _ in 0..<30 where app.capture.insetSize != 0.5 { try? await Task.sleep(for: .milliseconds(100)) }
                 report("title slide: camera bigger", app.capture.insetSize == 0.5, "inset size \(app.capture.insetSize.map { String($0) } ?? "normal")")
                 let content = kinds.firstIndex(of: false) ?? 1
                 _ = try await app.builder.showSlide(content)
-                try? await Task.sleep(for: .milliseconds(700))
+                for _ in 0..<30 where app.capture.insetSize != nil { try? await Task.sleep(for: .milliseconds(100)) }
                 report("content slide: camera back", app.capture.insetSize == nil, "inset size \(app.capture.insetSize.map { String($0) } ?? "normal")")
                 app.capture.setTitleSlideSize(nil)
                 _ = try await app.builder.showSlide(0)
@@ -217,7 +229,7 @@ enum SelfTest {
             let projectsBefore = Set(app.builder.workspace.listProjects().map(\.name))
             guard let sample = SampleDeck.all.first(where: { $0.id == "sales-demo" }) else { return ok }
             _ = try? app.builder.openSample(sample)
-            try? await Task.sleep(for: .seconds(2))
+            await deckAnswers(app)
             let voice = app.voice!
             voice.startScripted()
             app.builder.goToSlide(0)
@@ -227,6 +239,11 @@ enum SelfTest {
             await voice.say("Go to slide four", wordsPerSecond: 50)
             try? await Task.sleep(for: .milliseconds(700))
             report("go to slide 4", app.builder.currentSlide == 3, "slide \(app.builder.currentSlide + 1)")
+            // Recording and questions for the AI need the wake word, even when nothing is recording.
+            await voice.say("Start recording", wordsPerSecond: 50)
+            report("record needs the wake word", !app.capture.recorder.isActive && voice.lastAction.hasPrefix("Ignored"), voice.lastAction)
+            await voice.say("What do you think of this slide", wordsPerSecond: 50)
+            report("questions need the wake word", !app.chat.isRunning && voice.lastAction.hasPrefix("Ignored"), voice.lastAction)
             // While recording or live, only wake-word lines count.
             app.settings.alwaysNeedWakeWord = true
             await voice.say("So the next slide shows our results", wordsPerSecond: 50)
@@ -285,6 +302,30 @@ enum SelfTest {
                 let out = Recorder.defaultFolder.deletingLastPathComponent().appending(path: "prompter-selftest.png")
                 try? rep.representation(using: .png, properties: [:])?.write(to: out)
                 print("picture: \(out.path)")
+            }
+            // Slide notes: at the end of one slide's notes it waits, then carries on with the next slide's.
+            let projectsBefore = Set(app.builder.workspace.listProjects().map(\.name))
+            // This sample has notes on slides 1 and 3, and none on slide 2.
+            if let sample = SampleDeck.all.first(where: { $0.id == "lesson-photosynthesis" }), (try? app.builder.openSample(sample)) != nil {
+                await deckAnswers(app)
+                p.settings.source = .notes
+                try? await Task.sleep(for: .milliseconds(500))
+                p.start()
+                p.offset = max(0, p.contentHeight - 1)
+                try? await Task.sleep(for: .milliseconds(300))
+                let waiting = p.isScrolling && p.offset >= p.contentHeight - 0.5
+                // Through slides without notes (it stays on), to the next one with notes (it scrolls).
+                let next = app.builder.deckSlides.indices.first { $0 > 0 && !app.builder.deckSlides[$0].notes.isEmpty } ?? 1
+                for target in 1...next {
+                    app.builder.goToSlide(target)
+                    for _ in 0..<20 where app.builder.currentSlide != target { try? await Task.sleep(for: .milliseconds(100)) }
+                }
+                try? await Task.sleep(for: .milliseconds(800))
+                report("follows the slides", waiting && p.isScrolling && p.offset > 0,
+                       String(format: "waited at the end, then %.0f pt into slide %d's notes", p.offset, app.builder.currentSlide + 1))
+                for project in app.builder.workspace.listProjects() where !projectsBefore.contains(project.name) {
+                    try? app.builder.workspace.deleteProject(project.name)
+                }
             }
             p.restart()
             p.hide()

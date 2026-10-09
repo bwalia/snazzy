@@ -259,9 +259,9 @@ struct ChatSettings: View {
                     Slider(value: $model.settings.speechRate, in: 0.3...0.65) { Text("Speed") }
                     Button("Test") { Task { await model.voice.speak("Hi, I'm Snazzy. Say next slide, start recording, or ask me anything.") } }
                 }
-                TextField("Wake word", text: $model.settings.wakeWord)
+                TextField("Wake word", text: $model.settings.wakeWord, prompt: Text(VoiceCommands.defaultWakeWord))
                 Toggle("Always need the wake word", isOn: $model.settings.alwaysNeedWakeWord)
-                Text("Voice Mode (⌥⌘V, or the waveform button next to the mic) is a hands-free conversation. Short commands like “next slide”, “go to slide 3”, “start recording” and “stop recording” happen straight away, even without AI; anything else goes to the assistant, which can run your slides, recording, prompter and live room. While it speaks, the mic is muted, so its voice isn't recorded or streamed. While you're recording, live or streaming, start with the wake word (“\(model.settings.wakeWord), next slide”) so talking to your audience isn't taken as a command. Better voices: System Settings › Accessibility › Spoken Content › System Voice › Manage Voices.")
+                Text("Voice Mode (⌥⌘V, or the waveform button next to the mic) is a hands-free conversation. It listens on this Mac: your voice isn't sent to Apple. Short commands like “next slide”, “go to slide 3” and “stop recording” happen straight away, even without AI. Start with the wake word to ask the assistant something or to start recording (“\(VoiceCommands.wakeWord(model.settings.wakeWord)), start recording”), so talk in the room isn't sent to the AI or recorded; the assistant can run your slides, recording, prompter and live room. While you're recording, live or streaming, every command needs the wake word, so talking to your audience isn't taken as one. While it speaks, the mic is muted, so its voice isn't recorded or streamed. Better voices: System Settings › Accessibility › Spoken Content › System Voice › Manage Voices.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Voice messages") {

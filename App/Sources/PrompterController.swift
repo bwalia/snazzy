@@ -10,14 +10,18 @@ import SwiftUI
 @MainActor @Observable
 final class PrompterController {
     var settings: PrompterSettings {
-        didSet { save() }
+        didSet { save(); speed = nil }
     }
     private(set) var isShown = false
+    /// Scrolling is on. With slide notes it stays on at the end of a slide's
+    /// notes, and carries on with the next slide's.
     private(set) var isScrolling = false
     /// How far the text has scrolled, in points.
     var offset: Double = 0
     /// Laid-out text height, reported by the view.
-    var contentHeight: Double = 0
+    var contentHeight: Double = 0 {
+        didSet { speed = nil }
+    }
     /// Editing the script in place.
     var isEditing = false
 
@@ -25,6 +29,8 @@ final class PrompterController {
     @ObservationIgnored private var panel: PrompterPanel?
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastTick: Date?
+    /// Points per second for the current text (counting words every frame is wasteful).
+    @ObservationIgnored private var speed: Double?
     static let settingsKey = "SnazzyPro.prompter.v1"
     static let frameName = "SnazzyProCameraPrompter"
 
@@ -135,7 +141,9 @@ final class PrompterController {
     /// display, else the main screen.
     static func cameraScreen() -> NSScreen? {
         NSScreen.screens.first { $0.safeAreaInsets.top > 0 }
-            ?? NSScreen.screens.first { $0.localizedName.localizedCaseInsensitiveContains("built-in") }
+            ?? NSScreen.screens.first { screen in
+                (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID).map { CGDisplayIsBuiltin($0) != 0 } ?? false
+            }
             ?? NSScreen.main
     }
 
@@ -151,20 +159,35 @@ final class PrompterController {
     }
 
     func start() {
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty || settings.source == .notes else { return }
         if offset >= contentHeight - 1 { offset = 0 }
         isScrolling = true
-        lastTick = nil
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
-        }
+        run()
     }
 
     func pause() {
         isScrolling = false
+        stopTimer()
+    }
+
+    /// Moves the text while scrolling is on and there's something to read
+    /// (a slide with no notes waits for the next one).
+    private func run() {
+        stopTimer()
+        speed = nil
+        guard isScrolling, !text.isEmpty else { return }
+        let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick() }
+        }
+        // Common modes: it keeps scrolling while a menu is open or a slider is dragged.
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    private func stopTimer() {
         timer?.invalidate()
         timer = nil
+        lastTick = nil
     }
 
     func toggleScrolling() { isScrolling ? pause() : start() }
@@ -183,8 +206,13 @@ final class PrompterController {
         let now = Date()
         defer { lastTick = now }
         guard let last = lastTick else { return }
-        offset += pointsPerSecond * now.timeIntervalSince(last)
-        if offset >= contentHeight { offset = contentHeight; pause() }
+        let pps = speed ?? pointsPerSecond
+        speed = pps
+        offset += pps * now.timeIntervalSince(last)
+        guard offset >= contentHeight else { return }
+        offset = contentHeight
+        // A script is done; slide notes carry on with the next slide.
+        if settings.source == .notes { stopTimer() } else { pause() }
     }
 
     // MARK: Following the recording and slides
@@ -210,8 +238,11 @@ final class PrompterController {
     private func watchSlides() {
         withObservationTracking { _ = app.builder.currentSlide } onChange: { [weak self] in
             Task { @MainActor in
-                // A new slide's notes start from the top.
-                if self?.settings.source == .notes { self?.restart() }
+                // A new slide's notes start from the top, and keep scrolling if it was on.
+                if let self, self.settings.source == .notes {
+                    self.restart()
+                    self.run()
+                }
                 self?.watchSlides()
             }
         }

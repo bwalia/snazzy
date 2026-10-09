@@ -1,18 +1,21 @@
 @preconcurrency import AVFoundation
+import Assistant
 import CaptureEngine
 import Foundation
 import Observation
 import SnazzyCore
 
-/// Voice Mode: a hands-free conversation with the assistant. It listens,
-/// runs short commands straight away ("next slide", "start recording"), sends
-/// everything else to the assistant, and says the reply out loud with the Mac's
-/// built-in voices.
+/// Voice Mode: a hands-free conversation with the assistant. It listens on
+/// this Mac (speech is never sent to Apple), runs short commands straight away
+/// ("next slide"), sends questions to the assistant, and says the reply out
+/// loud with the Mac's built-in voices.
 ///
 /// - While it speaks, the mic is muted everywhere (`MicMute`): its voice isn't
 ///   recorded, streamed or sent to the live room, and it doesn't hear itself.
-/// - While recording, live or streaming, only lines that start with the wake
-///   word are for it ("Snazzy, next slide"), so talking to the audience isn't.
+/// - Questions for the assistant, and starting a recording, need the wake word
+///   ("Snazzy, …"), so talk in the room isn't sent to the AI or recorded.
+/// - While recording, live or streaming, every line needs the wake word, so
+///   talking to the audience isn't a command.
 /// - Anything that needs your OK (going live, deleting) still asks on screen.
 @MainActor @Observable
 final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
@@ -34,6 +37,10 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
     @ObservationIgnored private let synthesizer = AVSpeechSynthesizer()
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var finishedSpeaking: CheckedContinuation<Void, Never>?
+    /// The reply being spoken (heads-up lines aren't replies).
+    @ObservationIgnored private var replyID: ObjectIdentifier?
+    /// Voice Mode is switched on (it can be speaking without it: "Test" in Settings).
+    @ObservationIgnored private var running = false
 
     /// For the confirmation dialog (a static path in ChatSession).
     static weak var current: VoiceMode?
@@ -58,10 +65,11 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
 
     // MARK: On and off
 
-    func toggle() { isOn ? stop() : start() }
+    func toggle() { running ? stop() : start() }
 
     func start() {
-        guard !isOn else { return }
+        guard !running else { return }
+        running = true
         if app.chat.speech.isListening { Task { await app.chat.speech.cancel() } }
         heard = ""
         lastAction = ""
@@ -69,6 +77,7 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     func stop() {
+        running = false
         loop?.cancel()
         loop = nil
         synthesizer.stopSpeaking(at: .immediate)
@@ -88,9 +97,9 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
         loop?.cancel()
         loop = Task { [weak self] in
             guard let self else { return }
-            guard let text = await self.nextUtterance(), !Task.isCancelled, self.isOn else { return }
+            guard let text = await self.nextUtterance(), !Task.isCancelled, self.running else { return }
             await self.handle(text)
-            if !Task.isCancelled, self.isOn { self.listen() }
+            if !Task.isCancelled, self.running { self.listen() }
         }
     }
 
@@ -102,6 +111,7 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
             stop()
             return nil
         }
+        guard !Task.isCancelled else { await speech.cancel(); return nil }
         var last = "", changed = Date(), started = Date()
         while !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(150))
@@ -115,7 +125,7 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
                 started = Date()
             }
         }
-        guard !Task.isCancelled else { return nil }
+        guard !Task.isCancelled else { await speech.cancel(); return nil }
         let text = await speech.stop()?.text ?? last
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -124,29 +134,42 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
 
     /// What to do with something said (internal: the tours and self-tests use it).
     func handle(_ said: String) async {
-        let wake = app.settings.wakeWord
-        var text = said
-        if needsWakeWord {
-            // Not for us: the presenter was talking to the audience.
-            guard let rest = VoiceCommands.afterWakeWord(said, wakeWord: wake) else {
-                lastAction = "Ignored: didn't start with “\(wake)”"
+        let wake = VoiceCommands.wakeWord(app.settings.wakeWord)
+        let woken = VoiceCommands.afterWakeWord(said, wakeWord: wake)
+        // Not for us: the presenter was talking to the audience.
+        if needsWakeWord, woken == nil {
+            lastAction = "Ignored: didn't start with “\(wake)”"
+            return
+        }
+        let text = woken ?? said
+        guard !text.isEmpty else { return }
+        if let command = VoiceCommands.parse(text) {
+            // Recording turns on the camera, screen and mic: only when asked by name.
+            if command == .startRecording, woken == nil {
+                lastAction = "Ignored: say “\(wake), start recording” to record"
                 return
             }
-            text = rest
-        } else if let rest = VoiceCommands.afterWakeWord(said, wakeWord: wake) {
-            text = rest
-        }
-        guard !text.isEmpty else { return }
-        heard = text
-        if let command = VoiceCommands.parse(text) {
+            heard = text
             await run(command)
             return
         }
+        // The assistant only gets what's said to it, not the room's talk.
+        guard woken != nil else {
+            lastAction = "Ignored: start with “\(wake)” to ask the assistant"
+            return
+        }
+        heard = text
         await ask(text)
     }
 
     private func run(_ command: VoiceCommand) async {
         let builder = app.builder, capture = app.capture
+        let slideCommand: Bool = switch command {
+        case .nextSlide, .previousSlide, .goToSlide, .lastSlide: true
+        default: false
+        }
+        if slideCommand, !builder.isDeckOpen { return done("No slide deck is open", isError: true) }
+        let state = capture.recorder.state
         switch command {
         case .nextSlide:
             await move { builder.nextSlide() }
@@ -157,6 +180,9 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
         case .goToSlide(let n):
             await move { builder.goToSlide(n - 1) }
             done("Slide \(builder.currentSlide + 1) of \(builder.deckSlides.count)")
+        case .lastSlide:
+            await move { builder.goToSlide(builder.deckSlides.count - 1) }
+            done("Last slide (\(builder.currentSlide + 1) of \(builder.deckSlides.count))")
         case .startRecording:
             do {
                 try await capture.startRecording()
@@ -165,12 +191,15 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
                 done("Couldn't start recording: \(error.localizedDescription)", isError: true)
             }
         case .stopRecording:
+            guard capture.recorder.isActive else { return done("Nothing is recording") }
             await capture.stopRecording()
             done("Recording stopped and saved")
         case .pauseRecording:
+            guard state == .recording else { return done(state == .paused ? "Recording is already paused" : "Nothing is recording") }
             capture.pauseRecording()
             done("Recording paused")
         case .resumeRecording:
+            guard state == .paused else { return done(state == .recording ? "Already recording" : "Nothing is paused") }
             capture.resumeRecording()
             done("Recording resumed")
         case .startPrompter:
@@ -200,6 +229,10 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
 
     /// Sends it to the assistant and says the reply.
     private func ask(_ text: String) async {
+        if app.chat.isRunning {
+            done("Still working on the last question: ask again in a moment")
+            return
+        }
         state = .thinking
         let before = app.chat.transcript.count
         guard app.chat.send(text, viaVoice: true, context: context()) else {
@@ -222,6 +255,7 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
     func startScripted() {
         heard = ""
         lastAction = ""
+        running = true
         state = .listening
     }
 
@@ -238,7 +272,7 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
         scripted = nil
         if let volume { speakVolume = volume }
         await handle(text)
-        if isOn { state = .listening }
+        if running { state = .listening }
     }
     #endif
 
@@ -251,10 +285,12 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
         let b = app.builder
         if b.isDeckOpen, b.deckSlides.indices.contains(b.currentSlide) {
             let s = b.deckSlides[b.currentSlide]
-            parts.append("Showing slide \(b.currentSlide + 1) of \(b.deckSlides.count), “\(s.displayTitle)”, of the deck “\(b.current?.name ?? "")”.")
-            if !s.notes.isEmpty { parts.append("Its speaker notes: \(s.notes.prefix(600))") }
+            var deck = "Showing slide \(b.currentSlide + 1) of \(b.deckSlides.count), “\(s.displayTitle)”, of the deck “\(b.current?.name ?? "")”."
+            if !s.notes.isEmpty { deck += " Its speaker notes: \(s.notes.prefix(600))" }
             let titles = b.deckSlides.map(\.displayTitle).enumerated().map { "\($0 + 1). \($1)" }.joined(separator: "; ")
-            parts.append("All slides: \(titles.prefix(800))")
+            deck += " All slides: \(titles.prefix(800))"
+            // A deck someone else made (opened from a .snazzy file) is outside content.
+            parts.append(b.current?.shared == true ? ToolRegistry.untrusted(deck, from: "a deck someone else made") : deck)
         }
         if app.capture.recorder.isActive { parts.append("Recording is on.") }
         if app.live.isRunning { parts.append("A live room is open with \(app.live.viewers) viewers.") }
@@ -264,27 +300,34 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
 
     // MARK: Speaking
 
-    /// Says something with the mic muted, then waits for it to finish.
+    /// Says something with the mic muted, then waits for it to finish. A new
+    /// reply replaces one still being spoken.
     func speak(_ text: String) async {
+        if finishedSpeaking != nil {
+            synthesizer.stopSpeaking(at: .immediate)
+            resumeAfterSpeaking()
+        }
         state = .speaking
         MicMute.isMuted = true
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = Self.voice(identifier: app.settings.voiceIdentifier)
         utterance.rate = Float(app.settings.speechRate)
         utterance.volume = speakVolume
+        let id = ObjectIdentifier(utterance)
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
             finishedSpeaking = c
+            replyID = id
             synthesizer.speak(utterance)
         }
-        // Let the room's echo die down before the mic opens again.
-        try? await Task.sleep(for: .milliseconds(300))
-        MicMute.isMuted = false
-        if isOn { state = .listening }
+        guard replyID == nil else { return }  // replaced by a newer reply, which opens the mic when it's done
+        await openMicAfterEcho()
+        // Back to listening, or off if Voice Mode isn't running ("Test" in Settings).
+        if state == .speaking { state = running ? .listening : .off }
     }
 
     /// A heads-up before a confirmation dialog (it can't listen for "yes": you click).
     func announceConfirmation() {
-        guard isOn, app.settings.speakReplies else { return }
+        guard running, app.settings.speakReplies else { return }
         MicMute.isMuted = true
         let u = AVSpeechUtterance(string: "I need your OK on screen first.")
         u.voice = Self.voice(identifier: app.settings.voiceIdentifier)
@@ -292,20 +335,34 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
         synthesizer.speak(u)
     }
 
+    /// Lets the room's echo die down, then unmutes, unless it's speaking again by then.
+    private func openMicAfterEcho() async {
+        try? await Task.sleep(for: .milliseconds(300))
+        if replyID == nil, !synthesizer.isSpeaking { MicMute.isMuted = false }
+    }
+
     private func resumeAfterSpeaking() {
+        replyID = nil
         finishedSpeaking?.resume()
         finishedSpeaking = nil
     }
 
-    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in
-            if self.finishedSpeaking == nil { MicMute.isMuted = false }  // a heads-up line, not a reply
-            self.resumeAfterSpeaking()
+    private func finishedSpeaking(_ id: ObjectIdentifier) {
+        if id == replyID {
+            resumeAfterSpeaking()
+        } else if replyID == nil {
+            Task { await openMicAfterEcho() }  // a heads-up line, with no reply waiting
         }
     }
 
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        let id = ObjectIdentifier(utterance)
+        Task { @MainActor in self.finishedSpeaking(id) }
+    }
+
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor in self.resumeAfterSpeaking() }
+        let id = ObjectIdentifier(utterance)
+        Task { @MainActor in self.finishedSpeaking(id) }
     }
 
     // MARK: Voices
