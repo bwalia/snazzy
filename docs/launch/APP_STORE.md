@@ -34,9 +34,9 @@ Status and everything needed to submit Snazzy Pro to the Mac App Store.
    `snazzypro-mac-001`).
 6. **Privacy policy and support URLs** (both required). They're live on the
    landing site (`site/`, deployed to GitHub Pages):
-   - Marketing URL: https://bwalia.github.io/snazzy/
-   - Privacy policy URL: https://bwalia.github.io/snazzy/privacy.html
-   - Support URL: https://bwalia.github.io/snazzy/support.html
+   - Marketing URL: https://www.snazzy.pro/
+   - Privacy policy URL: https://www.snazzy.pro/privacy.html
+   - Support URL: https://www.snazzy.pro/support.html
 7. **Pricing.** Free, paid, or free with in-app purchase or subscription (IAP
    needs extra work). Plus availability countries.
 8. **Upload:** `Scripts/archive-appstore.sh --upload`, then test via

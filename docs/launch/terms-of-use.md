@@ -9,7 +9,7 @@
 These terms are an agreement between you and [SELLER LEGAL NAME] ("we", "us")
 about your use of the Snazzy Pro apps for Mac, iPhone, iPad and Apple Watch
 (the "App"). By using the App you agree to them. Our
-[Privacy Policy](https://bwalia.github.io/snazzy/privacy.html) explains how
+[Privacy Policy](https://www.snazzy.pro/privacy.html) explains how
 your information is handled. It's part of these terms.
 
 If you got the App from Apple's App Store, Apple's

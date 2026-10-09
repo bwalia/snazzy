@@ -7,7 +7,7 @@ brainstorm board, or YouTube, Twitch and Vimeo. An iPhone/iPad app is the
 remote and teleprompter, and an Apple Watch app (inside the iPhone app)
 starts, pauses and stops recording and changes slides. The assistant uses local (Ollama, Apple on-device) or
 cloud (Anthropic) models.
-Website: https://bwalia.github.io/snazzy/ (source in `site/`, deployed by
+Website: https://www.snazzy.pro/ (source in `site/`, deployed by
 `.github/workflows/pages.yml`). Brand: `docs/brand/`. Launch plan: `docs/launch/APP_STORE.md`.
 Phase plan: `ROADMAP.md`.
 

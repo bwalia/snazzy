@@ -79,7 +79,7 @@ Also decide:
    - Age rating: complete the questionnaire, answering "None" or "No" throughout. Expected rating: 4+.
 3. **Pricing and Availability:** price (or Free), countries, and pre-orders if you want them.
 4. **App Privacy**
-   - Privacy Policy URL: https://bwalia.github.io/snazzy/privacy.html
+   - Privacy Policy URL: https://www.snazzy.pro/privacy.html
    - Data collection: **"No, we do not collect data from this app"**. The
      reasoning is in `APP_STORE.md` §7. Revisit if you ever add analytics or
      your own servers.
@@ -92,8 +92,8 @@ Also decide:
 Copy from `APP_STORE.md` §4:
 
 - Promotional text, description, keywords
-- Support URL: https://bwalia.github.io/snazzy/support.html
-- Marketing URL: https://bwalia.github.io/snazzy/
+- Support URL: https://www.snazzy.pro/support.html
+- Marketing URL: https://www.snazzy.pro/
 - Copyright: `2026 <your seller name>`
 - Screenshots: at least 1, up to 10, in a 16:10 ratio (2880×1800 recommended). See §5 of `APP_STORE.md`.
 - App Review information: your contact details, plus the notes from `APP_STORE.md` §6
