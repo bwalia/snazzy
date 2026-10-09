@@ -36,6 +36,7 @@ $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj
 # more: --slides-record --broadcast-test --remote-pair --live-room --live-deck
 #       --share-roundtrip --s3-test --zoom-test --preset-roundtrip --builder-errors
 #       --relayout-test [--show-sheet]   (New Layout through the app on a made-up recording)
+#       --title-slide-test               (bigger camera on title slides, live, with a sample deck)
 #       --voice-test (Voice Mode: commands, wake word, mic muted while speaking) | --prompter-test
 # Tours (films the app window): -SnazzyPro.tour <name>, e.g. voice-presenter, agent-classroom (Tours.all)
 

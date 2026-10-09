@@ -365,6 +365,16 @@ private struct LayoutSection: View {
             LabeledSlider("Size", value: binding(\.size), range: InsetLayout.sizeRange, format: "%.2f")
             LabeledSlider("Border", value: binding(\.borderWidth), range: 0...20, format: "%.0f px")
             LabeledSlider("Corner radius", value: binding(\.cornerRadius), range: 0...0.5, format: "%.2f")
+            Toggle("Bigger camera on title slides", isOn: Binding {
+                capture.setup.titleSlideInsetSize != nil
+            } set: { on in
+                capture.setTitleSlideSize(on ? 0.5 : nil)
+            })
+            .help("While presenting a deck, the camera grows on title and closing slides and shrinks back on the rest.")
+            if let size = capture.setup.titleSlideInsetSize {
+                LabeledSlider("Title slide size", value: Binding { size } set: { capture.setTitleSlideSize($0) },
+                              range: CaptureSetup.titleSlideSizeRange, format: "%.2f")
+            }
         }
     }
 

@@ -13,6 +13,10 @@ public struct CompositeSpec: Equatable, Sendable {
     /// Part of the screen to show (top-left normalised 0…1); nil = whole screen.
     public var screenZoom: CGRect?
     public var arrangement: Arrangement = .inset
+    /// The inset's size right now, when it differs from `layout.size` (title slides).
+    public var insetSize: Double?
+    /// The title-slide setting the recording was made with (kept in its timeline).
+    public var titleSlideInsetSize: Double?
 
     /// How the screen and the camera share the picture.
     public enum Arrangement: Equatable, Sendable {
@@ -106,7 +110,9 @@ public enum Compositor {
         let content = FrameTransform.apply(camera, profile: spec.profile)
         let size = content.extent.size
         guard size.width > 0, size.height > 0 else { return CIImage.empty() }
-        let frameTL = InsetGeometry.insetFrame(canvas: spec.canvas, contentAspect: size.width / size.height, layout: spec.layout)
+        var layout = spec.layout
+        if let s = spec.insetSize { layout.size = s }
+        let frameTL = InsetGeometry.insetFrame(canvas: spec.canvas, contentAspect: size.width / size.height, layout: layout)
         // Core Image is y-up.
         let frame = CGRect(x: frameTL.minX, y: spec.canvas.height - frameTL.maxY, width: frameTL.width, height: frameTL.height)
         let scaled = content

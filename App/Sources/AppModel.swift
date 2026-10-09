@@ -82,6 +82,7 @@ final class AppModel {
             if type == "recording_started", capture.setup.source == .slides, builder.isDeckOpen {
                 let i = builder.currentSlide
                 markSlide(i, builder.deckSlides.indices.contains(i) ? builder.deckSlides[i] : nil)
+                capture.slideChanged(animated: false)
             }
         }
         builder.onPopOut = { [weak self] in
@@ -103,13 +104,21 @@ final class AppModel {
             return nil
         }
         capture.releaseSlidesStage = { [weak self] in self?.builder.setStageLocked(false) }
+        // Only a deck that's being presented (recorded slides or its Present window) counts.
+        capture.isTitleSlideShowing = { [weak self] in
+            guard let self, builder.isDeckOpen, capture.setup.source == .slides || builder.stage != nil else { return false }
+            return builder.deckSlides.indices.contains(builder.currentSlide) && builder.deckSlides[builder.currentSlide].isTitle
+        }
         builder.onStageChange = { [weak self] in
-            guard let self, capture.setup.source == .slides else { return }
+            guard let self else { return }
+            capture.slideChanged()  // presenting started or stopped
+            guard capture.setup.source == .slides else { return }
             Task { await self.capture.updateScreenFeed() }
         }
         builder.onSlideChange = { [weak self] index, slide in
             guard let self else { return }
             markSlide(index, slide)
+            capture.slideChanged()
             live.publishStatus()
             chat.logSession("slide", ["index": .number(Double(index)), "title": .string(slide?.displayTitle ?? "")])
         }
@@ -122,7 +131,8 @@ final class AppModel {
     /// Notes a slide change in the recording (becomes a chapter).
     private func markSlide(_ index: Int, _ slide: BuilderController.DeckSlide?) {
         capture.recorder.mark(["type": "slide", "index": .number(Double(index)),
-                               "title": .string(slide?.displayTitle ?? "Slide \(index + 1)")])
+                               "title": .string(slide?.displayTitle ?? "Slide \(index + 1)"),
+                               "title_slide": .bool(slide?.isTitle ?? false)])
     }
 
     var activeSelection: ModelSelection { settings.selection(for: settings.activeTask) }

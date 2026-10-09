@@ -399,6 +399,7 @@ final class CaptureController {
     }
 
     private func sourceChanged() {
+        slideChanged()  // title slides only count while a deck is presented
         Task { await updateScreenFeed() }
     }
 
@@ -414,7 +415,46 @@ final class CaptureController {
         let profile = setup.insetDevice.map { setup.profile(for: $0.uniqueID, kind: $0.kind) } ?? .defaults(for: .camera)
         var spec = CompositeSpec(layout: setup.layout, profile: profile)
         spec.screenZoom = screenZoom
+        spec.insetSize = insetSize
+        spec.titleSlideInsetSize = setup.titleSlideInsetSize
         return spec
+    }
+
+    // MARK: Title slides
+
+    /// The inset's size right now when it isn't the layout's (bigger on a title slide).
+    private(set) var insetSize: Double?
+    /// Whether a title slide of a presented deck is showing (set by the app).
+    @ObservationIgnored var isTitleSlideShowing: (() -> Bool)?
+    @ObservationIgnored private var insetTask: Task<Void, Never>?
+
+    /// Bigger camera on title slides: `size` (0.3–0.6 of the height), or nil for off.
+    func setTitleSlideSize(_ size: Double?) {
+        let range = CaptureSetup.titleSlideSizeRange
+        setup.titleSlideInsetSize = size.map { min(max($0, range.lowerBound), range.upperBound) }
+        slideChanged(animated: false)
+    }
+
+    /// A slide change (or the setting changed): grow or shrink the camera, easing the
+    /// way New Layout does (`TitleSlides`).
+    func slideChanged(animated: Bool = true) {
+        let target = (isTitleSlideShowing?() ?? false) ? setup.titleSlideInsetSize : nil
+        insetTask?.cancel()
+        let from = insetSize ?? setup.layout.size, to = target ?? setup.layout.size
+        guard animated, abs(from - to) > 0.001 else {
+            insetSize = target
+            recorder.update(spec: compositeSpec)
+            return
+        }
+        insetTask = Task { @MainActor [weak self] in
+            let steps = 12
+            for step in 1...steps {
+                try? await Task.sleep(for: .seconds(TitleSlides.transition / Double(steps)))
+                guard let self, !Task.isCancelled else { return }
+                self.insetSize = step == steps ? target : TitleSlides.ease(from: from, to: to, progress: Double(step) / Double(steps))
+                self.recorder.update(spec: self.compositeSpec)
+            }
+        }
     }
 
     // MARK: Zoom

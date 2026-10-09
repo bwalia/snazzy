@@ -165,6 +165,29 @@ func pixel(_ image: CGImage, x: Double, y: Double) -> (r: Int, g: Int, b: Int) {
         await #expect(throws: CaptureError.self) { try await Relayout.render(rec, video: video, options: options) }
     }
 
+    /// A recording that noted its title slides: the camera bigger on them, as it was live.
+    @Test func biggerCameraOnTitleSlides() async throws {
+        let (video, raw) = try await recording()
+        defer { try? FileManager.default.removeItem(at: video.deletingLastPathComponent()) }
+        let timelineURL = raw.appending(path: "timeline.json")
+        var t = try #require(try JSONValue.parse(Data(contentsOf: timelineURL)).objectValue)
+        t["markers"] = [["type": "slide", "index": 0, "title": "Intro", "title_slide": true, "at_seconds": 0.5],
+                        ["type": "slide", "index": 1, "title": "Results", "title_slide": false, "at_seconds": 2.2]]
+        var inset = try #require(t["inset"]?.objectValue)
+        inset["title_slide_size"] = 0.6
+        t["inset"] = .object(inset)
+        try JSONValue.object(t).encoded().write(to: timelineURL)
+
+        let rec = try Relayout.Recording(rawFolder: raw)
+        #expect(rec.hasTitleSlides && rec.original.titleSlideInsetSize == 0.6)
+        // (0.5, 0.5) is inside the big inset (0.6 of the height) but not the normal one (0.4).
+        #expect(pixel(try await Relayout.preview(rec, at: 0.5, options: rec.original), x: 0.5, y: 0.5).b > 150)  // title slide
+        #expect(pixel(try await Relayout.preview(rec, at: 2.5, options: rec.original), x: 0.5, y: 0.5).r > 150)  // content slide
+        var off = rec.original
+        off.titleSlideInsetSize = nil
+        #expect(pixel(try await Relayout.preview(rec, at: 0.5, options: off), x: 0.5, y: 0.5).r > 150)
+    }
+
     @Test func previewShowsTheLayoutAndCanHideTheCamera() async throws {
         let (video, raw) = try await recording()
         defer { try? FileManager.default.removeItem(at: video.deletingLastPathComponent()) }

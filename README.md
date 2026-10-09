@@ -172,6 +172,11 @@ MinIO), `--zoom-test <word>`, and `--dev-all` with `--chat` to try the tools.
   `camera.mov` (HEVC), `mic.mov` (24-bit PCM) and `timeline.json` (pauses,
   camera freezes, inset settings), all on one timeline, so the inset can be
   changed later. No save dialogs.
+- **Bigger camera on title slides** (Sources › Inset position, or `set_inset
+  title_slide_size`): while a deck is presented, the camera grows on title and
+  closing slides and shrinks back on the rest, easing over 0.4 s, in the
+  recording, the live room and live streams. Slide markers note which slides
+  were titles, so New Layout can add, change or remove it afterwards.
 - **New Layout** (Recordings › New Layout…, or `relayout_recording`): make a
   recording again from its raw tracks with the camera in another corner, a
   new size, crop, rotation, background (none, blur, as recorded) or lip-sync

@@ -93,6 +93,17 @@ struct RelayoutSheet: View {
                     LabeledSlider("Size", value: bind(\.layout.size), range: InsetLayout.sizeRange, format: "%.2f")
                     LabeledSlider("Border", value: bind(\.layout.borderWidth), range: 0...12, format: "%.0f px")
                     LabeledSlider("Rounding", value: bind(\.layout.cornerRadius), range: 0...0.5, format: "%.2f")
+                    if recording.hasTitleSlides {
+                        Toggle("Bigger on title slides", isOn: Binding {
+                            options.titleSlideInsetSize != nil
+                        } set: { on in
+                            self.options?.titleSlideInsetSize = on ? (recording.original.titleSlideInsetSize ?? 0.5) : nil
+                        })
+                        if let size = options.titleSlideInsetSize {
+                            LabeledSlider("Title slide size", value: Binding { size } set: { self.options?.titleSlideInsetSize = $0 },
+                                          range: CaptureSetup.titleSlideSizeRange, format: "%.2f")
+                        }
+                    }
                 }
                 Picker("Shape", selection: bind(\.profile.crop.aspect)) {
                     ForEach(Self.aspects, id: \.0) { Text($0.0).tag($0.1) }

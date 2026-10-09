@@ -173,6 +173,41 @@ enum SelfTest {
             report("remote tour host", true, "paired \(paired), \(recordings.count) test recording(s) deleted")
             return ok
         }
+        if arguments.contains("--title-slide-test") {
+            // Bigger camera on title slides, live: a sample deck in its Present window.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let saved = app.capture.setup.titleSlideInsetSize
+            let sample = SampleDeck.all[0]
+            let existed = app.builder.workspace.project(sample.projectName) != nil
+            defer {
+                app.capture.setTitleSlideSize(saved)
+                app.builder.closePopOutIfOpen()
+                if !existed { try? app.builder.workspace.deleteProject(sample.projectName) }
+            }
+            do {
+                _ = try app.builder.openSample(sample)
+                app.builder.openPopOut()
+                for _ in 0..<50 where app.builder.deckSlides.isEmpty { try? await Task.sleep(for: .milliseconds(100)) }
+                let kinds = app.builder.deckSlides.map(\.isTitle)
+                report("deck reports title slides", kinds.first == true && kinds.contains(false), "\(kinds.prefix(6))")
+                app.capture.setTitleSlideSize(0.5)
+                _ = try await app.builder.showSlide(0)
+                try? await Task.sleep(for: .milliseconds(700))
+                report("title slide: camera bigger", app.capture.insetSize == 0.5, "inset size \(app.capture.insetSize.map { String($0) } ?? "normal")")
+                let content = kinds.firstIndex(of: false) ?? 1
+                _ = try await app.builder.showSlide(content)
+                try? await Task.sleep(for: .milliseconds(700))
+                report("content slide: camera back", app.capture.insetSize == nil, "inset size \(app.capture.insetSize.map { String($0) } ?? "normal")")
+                app.capture.setTitleSlideSize(nil)
+                _ = try await app.builder.showSlide(0)
+                try? await Task.sleep(for: .milliseconds(700))
+                report("setting off: no change", app.capture.insetSize == nil, "inset size \(app.capture.insetSize.map { String($0) } ?? "normal")")
+            } catch {
+                report("title slides", false, error.localizedDescription)
+            }
+            return ok
+        }
         if arguments.contains("--voice-test") {
             // Voice Mode without the mic: commands, the wake word, and the mic
             // muted while it speaks (silently).
