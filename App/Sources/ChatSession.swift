@@ -190,6 +190,16 @@ final class ChatSession {
     /// Kept for the menu command and header button.
     func clear() { newConversation() }
 
+    #if DEBUG
+    /// Screenshots: shows a made-up conversation, never saved.
+    func stage(_ messages: [ChatMessage], title: String) {
+        newConversation()
+        conversation.title = title
+        conversation.messages = messages
+        transcript = Self.buildTranscript(messages)
+    }
+    #endif
+
     private func save() {
         guard !conversation.messages.isEmpty else { return }
         conversation.updated = Date()
