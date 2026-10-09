@@ -24,6 +24,7 @@
     <a class="brand" href="./" aria-label="Snazzy Pro home"><img src="assets/lockup-on-dark.svg" alt="Snazzy Pro" width="130" height="34"></a>
     <nav class="links" aria-label="Sections">
       <a href="#how">How it works</a>
+      <a href="#agent">AI agent</a>
       <a href="tours.html">Tours</a>
       <a href="#features">Features</a>
       <a href="#live">Live classroom</a>
@@ -42,7 +43,7 @@
     <div class="wrap">
       <img class="icon" src="assets/icon-512.png" alt="" width="112" height="112">
       <h1 id="hero-title">Just <span class="grad">say it.</span></h1>
-      <p class="lede">Snazzy Pro is a presentation studio you run by conversation. It plans your talk, builds the slides, frames your camera and records the video. Then it takes you live: to a classroom on your Wi-Fi, or to YouTube, Twitch and Vimeo.</p>
+      <p class="lede">Snazzy Pro is a presentation studio with an AI agent built in. Talk to it, or let it run the show: it plans your talk, builds the slides, changes them as you speak, starts and stops the recording and runs your live class. It asks you first before anything goes public.</p>
       <div class="ctas" id="get">
         <!-- At App Store launch, add Apple's official "Download on the Mac App Store" badge next to (or instead of) the direct download. -->
         <a class="btn primary" href="https://github.com/bwalia/snazzy/releases/download/mac-beta/SnazzyPro.dmg" aria-label="Download Snazzy Pro for Mac, free beta, DMG">
@@ -112,6 +113,51 @@
           <q>Start a live room for brainstorming the school fair.</q>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="agent" aria-labelledby="agent-title">
+    <div class="wrap center">
+      <p class="eyebrow">The AI agent</p>
+      <h2 id="agent-title">An agent that runs the show. You stay in charge.</h2>
+      <p class="section-lede">The assistant isn't a chat window bolted on: it drives the same controls you do. Ask it in the chat, or switch on Voice Mode and talk hands-free while you present. It works alongside you, so you can click any button yourself at any time.</p>
+      <div class="steps" style="text-align:left">
+        <div class="step reveal">
+          <span class="n">◆</span>
+          <h3>Drives your presentation</h3>
+          <p>Slides, recording (start, pause, stop), the camera prompter, presets and settings. It knows which slide you're on and what your notes say.</p>
+          <q>Snazzy, next slide.</q>
+        </div>
+        <div class="step reveal">
+          <span class="n">◆</span>
+          <h3>Runs your live class</h3>
+          <p>Opens the live room, welcomes students, seeds the brainstorm board, closes voting and turns the top ideas into a deck. It can also start and stop a stream.</p>
+          <q>Tell the class that voting is closed.</q>
+        </div>
+        <div class="step reveal">
+          <span class="n">◆</span>
+          <h3>Voice Mode</h3>
+          <p>Talk, and it answers out loud with your Mac's built-in voices. Your mic is muted while it speaks, so its voice never ends up in your recording. While you're recording or live, it only listens when you say “Snazzy” first.</p>
+          <q>Snazzy, what's the key point of this slide?</q>
+        </div>
+        <div class="step reveal">
+          <span class="n">◆</span>
+          <h3>Human in the loop</h3>
+          <p>Going live, streaming and anything that can't be undone wait for your OK on screen. Every step it takes is shown in the chat, and the simple commands work even with no AI set up.</p>
+          <q>Start a live room for my class.</q>
+        </div>
+      </div>
+      <div class="tour-grid" style="text-align:left">
+        <article class="tour-card">
+          <video controls playsinline preload="none" poster="tours/voice-presenter.jpg" aria-label="Voice Mode runs a recorded talk"><source src="tours/voice-presenter.mp4" type="video/mp4"></video>
+          <div><p class="tour-tag">Voice Mode · with sound</p><h3>It runs the talk while you present</h3><p>“Start recording”, “Snazzy, next slide”, a question answered out loud with the mic muted, then “Snazzy, stop recording”. Talk to the audience is ignored.</p></div>
+        </article>
+        <article class="tour-card">
+          <video controls muted playsinline preload="none" poster="tours/agent-classroom.jpg" aria-label="The agent runs a live lesson"><source src="tours/agent-classroom.mp4" type="video/mp4"></video>
+          <div><p class="tour-tag">Agent · Live room</p><h3>It runs the live lesson from the chat</h3><p>Opens the room (after you approve it), welcomes the class, adds ideas, closes voting and builds a deck from what students chose.</p></div>
+        </article>
+      </div>
+      <p style="margin-top:22px"><a href="blog/ai-agent-runs-your-presentation.html">Read: let the AI agent run your presentation →</a></p>
     </div>
   </section>
 
@@ -465,6 +511,7 @@
         <details><summary>How do I install it?</summary><p><a href="https://github.com/bwalia/snazzy/releases/download/mac-beta/SnazzyPro.dmg">Download the DMG</a>, open it and drag Snazzy Pro into Applications. It's signed and notarized by Apple, so it opens normally. The first time, it asks you to agree to the Terms of Use and Privacy Policy. The iPhone and iPad app arrives with the App Store launch.</p></details>
         <details><summary>Do I need an AI subscription?</summary><p>No. Run a free local model with Ollama, or use Claude from Anthropic with your own API key. You can mix them: a local model for quick commands, Claude for writing.</p></details>
         <details><summary>Can I use my iPhone or iPad as the camera?</summary><p>Yes. Connect it by cable and point it at yourself, or use Continuity Camera wirelessly. Snazzy Pro crops out the Camera app's buttons and remembers the framing for each device. The Snazzy Pro app for iPhone and iPad (now in testing) is a remote and teleprompter; recording its own camera in full quality comes next.</p></details>
+        <details><summary>Can the AI run my presentation for me?</summary><p>Yes. The built-in agent changes slides, starts and stops recording, runs the prompter, opens and runs your live room and starts streams. Ask in the chat, or turn on Voice Mode (⌥⌘V) and say “Snazzy, next slide” while you present. It answers out loud with your Mac's voices and mutes your mic while it speaks. Anything public or irreversible waits for your OK. <a href="blog/ai-agent-runs-your-presentation.html">How it works</a>.</p></details>
         <details><summary>Is there a teleprompter?</summary><p>Yes. The Camera Prompter puts your speaker notes or a script right under your Mac's camera, so you read while looking at the lens. It scrolls at your reading speed, starts and pauses with the recording, and is never recorded or streamed. Turn it on with the prompter button next to Record, or Record › Show Camera Prompter (⌥⌘T). <a href="blog/camera-prompter.html">More</a>.</p></details>
         <details><summary>Do students need the Snazzy Pro app to take part?</summary><p>No. Only the presenter needs Snazzy Pro. Students scan the QR code (or open the link and type the room code) in any browser on the same Wi-Fi, on a phone, tablet or laptop. No download, no account, no sign-up. <a href="blog/live-classroom.html">How a live lesson works</a>.</p></details>
         <details><summary>Does the live classroom need Zoom, Teams or the internet?</summary><p>No. The live room runs directly from your Mac to your students' browsers over your local network. If students are remote, you can stream to YouTube, Twitch or Vimeo instead, or use Zoom or Teams as you do today.</p></details>

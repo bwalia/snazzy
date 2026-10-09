@@ -233,11 +233,19 @@ final class ChatSession {
     /// Sends plain text without touching the composer (quick actions, the remote):
     /// what the user is typing, attachments and an edit in progress stay as they are.
     @discardableResult
-    func send(_ text: String) -> Bool {
+    func send(_ text: String, viaVoice: Bool = false, context: String? = nil) -> Bool {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return false }
-        return send(.user(text), attachmentNames: [], viaVoice: false)
+        var message = ChatMessage.user(text)
+        // What the user is looking at, for the model only (not shown in the chat).
+        if let context { message.parts.append(.text("\n\n" + Self.contextPrefix + context)) }
+        return send(message, attachmentNames: [], viaVoice: viaVoice)
     }
+
+    static let contextPrefix = "Context (from the app, not typed by the user): "
+
+    /// A line in the chat about what Voice Mode did ("next slide", "recording started").
+    func voiceNote(_ text: String, isError: Bool = false) { notice(text, isError: isError) }
 
     /// Re-runs the last user turn.
     func retryLast() {
@@ -517,7 +525,7 @@ final class ChatSession {
 
     static func displayText(_ message: ChatMessage) -> String {
         message.parts.compactMap { part -> String? in
-            if case .text(let t) = part, !t.hasPrefix("Attached file ") { return t }
+            if case .text(let t) = part, !t.hasPrefix("Attached file "), !t.hasPrefix("\n\n" + contextPrefix) { return t }
             return nil
         }.joined()
     }
@@ -612,7 +620,11 @@ final class ChatSession {
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Allow")
             alert.addButton(withTitle: "Cancel")
-            return alert.runModal() == .alertFirstButtonReturn
-        }
+            return alert
+        }.asking()
     }
+}
+
+private extension NSAlert {
+    @MainActor func asking() async -> Bool { await Confirm.ask(self) }
 }

@@ -335,7 +335,7 @@ private final class BroadcastMicDelegate: NSObject, AVCaptureAudioDataOutputSamp
     let handler: @Sendable (CMSampleBuffer) -> Void
     init(_ handler: @escaping @Sendable (CMSampleBuffer) -> Void) { self.handler = handler }
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        handler(sampleBuffer)
+        handler(MicMute.apply(sampleBuffer))
     }
 }
 

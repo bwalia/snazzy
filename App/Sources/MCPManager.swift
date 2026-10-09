@@ -435,6 +435,18 @@ struct SnazzyMCPBackend: MCPServerBackend {
         }
     }
 
+    @MainActor
+    private static func askAgentApproval(name: String, arguments: JSONValue) async -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "An AI agent wants to run “\(name)” in Snazzy Pro"
+        alert.informativeText = "This came from an app connected over MCP. It can't be undone.\n\n\(arguments.compactString.prefix(400))"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Allow")
+        alert.addButton(withTitle: "Deny")
+        NSApp.activate()
+        return await Confirm.ask(alert)
+    }
+
     func callTool(name: String, arguments: JSONValue) async -> MCPToolResult {
         let (reg, needsConfirm) = await MainActor.run { () -> (ToolRegistry, Bool) in
             app.mcp.noteAgentCall(name)
@@ -443,16 +455,7 @@ struct SnazzyMCPBackend: MCPServerBackend {
         }
         let call = ToolCall(id: "mcp_\(UUID().uuidString.prefix(8))", name: name, arguments: arguments)
         if needsConfirm {
-            let ok = await MainActor.run { () -> Bool in
-                let alert = NSAlert()
-                alert.messageText = "An AI agent wants to run “\(name)” in Snazzy Pro"
-                alert.informativeText = "This came from an app connected over MCP. It can't be undone.\n\n\(arguments.compactString.prefix(400))"
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Allow")
-                alert.addButton(withTitle: "Deny")
-                NSApp.activate()
-                return alert.runModal() == .alertFirstButtonReturn
-            }
+            let ok = await Self.askAgentApproval(name: name, arguments: arguments)
             if !ok { return MCPToolResult(text: "The person at the Mac declined this action.", isError: true) }
         }
         let result = await reg.execute(call)

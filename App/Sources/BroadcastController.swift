@@ -127,7 +127,7 @@ final class BroadcastController {
             """
         alert.addButton(withTitle: "Go Live")
         alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard await Confirm.ask(alert) else { return }
         await start(targets)
     }
 

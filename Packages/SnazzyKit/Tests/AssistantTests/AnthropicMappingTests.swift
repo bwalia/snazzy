@@ -163,6 +163,12 @@ import Testing
 }
 
 @Suite struct TextToolCallTests {
+    @Test func strayTagsAreDropped() {
+        #expect(TextToolCalls.withoutStrayMarkup("I'll summarise it in one sentence.<tool_call>") == "I'll summarise it in one sentence.")
+        #expect(TextToolCalls.withoutStrayMarkup("Sure.\n<tool_call>\n<function=show_slide") == "Sure.")
+        #expect(TextToolCalls.withoutStrayMarkup("Plain answer") == "Plain answer")
+    }
+
     @Test func qwenXMLStyle() throws {
         let text = """
         I'll create the deck. Let me check the devices first.

@@ -240,7 +240,31 @@ struct ChatSettings: View {
     var body: some View {
         @Bindable var model = model
         Form {
-            Section("Voice") {
+            Section("Text") {
+                HStack {
+                    Slider(value: $model.settings.chatTextSize, in: AppSettings.chatTextSizes, step: 1) { Text("Chat text size") }
+                    Text("\(Int(model.settings.chatTextSize)) pt").monospacedDigit().frame(width: 44, alignment: .trailing)
+                }
+                Text("Also ⌘+ and ⌘− in the chat, ⌘0 to reset.").font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Voice Mode") {
+                Toggle("Say replies out loud", isOn: $model.settings.speakReplies)
+                Picker("Voice", selection: $model.settings.voiceIdentifier) {
+                    Text("Best for my language").tag("")
+                    ForEach(VoiceMode.voices(), id: \.identifier) { v in
+                        Text("\(v.name)\(v.quality == .premium ? " (Premium)" : v.quality == .enhanced ? " (Enhanced)" : "")").tag(v.identifier)
+                    }
+                }
+                HStack {
+                    Slider(value: $model.settings.speechRate, in: 0.3...0.65) { Text("Speed") }
+                    Button("Test") { Task { await model.voice.speak("Hi, I'm Snazzy. Say next slide, start recording, or ask me anything.") } }
+                }
+                TextField("Wake word", text: $model.settings.wakeWord)
+                Toggle("Always need the wake word", isOn: $model.settings.alwaysNeedWakeWord)
+                Text("Voice Mode (⌥⌘V, or the waveform button next to the mic) is a hands-free conversation. Short commands like “next slide”, “go to slide 3”, “start recording” and “stop recording” happen straight away, even without AI; anything else goes to the assistant, which can run your slides, recording, prompter and live room. While it speaks, the mic is muted, so its voice isn't recorded or streamed. While you're recording, live or streaming, start with the wake word (“\(model.settings.wakeWord), next slide”) so talking to your audience isn't taken as a command. Better voices: System Settings › Accessibility › Spoken Content › System Voice › Manage Voices.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Voice messages") {
                 Toggle("Send voice messages as soon as I stop talking", isOn: $model.settings.voiceAutoSend)
                 Text("Otherwise the transcript goes into the message box so you can check it first. Speech is transcribed on this Mac when the language supports it. Uses the microphone chosen in Sources.")
                     .font(.caption).foregroundStyle(.secondary)

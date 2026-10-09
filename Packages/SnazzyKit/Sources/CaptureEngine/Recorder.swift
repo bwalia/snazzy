@@ -484,7 +484,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
     // MARK: Audio
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        let box = SampleBox(sampleBuffer)
+        let box = SampleBox(MicMute.apply(sampleBuffer))
         queue.async { self.audio(box.buffer) }
     }
 
