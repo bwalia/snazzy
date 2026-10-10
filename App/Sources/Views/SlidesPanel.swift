@@ -1,11 +1,14 @@
 import Builder
 import SwiftUI
 
-/// The Slides tab: present (and record) the open deck, or browse sample decks.
+/// The Slides tab: present (and record) the open deck, find and organise your decks,
+/// browse sample decks, or get decks from GitHub.
 struct SlidesPanel: View {
     enum Mode: String, CaseIterable, Identifiable {
         case present = "Present"
-        case samples = "Sample Decks"
+        case library = "My Decks"
+        case samples = "Samples"
+        case github = "Get Decks"
         var id: String { rawValue }
     }
 
@@ -20,11 +23,13 @@ struct SlidesPanel: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(maxWidth: 320)
+            .frame(maxWidth: 440)
             .padding(.top, 10)
             switch current {
             case .present: PresentView(showSamples: { model.slidesMode = .samples })
             case .samples: SampleGallery(opened: { model.slidesMode = .present })
+            case .library: DeckLibraryView()
+            case .github: DeckReposView()
             }
         }
     }

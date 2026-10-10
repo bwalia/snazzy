@@ -427,7 +427,7 @@ struct SnazzyMCPBackend: MCPServerBackend {
         await MainActor.run {
             let reg = registry()
             return reg.definitions.map { def in
-                let readOnly = ["get_", "list_", "check_", "read_"].contains { def.name.hasPrefix($0) }
+                let readOnly = ["get_", "list_", "check_", "read_", "search_"].contains { def.name.hasPrefix($0) }
                 let destructive = reg.tool(named: def.name)?.requiresConfirmation ?? false
                 return MCPTool(name: def.name, description: def.description, inputSchema: def.inputSchema,
                                readOnly: readOnly, destructive: destructive)

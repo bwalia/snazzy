@@ -39,8 +39,10 @@ $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj
 #       --store-test   (Pro purchases against a local App Store: StoreKitTest + App/Resources/SnazzyPro.storekit)
 #       --title-slide-test               (bigger camera on title slides, live, with a sample deck)
 #       --voice-test (Voice Mode: commands, wake word, mic muted while speaking) | --prompter-test
+#       --decks-test [--deck-repo owner/repo/tree/branch/decks]   (search, categories/tags, open at a slide, add from GitHub)
 # Tours (films the app window): -SnazzyPro.tour <name>, e.g. voice-presenter, agent-classroom (Tours.all)
 # App Store screenshots: -SnazzyPro.screenshots YES, then swift Scripts/frame-screenshots.swift (docs/launch/APP_STORE.md §5)
+#   (only the deck library: add -SnazzyPro.screenshotScenes decks [-SnazzyPro.screenshotDeckRepo <repo link>])
 
 Scripts/archive-appstore.sh [--upload]             # runs the tests, then archives a Release build for the Mac App Store
 ```
@@ -87,6 +89,7 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 | `Packages/SnazzyKit` | Local SwiftPM package, one module per area (see below). UI-free and unit-tested |
 | `integrations/claude-code/snazzy-pro` | Claude Code plugin (MCP config + skill). Marketplace file: `.claude-plugin/marketplace.json` |
 | `site/` | Landing page, blog, privacy and support pages (static HTML, deployed to GitHub Pages) |
+| `decks/` | Snazzy Pro's deck repo, listed in the app's Get Decks: one folder per deck plus `snazzy-decks.json` (titles, categories, tags). Format in `decks/README.md` |
 | `docs/` | `brand/`, `launch/` (App Store), `business/PRO.md` (open-core plan) |
 
 ### SnazzyKit modules
@@ -96,7 +99,7 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 | `SnazzyCore` | `AppSettings`, `KeychainStore`/`SecretStore`, `JSONValue`, `Log`, `CaptureSetup`/`InsetGeometry`/`DeviceProfile`, `PresetStore`, `HTTPMessage` (hand-rolled HTTP/1.1 parser shared by the Live and MCP servers), `SigV4`, `SecretRedactor` |
 | `Assistant` | `ModelProvider` protocol with `AnthropicProvider` (SSE), `OllamaProvider` (NDJSON), `AppleOnDeviceProvider` (FoundationModels). Also `ConversationRunner` (agent loop), `ToolRegistry`, `SchemaValidator`, `ConversationStore` |
 | `CaptureEngine` | `DeviceCatalog`, `CameraFeed`/`FeedManager`/`FrameReceiver`, `ScreenFeed` (ScreenCaptureKit), `FrameTransform`, `Compositor`, `Recorder`, `BackgroundEffect` (Vision segmentation), `LiveEncoder` (fMP4/HLS), `RecordingEditor` (trim), `Transcription`/`Captions`/`Chapters`, `ScreenReader` (OCR) |
-| `Builder` | `Workspace` (project folders with path confinement), `Templates` (starter `deck.js`), `PartialJSON`, `SampleDecks` (12 sectors), `SnazzyShare` (`.snazzy` file format) |
+| `Builder` | `Workspace` (project folders with path confinement; `BuilderProject` has optional `category`, `tags`, `origin`), `Templates` (starter `deck.js`), `PartialJSON`, `SampleDecks` (12 sectors), `SnazzyShare` (`.snazzy` file format), `DeckSearch` (slides from deck.json or index.html, search over titles/text/notes/tags), `DeckRepo`/`DeckRepoCatalogue` (GitHub deck repos: parse what people paste, find deck folders in a tree listing, file limits) |
 | `Slides` | **Empty placeholder.** Slide logic lives in `App/Sources/BuilderController.swift` and `Views/PresentView.swift` |
 | `MCP` | `MCPClient`, `MCPProtocol`, `MCPServerCore`, `MCPHTTPServer` (dual-era: modern stateless 2026-07-28 and legacy `initialize`/session) |
 | `Live` | `LiveServer` (NWListener HTTP: viewer page, fMP4 segments, SSE), `LiveSegments`, `LiveViewerPage` (inline HTML/JS), `BrainstormBoard` |
@@ -186,6 +189,12 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
   hidden context part (current slide, notes, recording/live state). Replies are spoken with
   `AVSpeechSynthesizer`; while it speaks `CaptureEngine.MicMute` turns the mic into silence in
   the recorder, live encoder and broadcaster. While recording/live, only wake-word lines count.
+- **Decks library** (Slides tab: Present · My Decks · Samples · Get Decks). `DeckLibraryView` groups decks by
+  category and filters by tag; search runs `DeckSearch` over every project and unopened sample, and a result
+  opens with `BuilderController.open(_:slide:)`. `DeckRepoController` lists decks in GitHub repos (unauthenticated
+  API: 60 requests an hour) and adds one through `Workspace.importProject`, so it's `shared` (no internet until
+  allowed), with `origin` set to `github:owner/repo/folder`. Tools: `search_slides`, `list_decks`, `open_deck`,
+  `set_deck_details`, `list_github_decks`, `add_github_deck` (asks first).
 - **Human in the loop:** irreversible or public actions go through `Confirm.ask` (a sheet on the
   main window; Voice Mode announces it). Used by tool confirmations, MCP agent calls, the live
   room and streams.
@@ -255,7 +264,7 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
      `external:` too. Anything sensitive that could leave the Mac goes through `offMac`.
   3. If the on-device model needs it, add it to `AppleToolPolicy.priority`.
   4. Remember that it is also published over MCP, and that names starting with
-     `get_`/`list_`/`check_`/`read_` are advertised as read-only.
+     `get_`/`list_`/`check_`/`read_`/`search_` are advertised as read-only.
 - **New provider:**
   1. Add a `ProviderKind` case (`displayName`, `isLocal`, `keychainAccount`, `suggestedModels`).
   2. Write pure mapping and parser types and unit-test them.

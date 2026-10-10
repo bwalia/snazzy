@@ -16,6 +16,18 @@ public struct BuilderProject: Codable, Identifiable, Hashable, Sendable {
     /// Came from someone else (a .snazzy file). Served without internet access, so
     /// its pages can't send anything out, until the user allows it.
     public var shared: Bool?
+    /// How decks are organised in the library: one category, any number of tags.
+    public var category: String?
+    public var tags: [String]?
+    /// Where it was added from, e.g. "github:owner/repo/decks/name".
+    public var origin: String?
+
+    /// Tags without blanks or repeats (ignoring case), in the order given.
+    public static func cleanTags(_ tags: [String]) -> [String] {
+        var seen = Set<String>()
+        return tags.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "") }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+    }
 }
 
 public struct WorkspaceError: LocalizedError, Equatable {
@@ -62,6 +74,19 @@ public struct Workspace: Sendable {
         guard var p = project(name) else { throw WorkspaceError("No project \"\(name)\".") }
         p.shared = shared ? true : nil
         try JSONEncoder.iso.encode(p).write(to: projectURL(name).appending(path: ".snazzy-project.json"))
+    }
+
+    /// Sets a project's category and tags (nil or empty removes them).
+    @discardableResult
+    public func setDetails(_ name: String, category: String?, tags: [String], origin: String? = nil) throws -> BuilderProject {
+        guard var p = project(name) else { throw WorkspaceError("No project \"\(name)\".") }
+        if let origin { p.origin = origin }
+        let c = category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        p.category = c.isEmpty ? nil : String(c.prefix(60))
+        let t = BuilderProject.cleanTags(tags).map { String($0.prefix(40)) }.prefix(20)
+        p.tags = t.isEmpty ? nil : Array(t)
+        try JSONEncoder.iso.encode(p).write(to: projectURL(name).appending(path: ".snazzy-project.json"))
+        return p
     }
 
     public func listProjects() -> [BuilderProject] {

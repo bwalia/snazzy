@@ -139,6 +139,13 @@ struct AppCommands: Commands {
                 .keyboardShortcut("s", modifiers: [.command, .shift])
             Button("Import Shared File…") { model.sharing.chooseFileToImport() }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
+            Divider()
+            Button("Find in Slides…") { model.findInSlides() }
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+            Button("Get Decks from GitHub…") {
+                model.sidePanelTab = .slides
+                model.slidesMode = .github
+            }
         }
         CommandMenu("Devices") {
             Button("Open Inset Preview") { try? model.capture.openPreview() }

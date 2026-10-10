@@ -162,7 +162,7 @@ enum AssistantTools {
                 description: "List the camera backgrounds available (built-ins and the user's images) and which is active.",
                 inputSchema: emptySchema
             ) { @Sendable _ in await capture.backgroundsJSON() },
-        ] + recordingTools(capture) + builderTools(builder, sharing: app.sharing) + modelTools(app) + settingsTools(app) + liveTools(app.live) + broadcastTools(app.broadcast) + prompterTools(app.prompter)
+        ] + recordingTools(capture) + builderTools(builder, sharing: app.sharing) + modelTools(app) + settingsTools(app) + liveTools(app.live) + broadcastTools(app.broadcast) + prompterTools(app.prompter) + deckTools(app)
           + DeveloperTools.tools(app.developer, offMac: offMac)
           + (includeMCP ? app.mcp.registeredTools() : []))
     }
@@ -621,5 +621,158 @@ enum AssistantTools {
     nonisolated static func object(_ properties: [String: JSONValue], required: [String]) -> JSONValue {
         ["type": "object", "properties": .object(properties), "required": .array(required.map { .string($0) }),
          "additionalProperties": false]
+    }
+}
+
+// MARK: - Decks: search, organise, get from GitHub
+
+extension AssistantTools {
+    static func deckTools(_ app: AppModel) -> [RegisteredTool] {
+        let builder = app.builder
+        let repos: DeckRepoController = app.deckRepos
+        let workspace = builder.workspace
+
+        return [
+            RegisteredTool(
+                name: "search_slides",
+                description: "Search every deck's slide titles, text and speaker notes (and deck categories and tags), including sample decks not opened yet. All words must match; case and accents are ignored. Returns the best slides first with the deck, the 0-based slide index and a snippet. Then use open_deck to show one.",
+                inputSchema: object([
+                    "query": ["type": "string", "minLength": 1],
+                    "limit": ["type": "integer", "minimum": 1, "maximum": 30, "description": "Default 10"],
+                ], required: ["query"]),
+                external: "the decks' slides"
+            ) { @Sendable args in
+                let query = args["query"]?.stringValue ?? ""
+                let limit = args["limit"]?.intValue ?? 10
+                let hits = await Task.detached { DeckSearch.search(query, in: DeckSearch.decks(in: workspace), limit: limit) }.value
+                return ["query": .string(query), "results": .array(hits.map { h in
+                    var o: [String: JSONValue] = ["deck": .string(h.deckTitle), "slide": .number(Double(h.slide)),
+                                                  "heading": .string(h.heading), "matched_in": .string(h.field.rawValue), "snippet": .string(h.snippet)]
+                    switch h.deck {
+                    case .project(let name): o["project"] = .string(name)
+                    case .sample(let id): o["sample"] = .string(id)
+                    }
+                    return .object(o)
+                })]
+            },
+            RegisteredTool(
+                name: "list_decks",
+                description: "List the user's decks with their category, tags and slide count, optionally only one category or tag.",
+                inputSchema: object([
+                    "category": ["type": "string"],
+                    "tag": ["type": "string"],
+                ], required: []),
+                external: "the decks' slides"
+            ) { @Sendable args in
+                let category = args["category"]?.stringValue, tag = args["tag"]?.stringValue
+                let decks = await Task.detached { DeckSearch.decks(in: workspace, samples: []) }.value.filter { d in
+                    (category.map { d.categoryName.caseInsensitiveCompare($0) == .orderedSame } ?? true)
+                        && (tag.map { t in d.tags.contains { $0.caseInsensitiveCompare(t) == .orderedSame } } ?? true)
+                }
+                return ["decks": .array(decks.map(deckJSON))]
+            },
+            RegisteredTool(
+                name: "open_deck",
+                description: "Open a deck at a slide (0-based), e.g. a search_slides result. Give project for the user's decks or sample for a sample deck not opened yet.",
+                inputSchema: object([
+                    "project": ["type": "string"],
+                    "sample": ["type": "string", "enum": .array(SampleDeck.all.map { .string($0.id) })],
+                    "slide": ["type": "integer", "minimum": 0],
+                ], required: []),
+                external: "the project's web page"
+            ) { @Sendable args in
+                let slide = args["slide"]?.intValue ?? 0
+                if let id = args["sample"]?.stringValue {
+                    guard let sample = SampleDeck.all.first(where: { $0.id == id }) else { throw WorkspaceError("No sample \(id).") }
+                    let p = try await builder.openSample(sample)
+                    await builder.open(p.name, slide: slide)
+                } else {
+                    let p = try await builder.requireProject(args["project"]?.stringValue)
+                    await builder.open(p.name, slide: slide)
+                }
+                await MainActor.run { app.sidePanelTab = .slides; app.slidesMode = .present }
+                try? await Task.sleep(for: .milliseconds(600))
+                return try await builder.report()
+            },
+            RegisteredTool(
+                name: "set_deck_details",
+                description: "Organise a deck in the library: set its category (one, e.g. Courses or Sales; empty removes it) and its tags (replaces them; empty list removes them).",
+                inputSchema: object([
+                    "project": ["type": "string", "minLength": 1],
+                    "category": ["type": "string"],
+                    "tags": ["type": "array", "items": ["type": "string"]],
+                ], required: ["project"])
+            ) { @Sendable args in
+                let name = args["project"]?.stringValue ?? ""
+                let p = try await builder.requireProject(name)
+                let current = await MainActor.run { workspace.project(p.name) }
+                let category = args["category"]?.stringValue ?? current?.category
+                let tags = args["tags"]?.arrayValue.map { $0.compactMap(\.stringValue) } ?? current?.tags ?? []
+                let saved = try await builder.setDetails(project: p.name, category: category, tags: tags)
+                return ["project": .string(saved.name), "category": .string(saved.category ?? ""),
+                        "tags": .array((saved.tags ?? []).map { .string($0) })]
+            },
+            RegisteredTool(
+                name: "list_github_decks",
+                description: "List the decks in a GitHub deck repo (default: Snazzy Pro's own collection). repo is owner/repo, owner/repo/folder or a github.com link. Only public files are read.",
+                inputSchema: object(["repo": ["type": "string"]], required: []),
+                external: "a GitHub repo"
+            ) { @Sendable args in
+                let repo: DeckRepo
+                if let text = args["repo"]?.stringValue, !text.isEmpty {
+                    guard let r = DeckRepo.parse(text) else { throw WorkspaceError("Not a GitHub repo: \(text). Use owner/repo.") }
+                    repo = r
+                } else {
+                    repo = .official
+                }
+                let decks = await repos.load(repo)
+                if decks.isEmpty, case .failed(let message) = await repos.state(repo) { throw WorkspaceError(message) }
+                var list: [JSONValue] = []
+                for d in decks {
+                    var j = remoteDeckJSON(d)
+                    if case .object(var o) = j, await repos.addedProject(d) != nil { o["added"] = true; j = .object(o) }
+                    list.append(j)
+                }
+                return ["repo": .string(repo.name), "decks": .array(list)]
+            },
+            RegisteredTool(
+                name: "add_github_deck",
+                description: "Download a deck from a GitHub deck repo into the user's decks and open it (asks the user first). folder is the deck's folder from list_github_decks. The deck can't reach the internet until the user allows it.",
+                inputSchema: object([
+                    "repo": ["type": "string", "description": "owner/repo; default Snazzy Pro's collection"],
+                    "folder": ["type": "string", "minLength": 1],
+                ], required: ["folder"]),
+                requiresConfirmation: true,
+                external: "a GitHub repo"
+            ) { @Sendable args in
+                let text = args["repo"]?.stringValue ?? ""
+                guard let repo = text.isEmpty ? DeckRepo.official : DeckRepo.parse(text) else { throw WorkspaceError("Not a GitHub repo: \(text).") }
+                let folder = (args["folder"]?.stringValue ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+                let decks = await repos.load(repo)
+                guard let deck = decks.first(where: { $0.folder == folder || $0.folder.hasSuffix("/" + folder) }) else {
+                    throw WorkspaceError("No deck \(folder) in \(repo.name). Decks: " + decks.map(\.folder).joined(separator: ", "))
+                }
+                let p = try await repos.add(deck)
+                await MainActor.run { app.sidePanelTab = .slides; app.slidesMode = .present }
+                return ["added": .string(deck.title), "project": .string(p.name), "category": .string(p.category ?? ""),
+                        "note": "Opens without internet access until the user clicks Allow Internet."]
+            },
+        ]
+    }
+
+    nonisolated static func deckJSON(_ deck: DeckSearch.Deck) -> JSONValue {
+        var o: [String: JSONValue] = ["title": .string(deck.title), "category": .string(deck.categoryName),
+                                      "tags": .array(deck.tags.map { .string($0) }), "slides": .number(Double(deck.slides.count))]
+        switch deck.source {
+        case .project(let name): o["project"] = .string(name)
+        case .sample(let id): o["sample"] = .string(id)
+        }
+        return .object(o)
+    }
+
+    nonisolated static func remoteDeckJSON(_ deck: RemoteDeck) -> JSONValue {
+        .object(["title": .string(deck.title), "folder": .string(deck.folder), "category": .string(deck.category ?? ""),
+                 "tags": .array(deck.tags.map { .string($0) }), "description": .string(deck.description),
+                 "files": .number(Double(deck.files.count)), "added": .bool(false)])
     }
 }
