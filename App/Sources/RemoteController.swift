@@ -153,6 +153,11 @@ final class RemoteController {
         switch command {
         case .startRecording:
             guard !capture.recorder.isActive else { return (false, "Already recording.") }
+            // Nothing chosen to record but a deck is open: record the slides,
+            // like Record This Deck in the Present view.
+            if capture.setup.source == nil, builder.isDeckOpen, builder.current?.kind == .presentation {
+                capture.selectSlidesSource()
+            }
             do {
                 try await capture.startRecording()
                 return (true, nil)
@@ -190,6 +195,11 @@ final class RemoteController {
         case .openPresentWindow:
             guard builder.isDeckOpen else { return (false, "No deck is open.") }
             builder.openPopOut()
+            return (true, nil)
+        case .prompter(let action):
+            app.prompter.perform(action)
+            return (true, nil)
+        case .ping:
             return (true, nil)
         case .chat(let text):
             let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -248,6 +258,7 @@ final class RemoteController {
             }
             if builder.deckSlides.indices.contains(i + 1) { s.nextSlideTitle = builder.deckSlides[i + 1].displayTitle }
         }
+        s.prompter = app.prompter.remoteState
         if app.live.isRunning { s.liveRoomViewers = app.live.viewers }
         if !app.broadcast.liveDestinations.isEmpty { s.broadcast = app.broadcast.liveDestinations.map(\.displayName).joined(separator: " + ") }
         if let w = recorder.warning { s.warnings.append(w) }

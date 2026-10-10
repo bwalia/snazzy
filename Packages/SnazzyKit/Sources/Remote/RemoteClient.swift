@@ -195,10 +195,12 @@ public final class RemoteClient: @unchecked Sendable {
         }
     }
 
-    /// Sends a command and waits for the Mac's answer.
+    /// Sends a command and waits for the Mac's answer. With no answer in time
+    /// the link is taken to be dead: it's closed, so the app reconnects.
     @discardableResult
-    public func send(_ command: RemoteCommand) async -> (ok: Bool, message: String?) {
+    public func send(_ command: RemoteCommand, timeout: Double? = nil) async -> (ok: Bool, message: String?) {
         guard let link, lock.withLock({ isOpen }) else { return (false, "Not connected.") }
+        let seconds = timeout ?? Self.timeout(for: command)
         let (ok, text) = await withCheckedContinuation { (c: CheckedContinuation<(Bool, String?), Never>) in
             let id = lock.withLock { () -> Int in
                 defer { nextID += 1 }
@@ -206,8 +208,36 @@ public final class RemoteClient: @unchecked Sendable {
                 return nextID
             }
             link.send(.command(id: id, command))
+            queue.asyncAfter(deadline: .now() + seconds) { [weak self, weak link] in
+                guard let self, let c = self.lock.withLock({ self.pending.removeValue(forKey: id) }) else { return }
+                c.resume(returning: (false, "The Mac didn't answer. Reconnecting…"))
+                if let link, self.link === link { self.drop(link, reason: "The Mac stopped answering.") }
+            }
         }
         return (ok, text)
+    }
+
+    /// True when the Mac answers a ping (a quick check after the app wakes).
+    public func ping(timeout: Double = 4) async -> Bool {
+        await send(.ping, timeout: timeout).ok
+    }
+
+    /// Starting includes the countdown and stopping includes saving the file.
+    static func timeout(for command: RemoteCommand) -> Double {
+        switch command {
+        case .startRecording, .stopRecording: 60
+        case .chat: 20
+        default: 10
+        }
+    }
+
+    /// Closes a link that stopped answering and reports it.
+    private func drop(_ link: RemoteLink, reason: String) {
+        lock.withLock { isOpen = false }
+        self.link = nil
+        link.close()
+        failPending()
+        onState?(.disconnected(reason))
     }
 
     private func failPending() {
