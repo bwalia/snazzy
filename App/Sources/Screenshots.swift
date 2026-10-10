@@ -66,6 +66,9 @@ enum Screenshots {
             }
         }
 
+        // Only the deck library (-SnazzyPro.screenshotScenes decks): skips 1–5.
+        let decksOnly = UserDefaults.standard.string(forKey: "SnazzyPro.screenshotScenes") == "decks"
+        if !decksOnly {
         // 1. The assistant builds a deck from one request.
         open("lesson-photosynthesis", app)
         app.sidePanelTab = .builder
@@ -126,6 +129,27 @@ enum Screenshots {
             await take("models", "On your Mac, or in the cloud.", "Apple's on-device model, Ollama or Claude. Nothing leaves your Mac unless you choose.", window: settings)
             settings.close()
         }
+
+        }
+
+        // 6–8. My Decks by category, search across every slide, and decks from GitHub.
+        for id in ["build-ship-ai", "sales-demo", "lesson-photosynthesis", "board-results"] { open(id, app) }
+        if let bsa = SampleDeck.all.first(where: { $0.id == "build-ship-ai" }) {
+            _ = try? app.builder.setDetails(project: bsa.projectName, category: "Courses", tags: ["AI", "Skool"])
+        }
+        app.slidesMode = .library
+        app.sidePanelTab = .slides
+        await pause(1)
+        await take("my-decks", "Every deck, organised.", "Decks by name and category, with tags to filter.")
+        app.findInSlides("spend cap")
+        await pause(1)
+        await take("find-in-slides", "Find any slide.", "Search titles, text and speaker notes across every deck, then jump straight to the slide.")
+        let repoText = UserDefaults.standard.string(forKey: "SnazzyPro.screenshotDeckRepo")
+        if let text = repoText { _ = try? app.deckRepos.addRepo(text) }
+        app.slidesMode = .github
+        await app.deckRepos.load(app.deckRepos.selected)
+        await take("get-decks", "Get decks from GitHub.", "Add decks from Snazzy Pro's collection or any public repo.")
+        if let text = repoText, let repo = DeckRepo.parse(text) { app.deckRepos.removeRepo(repo) }
 
         if let data = try? JSONEncoder().encode(shots) { try? data.write(to: folder.appending(path: "shots.json")) }
         // Leave no trace.

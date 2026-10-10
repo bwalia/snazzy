@@ -11,7 +11,8 @@ struct MainView: View {
     /// Tours and tests run without the splash and welcome screen.
     static var skipIntro: Bool {
         #if DEBUG
-        UserDefaults.standard.string(forKey: "SnazzyPro.tour") != nil || CommandLine.arguments.contains("-SnazzyPro.skipIntro")
+        UserDefaults.standard.string(forKey: "SnazzyPro.tour") != nil || UserDefaults.standard.bool(forKey: "SnazzyPro.screenshots")
+            || CommandLine.arguments.contains("-SnazzyPro.skipIntro")
         #else
         false
         #endif

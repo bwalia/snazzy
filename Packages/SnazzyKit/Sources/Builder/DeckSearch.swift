@@ -80,7 +80,8 @@ public enum DeckSearch {
     public static func deck(project: String, in workspace: Workspace) -> Deck? {
         guard var deck = slidesOnly(project: project, in: workspace) else { return nil }
         let meta = workspace.project(project)
-        deck.category = meta?.category
+        // Samples opened before decks had categories: their sector.
+        deck.category = meta?.category ?? SampleDeck.all.first { $0.projectName == project }?.sector.rawValue
         deck.tags = meta?.tags ?? []
         deck.created = meta?.created
         return deck
@@ -214,7 +215,9 @@ public enum DeckSearch {
 
     /// Visible text of an HTML fragment: tags removed, entities decoded, spaces collapsed.
     static func plain(_ html: String) -> String {
-        var s = html.replacingOccurrences(of: #"(?i)<br\s*/?>|</(p|li|div|h\d|td|th)>"#, with: " ", options: .regularExpression)
+        // List items and column headings read as "a · b · c"; other blocks just get a space.
+        var s = html.replacingOccurrences(of: #"(?i)</(li|h3|h4)>"#, with: " · ", options: .regularExpression)
+        s = s.replacingOccurrences(of: #"(?i)<br\s*/?>|</(p|div|h\d|td|th|b|span)>"#, with: " ", options: .regularExpression)
         s = s.replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
         for (entity, char) in [("&nbsp;", " "), ("&lt;", "<"), ("&gt;", ">"), ("&quot;", "\""), ("&#39;", "'"), ("&apos;", "'"),
                                ("&mdash;", "—"), ("&ndash;", "–"), ("&hellip;", "…"), ("&rarr;", "→"), ("&middot;", "·"), ("&amp;", "&")] {
@@ -233,6 +236,11 @@ public enum DeckSearch {
             }
             s = out + ns.substring(from: last)
         }
-        return s.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        var words = s.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        // No separators at the ends or twice in a row.
+        words = words.enumerated().filter { i, w in w != "·" || (i > 0 && words[i - 1] != "·") }.map(\.element)
+        while words.first == "·" { words.removeFirst() }
+        while words.last == "·" { words.removeLast() }
+        return words.joined(separator: " ")
     }
 }

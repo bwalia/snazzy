@@ -19,7 +19,7 @@ import Testing
         #expect(slides.count == 3)
         #expect(slides[0] == .init(heading: "Q3 Café Review", text: "Revenue & costs", notes: "Thank the finance team."))
         #expect(slides[1].heading == "Spend caps")
-        #expect(slides[1].text == "Hard monthly cap Kill switch")
+        #expect(slides[1].text == "Hard monthly cap · Kill switch")
         #expect(slides[2].heading == "Ship the loop")
         #expect(slides[2].notes == "Pause here and mention the <kill switch> drill.")
         #expect(DeckSearch.title(fromHTML: page) == "Q3 Café Review")

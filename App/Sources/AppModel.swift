@@ -45,10 +45,15 @@ final class AppModel {
     /// Bumped to focus the deck search field (Find in Slides).
     var deckSearchRequest = 0
 
-    /// Shows the deck library in the Slides tab, with the search field focused.
-    func findInSlides() {
+    /// Text to put in the deck search field on the next request.
+    var pendingDeckQuery: String?
+
+    /// Shows the deck library in the Slides tab, with the search field focused
+    /// (and filled in, when a query is given).
+    func findInSlides(_ query: String? = nil) {
         sidePanelTab = .slides
         slidesMode = .library
+        pendingDeckQuery = query
         deckSearchRequest += 1
     }
     /// Asks the Live tab to scroll to a section ("broadcast" or "top").

@@ -15,6 +15,8 @@ final class DeckRepoController {
     }
 
     private(set) var repos: [DeckRepo]
+    /// The repo shown in Get Decks.
+    var selected: DeckRepo = .official
     private(set) var states: [DeckRepo: LoadState] = [:]
     /// Decks being downloaded (by id), with how many files are done.
     private(set) var adding: [String: (done: Int, total: Int)] = [:]
@@ -46,6 +48,7 @@ final class DeckRepoController {
             repos.append(repo)
             save()
         }
+        selected = repo
         Task { await load(repo) }
         return repo
     }
@@ -53,6 +56,7 @@ final class DeckRepoController {
     func removeRepo(_ repo: DeckRepo) {
         guard repo != .official else { return }
         repos.removeAll { $0 == repo }
+        if selected == repo { selected = .official }
         states[repo] = nil
         save()
     }

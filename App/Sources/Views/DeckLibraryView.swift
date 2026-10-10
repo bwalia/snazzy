@@ -39,7 +39,11 @@ struct DeckLibraryView: View {
             }
         }
         .task(id: "\(model.builder.libraryVersion)-\(model.builder.reloadCount)") { await reloadDecks() }
-        .onChange(of: model.deckSearchRequest, initial: true) { _, n in if n > 0 { searchFocused = true } }
+        .onChange(of: model.deckSearchRequest, initial: true) { _, n in
+            guard n > 0 else { return }
+            if let q = model.pendingDeckQuery { query = q; model.pendingDeckQuery = nil }
+            searchFocused = true
+        }
         .sheet(item: $editing) { deck in
             DeckDetailsSheet(deck: deck, categories: Array(Set(decks.compactMap(\.category))).sorted(), allTags: allTags) { category, tags in
                 guard case .project(let name) = deck.source else { return }

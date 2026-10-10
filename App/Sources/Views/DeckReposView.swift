@@ -5,10 +5,11 @@ import SwiftUI
 /// user adds) and add a deck to My Decks with one click.
 struct DeckReposView: View {
     @Environment(AppModel.self) private var model
-    @State private var selected: DeckRepo = .official
     @State private var newRepo = ""
     @State private var filter = ""
     @State private var error: String?
+
+    private var selected: DeckRepo { model.deckRepos.selected }
 
     var body: some View {
         let repos: DeckRepoController = model.deckRepos
@@ -18,7 +19,7 @@ struct DeckReposView: View {
                 Text("Pick a deck repo, or add anyone's by pasting owner/repo or a GitHub link. Added decks go to My Decks and open without internet access until you allow it.")
                     .font(.callout).foregroundStyle(.secondary)
                 HStack {
-                    Picker("Repo", selection: $selected) {
+                    Picker("Repo", selection: Binding(get: { repos.selected }, set: { repos.selected = $0 })) {
                         ForEach(repos.repos) { r in
                             Text(r == .official ? "Snazzy Pro decks" : r.name).tag(r)
                         }
@@ -56,7 +57,6 @@ struct DeckReposView: View {
             if selected != .official {
                 Button {
                     model.deckRepos.removeRepo(selected)
-                    selected = .official
                 } label: { Image(systemName: "minus.circle") }
                     .buttonStyle(.borderless).help("Remove this repo from the list (decks you added stay)")
             }
@@ -100,7 +100,7 @@ struct DeckReposView: View {
 
     private func addRepo() {
         do {
-            selected = try model.deckRepos.addRepo(newRepo)
+            try model.deckRepos.addRepo(newRepo)
             newRepo = ""
         } catch {
             self.error = error.localizedDescription
