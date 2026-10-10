@@ -31,10 +31,13 @@ public struct RemoteStatus: Codable, Sendable, Equatable {
     public var liveRoomViewers: Int?
     public var broadcast: String?
     public var warnings: [String]
+    /// The auto-scrolling teleprompter (nil from Macs that don't have one).
+    public var prompter: PrompterState?
 
     public init(hostName: String = "", recording: String = "idle", countdown: Int? = nil, elapsed: Double = 0, micLevel: Double = 0,
                 source: String = "", deckName: String? = nil, slideIndex: Int? = nil, slideCount: Int = 0, slideTitle: String? = nil,
-                nextSlideTitle: String? = nil, notes: String? = nil, liveRoomViewers: Int? = nil, broadcast: String? = nil, warnings: [String] = []) {
+                nextSlideTitle: String? = nil, notes: String? = nil, liveRoomViewers: Int? = nil, broadcast: String? = nil, warnings: [String] = [],
+                prompter: PrompterState? = nil) {
         self.hostName = hostName
         self.recording = recording
         self.countdown = countdown
@@ -50,6 +53,7 @@ public struct RemoteStatus: Codable, Sendable, Equatable {
         self.liveRoomViewers = liveRoomViewers
         self.broadcast = broadcast
         self.warnings = warnings
+        self.prompter = prompter
     }
 
     public var isRecording: Bool { recording == "recording" || recording == "paused" || recording == "countdown" }
@@ -67,6 +71,59 @@ public enum RemoteCommand: Codable, Sendable, Equatable {
     case openPresentWindow
     /// A message to the assistant, as if typed in the Mac's chat.
     case chat(String)
+    case prompter(PrompterAction)
+    /// Checks the link is alive (answers ok, does nothing).
+    case ping
+}
+
+public enum PrompterAction: Codable, Sendable, Equatable {
+    case play
+    case pause
+    case toggle
+    case faster
+    case slower
+    /// Back to the top of the current slide's notes.
+    case restart
+    /// Jumps to a position, 0…1.
+    case seek(Double)
+}
+
+/// The Mac's camera prompter (the teleprompter): it scrolls the current
+/// slide's notes, or a script, at a reading speed. Devices show the same
+/// position (a fraction of the text, so it lines up whatever the font size)
+/// and keep it moving between status updates.
+public struct PrompterState: Codable, Sendable, Equatable {
+    public var running: Bool
+    /// Reading speed in words per minute.
+    public var wordsPerMinute: Double
+    /// How far through the text, 0…1, when the status was made.
+    public var progress: Double
+    /// The script, when it shows one instead of the slide's notes.
+    public var script: String?
+    /// The prompter is open on the Mac.
+    public var visible: Bool
+
+    /// The same as the Mac's prompter settings.
+    public static let speeds: ClosedRange<Double> = 60...260
+    public static let step = 20.0
+
+    public init(running: Bool = false, wordsPerMinute: Double = 140, progress: Double = 0, script: String? = nil, visible: Bool = true) {
+        self.running = running
+        self.wordsPerMinute = wordsPerMinute
+        self.progress = progress
+        self.script = script
+        self.visible = visible
+    }
+
+    public static func words(in text: String?) -> Int {
+        (text ?? "").split(whereSeparator: { $0.isWhitespace }).count
+    }
+
+    /// The position `seconds` later, for notes of `words` words.
+    public func progress(after seconds: Double, words: Int) -> Double {
+        guard running, words > 0, seconds > 0 else { return progress }
+        return min(1, progress + seconds * wordsPerMinute / 60 / Double(words))
+    }
 }
 
 public enum RemoteMessage: Codable, Sendable, Equatable {
@@ -108,7 +165,9 @@ public enum RemoteFrame {
                 guard length <= RemoteProtocol.maxFrame else { throw RemoteError("Message too large.") }
                 guard buffer.count >= 4 + length else { break }
                 let body = buffer.dropFirst(4).prefix(length)
-                out.append(try JSONDecoder().decode(RemoteMessage.self, from: Data(body)))
+                // A message from a newer version that this one doesn't know is
+                // skipped (its sender times out) rather than closing the link.
+                if let message = try? JSONDecoder().decode(RemoteMessage.self, from: Data(body)) { out.append(message) }
                 buffer = Data(buffer.dropFirst(4 + length))
             }
             return out

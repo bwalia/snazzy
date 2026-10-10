@@ -46,6 +46,9 @@ public enum RemoteSecurity {
         let tcp = NWProtocolTCP.Options()
         tcp.enableKeepalive = true
         tcp.keepaliveIdle = 5
+        // A phone that left the network is noticed in ~11 s, not minutes.
+        tcp.keepaliveInterval = 2
+        tcp.keepaliveCount = 3
         tcp.noDelay = true
         // Give up quickly on an address that doesn't answer (then try the next).
         tcp.connectionTimeout = 6

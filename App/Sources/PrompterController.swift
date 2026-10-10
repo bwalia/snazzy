@@ -1,5 +1,6 @@
 import AppKit
 import CaptureEngine
+import Remote
 import SnazzyCore
 import SwiftUI
 
@@ -246,6 +247,41 @@ final class PrompterController {
                 self?.watchSlides()
             }
         }
+    }
+
+    // MARK: Remote
+
+    /// From the iPhone/iPad remote or the watch. Playing opens the prompter
+    /// (it only scrolls while laid out on screen).
+    func perform(_ action: PrompterAction) {
+        switch action {
+        case .play:
+            show()
+            start()
+        case .pause:
+            pause()
+        case .toggle:
+            perform(isScrolling ? .pause : .play)
+        case .faster, .slower:
+            let step = action == .faster ? PrompterState.step : -PrompterState.step
+            let r = PrompterSettings.speedRange
+            settings.wordsPerMinute = min(r.upperBound, max(r.lowerBound, settings.wordsPerMinute + step))
+        case .restart:
+            restart()
+        case .seek(let p):
+            offset = (p.isFinite ? min(1, max(0, p)) : 0) * max(0, contentHeight)
+            lastTick = nil
+        }
+    }
+
+    /// For the remote's status: the position as a fraction of the text.
+    var remoteState: PrompterState? {
+        guard isShown || isScrolling || app.builder.isDeckOpen else { return nil }
+        let moving = isScrolling && timer != nil
+        return PrompterState(running: moving, wordsPerMinute: settings.wordsPerMinute,
+                             progress: contentHeight > 0 ? min(1, offset / contentHeight) : 0,
+                             script: settings.source == .script ? String(settings.script.prefix(PrompterSettings.maxScript)) : nil,
+                             visible: isShown)
     }
 
     // MARK: Assistant

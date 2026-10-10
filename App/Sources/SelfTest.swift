@@ -5,6 +5,7 @@ import AppKit
 import AVFoundation
 import Builder
 import MCP
+import Remote
 import CoreImage
 import Foundation
 import ImageIO
@@ -545,16 +546,32 @@ enum SelfTest {
             let app = AppModel()
             app.sessionLoggingSuspended = true
             let before = Set(app.remote.devices.map(\.id))
+            // --with-deck: a sample deck with speaker notes, the camera prompter scrolling,
+            // so the remote's slide and teleprompter controls can be tried.
+            let deckName = "remote-test-\(UUID().uuidString.prefix(6).lowercased())"
+            let withDeck = arguments.contains("--with-deck")
+            if withDeck, let sample = SampleDeck.all.first(where: { $0.sector == .sales }) {
+                let project = try? app.builder.workspace.createProject(name: deckName, kind: .presentation)
+                for (path, content) in sample.files() { try? app.builder.workspace.write(project: deckName, path: path, content: content) }
+                app.builder.refreshProjects()
+                if project != nil { app.builder.open(deckName) }
+                for _ in 0..<60 where !app.builder.isDeckOpen { try? await Task.sleep(for: .milliseconds(100)) }
+                app.prompter.perform(.play)
+            }
             await app.remote.openPairing()
             print("PAIR \(app.remote.pairingURL?.absoluteString ?? "none")")
             let end = Date().addingTimeInterval(Double(value(after: "--seconds") ?? "60") ?? 60)
             var last = ""
             while Date() < end {
                 try? await Task.sleep(for: .milliseconds(500))
-                let now = "devices=\(app.remote.devices.map(\.name)) connected=\(app.remote.connected)"
+                var now = "devices=\(app.remote.devices.map(\.name)) connected=\(app.remote.connected)"
+                if withDeck {
+                    now += " slide=\(app.builder.currentSlide) prompter=\(app.prompter.isScrolling ? "running" : "paused") wpm=\(Int(app.prompter.settings.wordsPerMinute)) recording=\(app.capture.recorder.state)"
+                }
                 if now != last { print(now); last = now }
             }
             for d in app.remote.devices where !before.contains(d.id) { app.remote.remove(d) }
+            if withDeck { try? app.builder.workspace.deleteProject(deckName) }
             report("remote pairing", !last.contains("connected=[]"), last)
             return ok
         }

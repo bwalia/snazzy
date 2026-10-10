@@ -16,7 +16,7 @@ public enum WatchLink {
     /// Commands the watch may send (not chat: its replies have nowhere to go).
     public static func allows(_ command: RemoteCommand) -> Bool {
         switch command {
-        case .startRecording, .pauseRecording, .resumeRecording, .stopRecording, .nextSlide, .previousSlide, .goToSlide:
+        case .startRecording, .pauseRecording, .resumeRecording, .stopRecording, .nextSlide, .previousSlide, .goToSlide, .prompter, .ping:
             true
         case .openPresentWindow, .chat:
             false
@@ -35,7 +35,7 @@ public enum WatchLink {
 public struct WatchState: Codable, Sendable, Equatable {
     /// Why there's no status, e.g. "Connecting to Studio…" (nil when connected).
     public var problem: String?
-    /// The Mac's status, trimmed for the watch (no notes or mic level).
+    /// The Mac's status, trimmed for the watch (no notes, mic level or teleprompter position).
     public var status: RemoteStatus?
     /// When `status.elapsed` was measured, so the watch can keep the timer running.
     public var sentAt: Date
@@ -50,6 +50,10 @@ public struct WatchState: Codable, Sendable, Equatable {
         var s = s
         s.notes = nil
         s.micLevel = 0
+        // The watch shows play/pause, not the scrolling position (which
+        // changes all the time and would flood the watch).
+        s.prompter?.progress = 0
+        s.prompter?.script = nil
         return s
     }
 

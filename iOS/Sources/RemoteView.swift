@@ -24,7 +24,7 @@ struct RemoteView: View {
                         ScrollView {
                             VStack(spacing: 18) {
                                 Controls(status: status)
-                                Teleprompter(status: status).frame(minHeight: 260)
+                                Teleprompter(status: status).frame(minHeight: 420)
                             }
                             .padding(16)
                         }
@@ -193,33 +193,85 @@ private struct MicMeter: View {
     }
 }
 
-/// Speaker notes for the current slide, large and scrollable.
+/// Speaker notes for the current slide (or the prompter's script): they
+/// scroll with the Mac's camera prompter, which you play, pause and speed up
+/// from here.
 private struct Teleprompter: View {
+    @Environment(RemoteModel.self) private var model
     let status: RemoteStatus
     @AppStorage("teleprompterSize") private var fontSize = 30.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Speaker notes").font(.caption.weight(.semibold)).textCase(.uppercase).foregroundStyle(.secondary)
+                Text(status.prompter?.script != nil ? "Script" : "Speaker notes").font(.caption.weight(.semibold)).textCase(.uppercase).foregroundStyle(.secondary)
                 Spacer()
                 Button { fontSize = max(18, fontSize - 3) } label: { Image(systemName: "textformat.size.smaller") }
                     .accessibilityLabel("Smaller text")
                 Button { fontSize = min(64, fontSize + 3) } label: { Image(systemName: "textformat.size.larger") }
                     .accessibilityLabel("Larger text")
             }
-            ScrollView {
-                Text(status.notes ?? (status.slideCount > 0 ? "No notes for this slide." : "Open a deck on the Mac to see your notes here."))
-                    .font(.system(size: fontSize, weight: .medium))
-                    .lineSpacing(fontSize * 0.25)
-                    .foregroundStyle(status.notes == nil ? .secondary : .primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            if let prompter = status.prompter {
+                // Above the notes so it's always in reach, and shown on slides
+                // without notes too, so it can be paused before the next one.
+                PrompterControls(prompter: prompter)
+            }
+            if let prompter = status.prompter, let text = prompter.script ?? status.notes, !text.isEmpty {
+                PrompterScroller(text: text, fontSize: fontSize, state: prompter, since: model.statusAt) { p in
+                    model.send(.prompter(.seek(p)))
+                }
+                .frame(minHeight: 200)
+            } else {
+                ScrollView {
+                    Text(status.notes ?? (status.slideCount > 0 ? "No notes for this slide." : "Open a deck on the Mac to see your notes here."))
+                        .font(.system(size: fontSize, weight: .medium))
+                        .lineSpacing(fontSize * 0.25)
+                        .foregroundStyle(status.notes == nil ? .secondary : .primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             if let next = status.nextSlideTitle {
                 Text("Next: \(next)").font(.callout).foregroundStyle(.secondary).lineLimit(1)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// Play/pause, restart and speed for the teleprompter.
+private struct PrompterControls: View {
+    @Environment(RemoteModel.self) private var model
+    let prompter: PrompterState
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button { model.send(.prompter(.restart)) } label: {
+                Image(systemName: "backward.end.fill").frame(width: 30, height: 44)
+            }
+            .accessibilityLabel("Back to the top")
+            Button { model.send(.prompter(prompter.running ? .pause : .play)) } label: {
+                Label(prompter.running ? "Pause" : "Scroll", systemImage: prompter.running ? "pause.fill" : "play.fill")
+                    .font(.headline)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(prompter.running ? .orange : .accentColor)
+            Button { model.send(.prompter(.slower)) } label: {
+                Image(systemName: "tortoise.fill").frame(width: 30, height: 44)
+            }
+            .disabled(prompter.wordsPerMinute <= PrompterState.speeds.lowerBound)
+            .accessibilityLabel("Slower")
+            Text("\(Int(prompter.wordsPerMinute))").font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
+                .frame(minWidth: 30)
+                .accessibilityLabel("\(Int(prompter.wordsPerMinute)) words a minute")
+            Button { model.send(.prompter(.faster)) } label: {
+                Image(systemName: "hare.fill").frame(width: 30, height: 44)
+            }
+            .disabled(prompter.wordsPerMinute >= PrompterState.speeds.upperBound)
+            .accessibilityLabel("Faster")
+        }
+        .buttonStyle(.bordered)
     }
 }
 
