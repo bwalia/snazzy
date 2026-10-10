@@ -58,6 +58,10 @@ final class BuilderController {
     private(set) var deckSlides: [DeckSlide] = []
     /// The slide showing in the preview and the Present window (they stay in step).
     private(set) var currentSlide = 0
+    /// Bumped when a deck is added, removed, edited or re-labelled, so the library re-reads.
+    private(set) var libraryVersion = 0
+    /// Slide to show once the deck being opened has loaded (from search).
+    @ObservationIgnored private var pendingSlide: Int?
     /// Whether the Present window is open.
     private(set) var stageOpen = false
 
@@ -176,6 +180,26 @@ final class BuilderController {
 
     func refreshProjects() {
         projects = workspace.listProjects()
+        libraryVersion += 1
+    }
+
+    /// Opens a deck at a slide (a search result). Waits for the page if it isn't open yet.
+    func open(_ name: String, slide: Int) {
+        if current?.name == Workspace.slug(name), isDeckOpen {
+            goToSlide(slide)
+        } else {
+            pendingSlide = slide
+            open(name, announce: false)
+        }
+    }
+
+    /// Sets how a deck is organised in the library.
+    @discardableResult
+    func setDetails(project: String, category: String?, tags: [String]) throws -> BuilderProject {
+        let p = try workspace.setDetails(project, category: category, tags: tags)
+        refreshProjects()
+        if current?.name == p.name { current = p }
+        return p
     }
 
     @discardableResult
@@ -434,6 +458,10 @@ final class BuilderController {
         if let slides {
             // Full report after a page load. A page without a deck in the main preview clears the list.
             if web === webView || !slides.isEmpty, slides != deckSlides { deckSlides = slides }
+            if web === webView, !slides.isEmpty, let slide = pendingSlide {
+                pendingSlide = nil
+                if slide != index { goToSlide(slide); return }
+            }
         }
         guard index >= 0 else { return }
         let changed = index != currentSlide

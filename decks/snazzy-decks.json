@@ -1,0 +1,13 @@
+{
+  "title": "Snazzy Pro decks",
+  "decks": [
+    {
+      "path": "build-ship-ai",
+      "title": "Build & Ship AI",
+      "description": "The course map for the Build & Ship AI Skool group: eight courses, a slide per lesson with what you learn, what you build and when it's done, ending in a production showcase.",
+      "category": "Courses",
+      "tags": ["AI", "Skool", "Curriculum"],
+      "author": "Snazzy Pro"
+    }
+  ]
+}

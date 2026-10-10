@@ -35,12 +35,22 @@ final class AppModel {
     @ObservationIgnored private(set) var prompter: PrompterController!
     @ObservationIgnored private(set) var purchases: PurchaseController!
     @ObservationIgnored private(set) var voice: VoiceMode!
+    @ObservationIgnored private(set) var deckRepos: DeckRepoController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// Hides the conversation list (tours, screen sharing).
     var hideConversations = false
     /// The Slides tab's mode (nil: Present when a deck is open, else samples).
     var slidesMode: SlidesPanel.Mode?
+    /// Bumped to focus the deck search field (Find in Slides).
+    var deckSearchRequest = 0
+
+    /// Shows the deck library in the Slides tab, with the search field focused.
+    func findInSlides() {
+        sidePanelTab = .slides
+        slidesMode = .library
+        deckSearchRequest += 1
+    }
     /// Asks the Live tab to scroll to a section ("broadcast" or "top").
     var liveScrollTarget: String?
     /// The right-hand panel's tab (the builder switches to it when it works).
@@ -72,6 +82,7 @@ final class AppModel {
         self.prompter = PrompterController(app: self)
         self.purchases = PurchaseController()
         self.voice = VoiceMode(app: self)
+        self.deckRepos = DeckRepoController(app: self)
         refreshStoredKeys()
         startPathMonitor()
         mcp.start()

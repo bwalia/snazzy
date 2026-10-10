@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Build &amp; Ship AI</title>
+  <link rel="stylesheet" href="deck.css">
+</head>
+<body style="--accent: #6C5CFF">
+  <!-- Build & Ship AI: one curriculum, eight courses, a slide per lesson. -->
+  <div class="deck">
+    <section class="slide title">
+      <h1>Build &amp; Ship AI</h1><p class="subtitle">A Skool group for people who ship production-grade AI apps, not demos</p>
+      <aside class="notes">Welcome them. This is the course map for the group: eight courses, thirty-two lessons, one shipped app you can put on a stage.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>The promise</h2><ul><li>Leave with a live product, not a notebook</li><li>AI as a system: models, tools, evals, spend caps</li><li>A public showcase video of the thing you shipped</li></ul>
+      <aside class="notes">Say the promise twice: you will ship something people can use, with the boring production pieces, and you will record a showcase of it.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>Who this is for</h2><div class="cols"><div><h3>Builders</h3><ul><li>Engineers, PMs and founders who can ship a vertical slice</li><li>You already use ChatGPT or Cursor</li><li>You want users, not another tutorial</li></ul></div><div><h3>Not this</h3><ul><li>Prompt-only playlists with no product</li><li>Not this either</li><li>Research papers with no customers</li></ul></div></div>
+      <aside class="notes">This group is for people who can already write or steer code. We are not teaching Python from zero. We are teaching how to get an AI product into production.</aside>
+    </section>
+    <section class="slide layout-stats">
+      <h2>What you ship</h2><div class="stats"><div class="stat"><b>1</b><span>production URL with real users or a real waitlist</span></div><div class="stat"><b>1</b><span>eval set that catches regressions</span></div><div class="stat"><b>1</b><span>three-minute showcase film</span></div></div>
+      <aside class="notes">The capstone is three artefacts: a live URL, a small eval harness, and a three-minute film of the product working.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>The production bar</h2><ul><li>Secrets never in git, logs or chat</li><li>Ask before anything leaves the machine</li><li>Traces for every model and tool call</li><li>A kill switch and a spend cap</li><li>A human in the loop for irreversible actions</li></ul>
+      <aside class="notes">Read these slowly. This is the difference between a weekend demo and something you can show a customer.</aside>
+    </section>
+    <section class="slide layout-steps">
+      <h2>Eight courses, one arc</h2><ol class="steps"><li>Welcome: builders who ship</li><li>Find a problem worth shipping</li><li>AI systems, not chat windows</li><li>Product, UX and trust</li><li>Architecture of production AI</li><li>Build the vertical slice</li><li>Ship for real</li><li>Showcase night</li></ol>
+      <aside class="notes">Walk the arc with your hand. Each course is one Skool classroom. Skip none. The last week is a public demo of what you built.</aside>
+    </section>
+    <section class="slide layout-quote">
+      <blockquote>A chatbot in a notebook is homework. A system with users is a product.</blockquote><p class="by">— Build &amp; Ship AI</p>
+      <aside class="notes">Pause. Let this land. Then: every lesson exists to move you from homework to product.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Course 0 — Welcome: builders who ship</h2><ul><li>0.1 Promise, rules, how we give feedback</li><li>0.2 What production-grade means here</li><li>0.3 Tooling: Git, Cursor, one cloud model, one local</li><li>0.4 Pick your lane and open a shipping log</li></ul>
+      <aside class="notes">Week zero. Get accounts working. Everyone posts a two-line shipping log: who they help, and the URL they will own by week seven.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>0.1 Promise, rules and feedback</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>How lessons, live calls and logs work</li><li>Feedback: kind, specific, on the artefact</li><li>Asking for help with code and error</li></ul></div><div><h3>You'll build</h3><ul><li>Your intro post and a shipping log thread</li><li>Done when: your log names who you help and your URL goal</li></ul></div></div>
+      <aside class="notes">Explain the promise and the rhythm. Everyone posts an intro and opens a shipping log today. Public commitment is what gets people to showcase night.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>0.2 What production-grade means here</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Live URL, real users, evals, traces</li><li>Spend caps, kill switch, human approval</li><li>Demo versus product, side by side</li></ul></div><div><h3>You'll build</h3><ul><li>Your copy of the production checklist</li><li>Done when: you can explain each item in one sentence</li></ul></div></div>
+      <aside class="notes">Read the production bar slowly and show a weekend demo next to a product. Every later lesson ticks off part of this checklist.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>0.3 Tooling: Git, Cursor, cloud and local</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Git, GitHub and an AI code editor</li><li>One cloud model and one local model</li><li>Keys in .env, spend limits on day one</li></ul></div><div><h3>You'll build</h3><ul><li>A starter repo that calls both models</li><li>Done when: fresh clone runs in one command, no keys in Git</li></ul></div></div>
+      <aside class="notes">Do it live. Add .env to .gitignore first, set a spend limit on the provider dashboard. Leaked keys get abused within minutes.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>0.4 Pick your lane, open your log</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Lanes: copilot, specialist agent, workflow</li><li>One user, one painful job, one sentence</li><li>Why boring, real problems win</li></ul></div><div><h3>You'll build</h3><ul><li>A one-page brief for your app</li><li>Done when: your brief is posted and a peer challenged it</li></ul></div></div>
+      <aside class="notes">Give an example from each lane. Push for a specific user they can talk to. The brief is the north star for every course after this.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Course 1 — Find a problem worth shipping</h2><ul><li>1.1 Jobs-to-be-done: talk to five people</li><li>1.2 The wedge: one user, one job, one metric</li><li>1.3 Where AI belongs — and where code is enough</li><li>1.4 Fake door, waitlist, or a paid letter of intent</li></ul>
+      <aside class="notes">No building the model yet. If they cannot name five people and one number, they do not start Course 2.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>1.1 Jobs-to-be-done: talk to five people</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Interviewing without pitching</li><li>Finding the job behind the request</li><li>Writing up what you heard</li></ul></div><div><h3>You'll build</h3><ul><li>Notes from five user conversations</li><li>Done when: five calls logged, with quotes, in your log</li></ul></div></div>
+      <aside class="notes">Role-play an interview in the call. Ban the question 'would you use this?'. Ask about the last time they did the job instead.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>1.2 The wedge: one user, one job, one metric</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Narrowing to the smallest valuable job</li><li>Choosing the one number that shows success</li><li>What you will not build</li></ul></div><div><h3>You'll build</h3><ul><li>A wedge statement and its metric</li><li>Done when: a stranger understands your wedge in ten seconds</li></ul></div></div>
+      <aside class="notes">Read wedges aloud and cut each one in half. The metric must be something a user would notice, like minutes saved per week.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>1.3 Where AI belongs, and where code is enough</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Tasks models are good and bad at</li><li>Rules and code for anything exact</li><li>Mapping your job into AI and code steps</li></ul></div><div><h3>You'll build</h3><ul><li>A flow diagram marking AI steps and code steps</li><li>Done when: every AI step says why code can't do it</li></ul></div></div>
+      <aside class="notes">Many steps are plain code. Models for language and judgement, code for maths, rules and anything that must be exact.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>1.4 Fake door, waitlist or letter of intent</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Testing demand before building</li><li>A landing page with one call to action</li><li>Asking for a commitment, not a compliment</li></ul></div><div><h3>You'll build</h3><ul><li>A fake door, waitlist or paid letter of intent</li><li>Done when: real sign-ups or a signed letter, in your log</li></ul></div></div>
+      <aside class="notes">No Course 2 without a number. Ten waitlist sign-ups from strangers beats a hundred likes from friends.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Course 2 — AI systems, not chat</h2><ul><li>2.1 Model vs code vs retrieval vs tools</li><li>2.2 Prompts as product: versioned and tested</li><li>2.3 Tool calling, agents, human in the loop</li><li>2.4 Eval harness from day one (twenty gold cases)</li></ul>
+      <aside class="notes">This week they replace 'I asked the model' with a loop: input, tools, check, retry. Twenty gold cases in a file. That file is the product.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>2.1 Model vs code vs retrieval vs tools</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Tokens, context, cost and latency</li><li>Retrieval (RAG) for your own data</li><li>Tools when the AI must act</li></ul></div><div><h3>You'll build</h3><ul><li>Your first streaming model call in the app</li><li>Done when: you can explain cost and latency of your main call</li></ul></div></div>
+      <aside class="notes">Show the pricing page and a big versus small model on the same task. When the data won't fit in context, retrieve it. When the AI must act, give it a tool.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>2.2 Prompts as product: versioned and tested</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Instructions, context and examples</li><li>Structured output that matches a schema</li><li>Prompts in Git, reviewed like code</li></ul></div><div><h3>You'll build</h3><ul><li>Your system prompt in a file, with JSON output</li><li>Done when: 100 sample inputs, zero schema failures</li></ul></div></div>
+      <aside class="notes">Show a vague prompt, then one with role, context, format and examples. Validate every output with Zod or Pydantic, even when the model is usually right.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>2.3 Tool calling, agents, human in the loop</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>The tool loop: ask, run, return</li><li>MCP to plug in tools from anywhere</li><li>Approval before anything irreversible</li></ul></div><div><h3>You'll build</h3><ul><li>Two tools and an approval step in your app</li><li>Done when: a doc saying 'ignore your rules' can't trigger an action</li></ul></div></div>
+      <aside class="notes">Tool descriptions are prompts. Run the prompt-injection demo live. Rule: the model proposes, a person or a policy approves.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>2.4 Eval harness from day one</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Twenty gold cases from real inputs</li><li>Graders: code checks and LLM-as-judge</li><li>One command, one score</li></ul></div><div><h3>You'll build</h3><ul><li>An eval file with twenty gold cases and a runner</li><li>Done when: your score prints, and a bad prompt lowers it</li></ul></div></div>
+      <aside class="notes">Evals are unit tests for behaviour. Start with twenty cases and grow it. That file is the product.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Course 3 — Product, UX and trust</h2><ul><li>3.1 Latency, streaming, empty and error states</li><li>3.2 Show your work: citations, diffs, ask first</li><li>3.3 Cost per successful action</li><li>3.4 Privacy: what never leaves the device</li></ul>
+      <aside class="notes">Users forgive a slow answer they can see thinking. They do not forgive a silent wrong one. Cost and privacy are product features, not later.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>3.1 Latency, streaming, empty and error states</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Streaming so first words appear fast</li><li>Stop, retry and copy buttons</li><li>Loading, empty and error states</li></ul></div><div><h3>You'll build</h3><ul><li>A streaming UI with every state designed</li><li>Done when: first words in under a second; errors are friendly</li></ul></div></div>
+      <aside class="notes">Show waiting versus streaming. Build the stop button live, it's the feature people miss most. Pull the network cable to test errors.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>3.2 Show your work: citations, diffs, ask first</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Citing sources from retrieval</li><li>Showing diffs before changes</li><li>Saying 'I don't know'</li></ul></div><div><h3>You'll build</h3><ul><li>Citations or a preview on every AI answer</li><li>Done when: out-of-scope questions get an honest 'not sure'</li></ul></div></div>
+      <aside class="notes">Trust comes from seeing the work. Demo an out-of-scope question. Retrieved text is data, not instructions.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>3.3 Cost per successful action</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Measuring cost per task, not per call</li><li>Caching, smaller models, batching</li><li>Pricing above your cost floor</li></ul></div><div><h3>You'll build</h3><ul><li>A cost-per-action number for your main task</li><li>Done when: cost known, lowered once, eval score unchanged</li></ul></div></div>
+      <aside class="notes">Measure first. Caching a long system prompt and moving easy tasks to a small model are usually the biggest wins. Re-run evals after every cost change.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>3.4 Privacy: what never leaves the device</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Data minimisation and redaction</li><li>Local models for sensitive steps</li><li>Retention and deletion</li></ul></div><div><h3>You'll build</h3><ul><li>A data map: what leaves, where, why</li><li>Done when: your privacy page matches the data map</li></ul></div></div>
+      <aside class="notes">Privacy is a feature you can sell. Walk a data map for a member's app. Anything sensitive gets redacted or stays local.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Course 4 — Architecture of production AI</h2><ul><li>4.1 Auth, data model, secrets</li><li>4.2 Queues, retries, idempotency</li><li>4.3 Observability: a trace per request</li><li>4.4 Rate limits, spend caps, kill switch</li></ul>
+      <aside class="notes">Draw the box: client, API, queue, model, tools, store. If they cannot point to the spend cap and the kill switch, it is not production yet.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>4.1 Auth, data model, secrets</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Keys on the server, never the browser</li><li>Hosted auth and per-user data</li><li>Secrets manager and key rotation</li></ul></div><div><h3>You'll build</h3><ul><li>Sign-in, saved history and an architecture diagram</li><li>Done when: two test users can't see each other's data</li></ul></div></div>
+      <aside class="notes">Draw the box live: client, API, queue, model, tools, store. Calling a model from the browser with a key leaks it.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>4.2 Queues, retries, idempotency</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Background jobs for slow work</li><li>Retries with backoff and timeouts</li><li>Idempotency so retries are safe</li></ul></div><div><h3>You'll build</h3><ul><li>A queue for long tasks and a model fallback</li><li>Done when: with the model blocked, no work is lost</li></ul></div></div>
+      <aside class="notes">Simulate an outage. Users forgive slow, they don't forgive lost work.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>4.3 Observability: a trace per request</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Tracing every model and tool call</li><li>User feedback with a reason</li><li>Alerts on errors, latency and spend</li></ul></div><div><h3>You'll build</h3><ul><li>Tracing and thumbs up/down in your app</li><li>Done when: any complaint opens to what the model saw and said</li></ul></div></div>
+      <aside class="notes">Show a trace of a bad answer and walk back to the cause. Feedback flows into the eval set, which closes the loop.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>4.4 Rate limits, spend caps, kill switch</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Per-user limits against abuse and bills</li><li>A hard monthly spend cap</li><li>A kill switch that fails closed</li></ul></div><div><h3>You'll build</h3><ul><li>Limits, a spend cap and a kill switch</li><li>Done when: request 51 is blocked; the switch stops AI in seconds</li></ul></div></div>
+      <aside class="notes">If they can't point to the spend cap and the kill switch, it's not production. Test both live.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Course 5 — Build the vertical slice</h2><ul><li>5.1 One happy path, end to end, this week</li><li>5.2 Tests on the agent path</li><li>5.3 One screen that looks like a real product</li><li>5.4 Record a ninety-second work-in-progress</li></ul>
+      <aside class="notes">Narrow ruthlessly. One user, one job, one screen. Record the ninety seconds even if it is ugly. Shipping log gets the link.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>5.1 One happy path, end to end</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Cutting scope to one path</li><li>Wiring UI, API, model and store</li><li>Deploying from main</li></ul></div><div><h3>You'll build</h3><ul><li>Your happy path working on a real URL</li><li>Done when: a user can finish the job without your help</li></ul></div></div>
+      <aside class="notes">Narrow ruthlessly: one user, one job, one screen. Ship ugly, ship early.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>5.2 Tests on the agent path</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Unit tests for tools and parsing</li><li>Evals in CI on every pull request</li><li>Thresholds that block bad changes</li></ul></div><div><h3>You'll build</h3><ul><li>A CI job that runs tests and evals</li><li>Done when: a deliberately bad prompt change fails CI</li></ul></div></div>
+      <aside class="notes">Keep a small fast eval set for every PR and a full set nightly so costs stay sane.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>5.3 One screen that looks like a product</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Layout, type and spacing basics</li><li>Copy that names the user's job</li><li>Polishing the screen people see most</li></ul></div><div><h3>You'll build</h3><ul><li>One polished screen for your main job</li><li>Done when: a stranger knows what to do in five seconds</li></ul></div></div>
+      <aside class="notes">Pick the one screen users see most and make it great. Polish beats breadth.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>5.4 Record a ninety-second work in progress</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Problem, loop, proof in ninety seconds</li><li>Recording screen, camera and voice</li><li>Posting for feedback</li></ul></div><div><h3>You'll build</h3><ul><li>A ninety-second video in your shipping log</li><li>Done when: posted, with two pieces of feedback answered</li></ul></div></div>
+      <aside class="notes">Record even if it's ugly. Snazzy Pro records slides, screen and camera in one go. The link goes in the log.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Course 6 — Ship for real</h2><ul><li>6.1 One production URL</li><li>6.2 Privacy, terms, logs, backups</li><li>6.3 Payments or a real waitlist</li><li>6.4 First ten users and an incident drill</li></ul>
+      <aside class="notes">Live means someone who is not you can open it. Incident drill: kill the model key, confirm the app fails closed, restore.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>6.1 One production URL</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Hosting, environments and domains</li><li>Preview deploys for every pull request</li><li>Separating test and production keys</li></ul></div><div><h3>You'll build</h3><ul><li>Your app on its own domain over HTTPS</li><li>Done when: someone outside the group has used it</li></ul></div></div>
+      <aside class="notes">Live means someone who isn't you can open it. Celebrate every link posted.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>6.2 Privacy, terms, logs, backups</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Privacy policy and terms of use</li><li>Logs without secrets or personal data</li><li>Backups you have restored once</li></ul></div><div><h3>You'll build</h3><ul><li>Privacy and terms pages, and a tested backup</li><li>Done when: you restored a backup to a fresh database</li></ul></div></div>
+      <aside class="notes">A backup you haven't restored is a hope, not a backup. Check logs for keys and personal data.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>6.3 Payments or a real waitlist</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Pricing: subscription, credits or usage</li><li>Checkout with Stripe in test mode</li><li>Plan limits enforced in the app</li></ul></div><div><h3>You'll build</h3><ul><li>Working checkout, or a waitlist with a deposit</li><li>Done when: a test customer can subscribe and cancel alone</li></ul></div></div>
+      <aside class="notes">Test mode only in class. Cost per action from Course 3 sets the price floor.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>6.4 First ten users and an incident drill</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Finding and onboarding your first ten</li><li>Talking to users every week</li><li>Running an incident drill</li></ul></div><div><h3>You'll build</h3><ul><li>Ten users, and a written incident runbook</li><li>Done when: key revoked: app fails closed, then you restore it</li></ul></div></div>
+      <aside class="notes">Incident drill: kill the model key, confirm the app fails closed, restore it. Then write down what you did.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Course 7 — Showcase night</h2><ul><li>7.1 The three-minute story: problem, loop, proof</li><li>7.2 Record the demo: slides, camera, chapters</li><li>7.3 Launch: site, film, Skool post, one share</li><li>7.4 Feedback to v1.1 in seven days</li></ul>
+      <aside class="notes">Showcase format is fixed: one minute problem, one minute the loop, one minute proof it works in production. Then they post the film.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>7.1 The three-minute story</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>One minute problem</li><li>One minute the AI loop working</li><li>One minute proof in production</li></ul></div><div><h3>You'll build</h3><ul><li>A three-minute script and slide outline</li><li>Done when: a peer can retell your story after one listen</li></ul></div></div>
+      <aside class="notes">The format is fixed: problem, loop, proof. No architecture slides without the product running.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>7.2 Record the demo: slides, camera, chapters</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Slides plus live product on screen</li><li>Camera inset and clean audio</li><li>Chapters for each part of the story</li></ul></div><div><h3>You'll build</h3><ul><li>Your three-minute showcase film</li><li>Done when: it meets the showcase definition of done</li></ul></div></div>
+      <aside class="notes">Use the prompter for your script and record the deck so every part is a chapter. Two takes maximum.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>7.3 Launch: site, film, Skool post, one share</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>A landing page with the film</li><li>A case study: problem, approach, results</li><li>A launch post that tells a story</li></ul></div><div><h3>You'll build</h3><ul><li>Landing page, case study and launch post</li><li>Done when: launched publicly; every comment answered</li></ul></div></div>
+      <aside class="notes">Launch in the group first as a friendly dry run, then go public. The case study is what gets members hired or signed.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>7.4 Feedback to v1.1 in seven days</h2><div class="cols"><div><h3>You'll learn</h3><ul><li>Sorting feedback by evidence</li><li>Change one thing, measure with evals</li><li>Shipping a release note</li></ul></div><div><h3>You'll build</h3><ul><li>v1.1 shipped with a short release note</li><li>Done when: your score or metric moved, and you know why</li></ul></div></div>
+      <aside class="notes">Close the loop: feedback, eval, change, ship. Invite graduates to mentor the next cohort.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>A week in the group</h2><div class="cols"><div><h3>Live</h3><ul><li>60-minute lesson, then critique two logs</li><li>Async</li><li>Do the work, post proof, comment twice</li></ul></div><div><h3>Gate</h3><ul><li>No next course without the artefact</li><li>Hours</li><li>Office hours unblock deploys — not a lecture</li></ul></div></div>
+      <aside class="notes">Live is short. The work is async. The gate is real: no Course 6 film until there is a URL.</aside>
+    </section>
+    <section class="slide layout-steps">
+      <h2>How Skool is set up</h2><ol class="steps"><li>Classroom per course, lessons in order</li><li>A Shipping Logs channel: URL or it did not happen</li><li>Critique threads: kind, specific, about the artefact</li><li>Showcase calendar in week seven</li></ol>
+      <aside class="notes">Point at Skool while you say this. Classrooms match Course 0 to 7. Shipping Logs is the heartbeat.</aside>
+    </section>
+    <section class="slide layout-stats">
+      <h2>Time you should spend</h2><div class="stats"><div class="stat"><b>4–6h</b><span>build time per week</span></div><div class="stat"><b>60m</b><span>live lesson</span></div><div class="stat"><b>8 wks</b><span>welcome to showcase</span></div></div>
+      <aside class="notes">Be honest. If they cannot find four hours, they should audit, not commit to a showcase slot.</aside>
+    </section>
+    <section class="slide layout-bullets">
+      <h2>Showcase film — definition of done</h2><ul><li>Problem named in one sentence</li><li>The AI loop on screen, not described</li><li>A real URL, a trace, a spend cap</li><li>What broke, and what you changed</li><li>Ask: who should try this next week</li></ul>
+      <aside class="notes">This checklist is also the scorecard on showcase night. No slides of architecture without the product running.</aside>
+    </section>
+    <section class="slide layout-columns">
+      <h2>Good first products</h2><div class="cols"><div><h3>Ship these</h3><ul><li>Internal copilot with tools and logs</li><li>A specialist agent with evals</li><li>A workflow that replaces a weekly report</li></ul></div><div><h3>Skip these</h3><ul><li>Generic ChatGPT wrappers</li><li>A model trained from scratch</li><li>A platform with no wedge</li></ul></div></div>
+      <aside class="notes">Give examples from the room if you have them. Ban wrappers. Ban platform. Reward a sharp wedge.</aside>
+    </section>
+    <section class="slide layout-quote">
+      <blockquote>Ship the loop. Then make the loop trustworthy.</blockquote><p class="by">— Week five, then week six</p>
+      <aside class="notes">Course five is the loop working. Course six is the loop you can leave running. Do not swap those.</aside>
+    </section>
+    <section class="slide title">
+      <h1>This week: Course 0</h1><p class="subtitle">Post your shipping log: who you help, and the URL you will own by showcase night</p>
+      <aside class="notes">Give the homework. Stay for questions. First live session is Course 0.1 — promise, rules, production-grade.</aside>
+    </section>
+  </div>
+  <div class="counter"></div>
+  <script src="deck.js"></script>
+</body>
+</html>

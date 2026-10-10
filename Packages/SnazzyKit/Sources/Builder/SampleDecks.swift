@@ -180,7 +180,7 @@ extension Workspace {
         }
         // Editable without AI in the slide editor.
         try DeckOutline(title: sample.title, accent: sample.accent, slides: sample.slides).save(to: self, project: project.name, writeHTML: false)
-        return project
+        return try setDetails(project.name, category: sample.sector.rawValue, tags: ["Sample"])
     }
 }
 

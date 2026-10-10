@@ -285,6 +285,84 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--decks-test") {
+            // My Decks and Get Decks: search every deck, open a result at its slide,
+            // organise with a category and tags, the assistant's tools, and adding a
+            // deck from a GitHub repo (--deck-repo owner/repo[/tree/branch/folder], default Snazzy Pro's).
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let builder = app.builder
+            let projectsBefore = Set(builder.workspace.listProjects().map(\.name))
+            defer { for p in builder.workspace.listProjects() where !projectsBefore.contains(p.name) { try? builder.workspace.deleteProject(p.name) } }
+            guard let bsa = SampleDeck.all.first(where: { $0.id == "build-ship-ai" }),
+                  let sales = SampleDeck.all.first(where: { $0.id == "sales-demo" }) else { return false }
+            do {
+                // Search finds a sample that was never opened.
+                let fresh = DeckSearch.decks(in: builder.workspace)
+                let sampleHit = DeckSearch.search("spend cap", in: fresh).first
+                report("finds slides in unopened samples", sampleHit != nil, sampleHit.map { "\($0.deckTitle), slide \($0.slide + 1): \($0.heading)" } ?? "none")
+
+                let project = try builder.openSample(bsa)
+                let salesProject = try builder.openSample(sales)
+                await deckAnswers(app)
+                let decks = DeckSearch.decks(in: builder.workspace)
+                let hits = DeckSearch.search("kill switch", in: decks)
+                let hit = hits.first { $0.deck == .project(project.name) && $0.slide > 0 }
+                report("search in titles, text and notes", hit != nil, hit.map { "slide \($0.slide + 1) “\($0.heading)” in \($0.field.rawValue): \($0.snippet.prefix(60))" } ?? "\(hits.count) hits")
+
+                // Opening a result from another deck lands on that slide.
+                if let hit {
+                    builder.open(project.name, slide: hit.slide)
+                    for _ in 0..<60 where !(builder.current?.name == project.name && builder.currentSlide == hit.slide) {
+                        try? await Task.sleep(for: .milliseconds(100))
+                    }
+                    report("opens the deck at the slide", builder.current?.name == project.name && builder.currentSlide == hit.slide,
+                           "\(builder.current?.name ?? "-") slide \(builder.currentSlide + 1) of \(builder.deckSlides.count)")
+                }
+
+                // Organise: samples start in their sector; set a category and tags.
+                report("samples start with their sector", DeckSearch.deck(project: salesProject.name, in: builder.workspace)?.category == sales.sector.rawValue,
+                       DeckSearch.deck(project: salesProject.name, in: builder.workspace)?.categoryName ?? "-")
+                try builder.setDetails(project: project.name, category: "Courses", tags: ["AI", "Skool", "ai"])
+                let organised = DeckSearch.deck(project: project.name, in: builder.workspace)
+                report("category and tags saved", organised?.category == "Courses" && organised?.tags == ["AI", "Skool"],
+                       "\(organised?.categoryName ?? "-") \(organised?.tags ?? [])")
+                let byTag = DeckSearch.search("skool kill", in: DeckSearch.decks(in: builder.workspace))
+                report("tags narrow the search", !byTag.isEmpty && byTag.allSatisfy { $0.deck == .project(project.name) }, "\(byTag.count) hits")
+
+                // The assistant's tools.
+                let tools = AssistantTools.registry(app: app, includeMCP: false, offMac: nil)
+                let found = await tools.execute(ToolCall(id: "1", name: "search_slides", arguments: ["query": "incident drill", "limit": 3]))
+                report("search_slides tool", !found.isError && found.content.contains("incident drill"), String(found.content.prefix(120)))
+                let listed = await tools.execute(ToolCall(id: "2", name: "list_decks", arguments: ["category": "Courses"]))
+                report("list_decks tool", !listed.isError && listed.content.contains(project.name) && !listed.content.contains(salesProject.name), String(listed.content.prefix(120)))
+                let opened = await tools.execute(ToolCall(id: "3", name: "open_deck", arguments: ["project": .string(salesProject.name), "slide": 2]))
+                report("open_deck tool", !opened.isError && builder.current?.name == salesProject.name && builder.currentSlide == 2,
+                       "\(builder.current?.name ?? "-") slide \(builder.currentSlide + 1)")
+
+                // A deck from GitHub.
+                let repoText = arguments.firstIndex(of: "--deck-repo").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+                guard let repo = repoText.map(DeckRepo.parse) ?? .official else {
+                    report("deck repo", false, "can't read \(repoText ?? "")"); return ok
+                }
+                let remote = await app.deckRepos.load(repo)
+                if case .failed(let message) = app.deckRepos.state(repo) { report("lists decks in \(repo.name)", false, message); return ok }
+                report("lists decks in \(repo.name)", !remote.isEmpty, remote.map { "\($0.title) [\($0.category ?? "-")] \($0.files.count) files" }.joined(separator: "; "))
+                if let first = remote.first {
+                    let added = try await app.deckRepos.add(first)
+                    await deckAnswers(app)
+                    let meta = builder.workspace.project(added.name)
+                    report("adds it to My Decks", meta?.origin == first.origin && meta?.category == first.category && builder.deckSlides.count > 1,
+                           "\(added.name): \(builder.deckSlides.count) slides, category \(meta?.category ?? "-"), tags \(meta?.tags ?? [])")
+                    report("no internet until allowed", meta?.shared == true, "shared: \(meta?.shared == true)")
+                    let again = try await app.deckRepos.add(first, open: false)
+                    report("adding twice reuses it", again.name == added.name, again.name)
+                }
+            } catch {
+                report("decks", false, error.localizedDescription)
+            }
+            return ok
+        }
         if arguments.contains("--voice-test") {
             // Voice Mode without the mic: commands, the wake word, and the mic
             // muted while it speaks (silently).
