@@ -102,5 +102,15 @@ if [[ $PUBLISH == 1 ]]; then
     --notes "Direct download for macOS 15 or later, Apple Silicon and Intel. Signed with Developer ID and notarized by Apple."
   gh release upload mac-beta build/SnazzyPro.dmg build/SnazzyPro.dmg.sha256 "$DMG" --clobber
   gh release edit mac-beta --notes "Snazzy Pro $VERSION for macOS 15 or later (Apple Silicon and Intel). Signed with Developer ID and notarized by Apple. SHA-256: $(cut -d' ' -f1 build/SnazzyPro.dmg.sha256)"
+
+  # The download page: version, when this download was built, and its checksum.
+  SHA=$(cut -d' ' -f1 build/SnazzyPro.dmg.sha256)
+  BUILT_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  BUILT_TEXT=$(date -u "+%-d %b %Y, %H:%M UTC")
+  VERSION="$VERSION" SHA="$SHA" BUILT_ISO="$BUILT_ISO" BUILT_TEXT="$BUILT_TEXT" perl -0pi -e '
+    s{Version [0-9.]+ · free beta(?: \(built <time[^>]*>[^<]*</time>\))?}{Version $ENV{VERSION} · free beta (built <time class="dl-built" datetime="$ENV{BUILT_ISO}">$ENV{BUILT_TEXT}</time>)};
+    s{(<code class="sha">)[0-9a-f]{64}(</code>)}{$1$ENV{SHA}$2};
+  ' site/download.html
+  echo "  site/download.html: $VERSION, built $BUILT_TEXT, SHA-256 $SHA (commit it to update the website)"
 fi
 echo "Done: $DMG"
