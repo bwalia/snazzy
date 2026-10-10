@@ -46,7 +46,7 @@ struct SampleGallery: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Sample decks").font(.headline)
-                Text("One idea per sector: lessons, pitches, training, board updates and more. Names and figures are made up. Open one, then ask the assistant to make it yours.")
+                Text("Example decks by sector: lessons, pitches, training, board updates and more. Names and figures in the samples are made up, except Build & Ship AI. Open one, then ask the assistant to make it yours.")
                     .font(.callout).foregroundStyle(.secondary)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
