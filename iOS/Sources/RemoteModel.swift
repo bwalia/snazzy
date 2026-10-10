@@ -20,6 +20,8 @@ final class RemoteModel {
     private(set) var hosts: [PairedHost] = []
     private(set) var connection: Connection = .idle { didSet { updateWatch() } }
     private(set) var status: RemoteStatus? { didSet { updateWatch() } }
+    /// When `status` arrived (the teleprompter moves on from there).
+    private(set) var statusAt = Date()
     private(set) var lastResult: String?
     private(set) var chat: [(id: UUID, fromMe: Bool, text: String)] = []
     private(set) var busy = false
@@ -30,6 +32,7 @@ final class RemoteModel {
     @ObservationIgnored private var found: [RemoteBrowser.Found] = []
     @ObservationIgnored private var currentHostID: String?
     @ObservationIgnored private var retry: Task<Void, Never>?
+    @ObservationIgnored private var browsing = false
     /// The Apple Watch app, which controls the Mac through this app.
     @ObservationIgnored private let watch = WatchRelay()
 
@@ -61,9 +64,19 @@ final class RemoteModel {
             pair(with: url)
         }
         #endif
-        browser.start()
+        if !browsing {
+            browser.start()
+            browsing = true
+        }
         if !hosts.isEmpty, !isConnected { connection = .searching }
         connectToKnownHost()
+        // Back from the background: the link may have died while asleep.
+        if isConnected, let client {
+            Task { [weak self] in
+                guard await !client.ping(), let self, self.client === client else { return }
+                self.reconnect()
+            }
+        }
     }
 
     // MARK: Pairing
@@ -124,7 +137,14 @@ final class RemoteModel {
         client?.disconnect()
         let c = RemoteClient(deviceID: deviceID, deviceName: UIDevice.current.name)
         c.onState = { [weak self] s in Task { @MainActor in self?.stateChanged(s) } }
-        c.onStatus = { [weak self] s in Task { @MainActor in self?.status = s } }
+        c.onStatus = { [weak self] s in
+            let at = Date()
+            Task { @MainActor in
+                guard let self else { return }
+                self.statusAt = at
+                self.status = s
+            }
+        }
         c.onChatReply = { [weak self] text in Task { @MainActor in self?.chat.append((UUID(), false, text)) } }
         c.onPaired = { [weak self] host in Task { @MainActor in self?.paired(host) } }
         client = c
@@ -143,6 +163,9 @@ final class RemoteModel {
             break
         case .connected(let name):
             connection = .connected(name)
+            #if DEBUG
+            runDebugCommands()
+            #endif
             UIApplication.shared.isIdleTimerDisabled = true
             // Remember the address that worked.
             if let id = currentHostID, let i = hosts.firstIndex(where: { $0.id == id }), hosts[i].name != name {
@@ -167,21 +190,53 @@ final class RemoteModel {
     // MARK: Commands
 
     func send(_ command: RemoteCommand) {
-        guard client != nil else { return }
-        busy = true
+        // Recording buttons wait for the answer; the teleprompter and slides don't.
+        let blocking = [.startRecording, .stopRecording, .pauseRecording, .resumeRecording].contains(command)
+        if blocking { busy = true }
         Task {
             let (ok, message) = await perform(command)
-            busy = false
+            if blocking { busy = false }
             lastResult = ok ? nil : (message ?? "That didn't work.")
             if ok { UIImpactFeedbackGenerator(style: .medium).impactOccurred() } else { UINotificationFeedbackGenerator().notificationOccurred(.error) }
         }
     }
 
     /// Runs a command on the Mac and returns its answer.
+    /// Not connected (e.g. the link dropped while the phone was locked): it
+    /// reconnects first, waiting a few seconds, so a tap still works.
     func perform(_ command: RemoteCommand) async -> (ok: Bool, message: String?) {
-        guard let client else { return (false, "Your iPhone isn't connected to a Mac.") }
+        if !isConnected {
+            guard !hosts.isEmpty else { return (false, "Pair your iPhone with your Mac first.") }
+            if case .connecting = connection {} else { reconnect() }
+            for _ in 0..<40 where !isConnected { try? await Task.sleep(for: .milliseconds(200)) }
+        }
+        guard isConnected, let client else { return (false, "Your iPhone isn't connected to a Mac.") }
         return await client.send(command)
     }
+
+    #if DEBUG
+    @ObservationIgnored private var debugCommandsRan = false
+
+    /// Tests: `simctl launch … -debugSend prompterPause,next,record,stop`
+    /// sends those once connected, 3 seconds apart, and prints each answer.
+    private func runDebugCommands() {
+        guard !debugCommandsRan, let list = UserDefaults.standard.string(forKey: "debugSend") else { return }
+        debugCommandsRan = true
+        let names: [String: RemoteCommand] = [
+            "prompterPause": .prompter(.pause), "prompterPlay": .prompter(.play), "faster": .prompter(.faster), "slower": .prompter(.slower),
+            "next": .nextSlide, "previous": .previousSlide, "record": .startRecording, "pause": .pauseRecording,
+            "resume": .resumeRecording, "stop": .stopRecording, "ping": .ping,
+        ]
+        Task {
+            for name in list.split(separator: ",").map(String.init) {
+                try? await Task.sleep(for: .seconds(3))
+                guard let command = names[name] else { continue }
+                let (ok, message) = await perform(command)
+                print("DEBUG-SEND \(name) ok=\(ok) \(message ?? "")")
+            }
+        }
+    }
+    #endif
 
     // MARK: Apple Watch
 

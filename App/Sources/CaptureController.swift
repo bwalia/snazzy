@@ -508,8 +508,15 @@ final class CaptureController {
         if recorder.state != .recording, setup.source == .slides { releaseSlidesStage?() }
     }
 
-    func pauseRecording() { recorder.pause() }
-    func resumeRecording() { recorder.resume() }
+    func pauseRecording() {
+        recorder.pause()
+        if recorder.state == .paused { onRecordingEvent?("recording_paused", [:]) }
+    }
+
+    func resumeRecording() {
+        recorder.resume()
+        if recorder.state == .recording { onRecordingEvent?("recording_resumed", [:]) }
+    }
 
     @discardableResult
     func stopRecording() async -> RecordingResult? {

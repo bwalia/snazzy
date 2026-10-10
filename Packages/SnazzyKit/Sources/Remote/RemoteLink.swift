@@ -31,7 +31,9 @@ public final class RemoteLink: @unchecked Sendable {
                 self.finish(Self.describe(e))
             case .waiting(let e):
                 // TLS failures (wrong key) and unreachable hosts land here.
+                // Don't leave the connection waiting to retry on its own.
                 self.finish(Self.describe(e))
+                self.connection.cancel()
             case .cancelled:
                 self.finish(nil)
             default:

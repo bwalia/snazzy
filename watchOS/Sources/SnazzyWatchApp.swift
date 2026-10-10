@@ -133,7 +133,15 @@ private struct SlidesPage: View {
                         .disabled(index >= status.slideCount - 1 || model.busy)
                         .accessibilityLabel("Next slide")
                 }
-                if let next = status.nextSlideTitle {
+                if let prompter = status.prompter {
+                    Button { model.send(.prompter(prompter.running ? .pause : .play)) } label: {
+                        Label(prompter.running ? "Pause Notes" : "Scroll Notes", systemImage: prompter.running ? "pause.fill" : "play.fill")
+                            .font(.caption)
+                    }
+                    .controlSize(.small)
+                    .tint(prompter.running ? .orange : nil)
+                    .disabled(model.busy)
+                } else if let next = status.nextSlideTitle {
                     Text("Next: \(next)").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                 }
             } else {

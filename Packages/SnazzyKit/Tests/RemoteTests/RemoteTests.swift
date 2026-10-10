@@ -38,6 +38,32 @@ final class Box<T: Sendable>: @unchecked Sendable {
         #expect(throws: RemoteError.self) { _ = try bad.append(Data([0x7f, 0xff, 0xff, 0xff])) }
     }
 
+    @Test func unknownMessagesAreSkipped() throws {
+        // A newer app's message this version can't read doesn't break the link.
+        let unknown = Data(#"{"somethingNew":{}}"#.utf8)
+        var length = UInt32(unknown.count).bigEndian
+        let data = Data(bytes: &length, count: 4) + unknown + (try RemoteFrame.encode(.command(id: 2, .prompter(.toggle))))
+        var reader = RemoteFrame.Reader()
+        #expect(try reader.append(data) == [.command(id: 2, .prompter(.toggle))])
+    }
+
+    @Test func prompterMovesAtReadingSpeed() throws {
+        let words = PrompterState.words(in: "one two  three\nfour")
+        #expect(words == 4)
+        // 120 words a minute = 2 a second; 40 words take 20 seconds.
+        let p = PrompterState(running: true, wordsPerMinute: 120, progress: 0.25)
+        #expect(abs(p.progress(after: 5, words: 40) - 0.5) < 1e-9)
+        #expect(p.progress(after: 600, words: 40) == 1)
+        #expect(PrompterState(running: false, wordsPerMinute: 120, progress: 0.25).progress(after: 5, words: 40) == 0.25)
+        #expect(p.progress(after: 5, words: 0) == 0.25)
+        // Old Macs send no teleprompter; new statuses round-trip it.
+        let old = try JSONDecoder().decode(RemoteStatus.self, from: JSONEncoder().encode(RemoteStatus(hostName: "Mac")))
+        #expect(old.prompter == nil)
+        var status = RemoteStatus(hostName: "Mac", prompter: p)
+        status.notes = "hi"
+        #expect(try JSONDecoder().decode(RemoteStatus.self, from: JSONEncoder().encode(status)) == status)
+    }
+
     @Test func inviteURL() throws {
         let invite = PairingInvite(hostID: "H1", hostName: "Bal's Mac", secret: RemoteSecurity.newKey(), address: "192.168.1.9:50000")
         let back = try #require(PairingInvite(url: invite.url))
@@ -56,6 +82,8 @@ final class Box<T: Sendable>: @unchecked Sendable {
         host.onPaired = { paired.add($0) }
         host.onListening = { port, _ in if let port { ports.add(port) } }
         host.onCommand = { device, command in
+            if case .prompter = command { return (true, nil) }
+            if command == .ping { return (true, nil) }
             commands.add("\(device):\(command)")
             return command == .stopRecording ? (false, "Not recording.") : (true, nil)
         }
@@ -88,6 +116,10 @@ final class Box<T: Sendable>: @unchecked Sendable {
         #expect(commands.all == ["dev-1:nextSlide", "dev-1:stopRecording"])
         host.publish(RemoteStatus(hostName: "Test Mac", recording: "recording", slideIndex: 1, slideCount: 4, notes: "Hello"))
         #expect(await statuses.wait { $0.last?.notes == "Hello" })
+
+        // The teleprompter and ping go through like any command.
+        #expect(await client.send(.prompter(.seek(0.5))).ok)
+        #expect(await client.ping())
 
         // The QR code works once: a second device with the same invite is refused.
         try await Task.sleep(for: .milliseconds(300))
@@ -123,11 +155,50 @@ final class Box<T: Sendable>: @unchecked Sendable {
     }
 }
 
+@Suite(.serialized) struct RemoteTimeoutTests {
+    @Test func noAnswerTimesOutAndDisconnects() async throws {
+        let host = RemoteHost(hostID: "h-\(UUID().uuidString.prefix(4))", hostName: "Slow Mac", devices: [])
+        // A Mac that never answers (e.g. the link died without closing).
+        host.onCommand = { _, _ in
+            try? await Task.sleep(for: .seconds(30))
+            return (true, nil)
+        }
+        let invite = host.openPairing(address: nil)
+        for _ in 0..<40 where host.listeningPort == nil { try await Task.sleep(for: .milliseconds(50)) }
+        let port = try #require(host.listeningPort)
+        let client = RemoteClient(deviceID: "d-slow", deviceName: "iPhone")
+        let states = Box<RemoteClient.State>()
+        client.onState = { states.add($0) }
+        client.pair(invite, endpoint: .hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!))
+        #expect(await states.wait { $0.contains { if case .connected = $0 { true } else { false } } })
+        let started = Date()
+        let r = await client.send(.nextSlide, timeout: 1)
+        #expect(!r.ok && Date().timeIntervalSince(started) < 5)
+        // The app is told, so it reconnects.
+        #expect(await states.wait { $0.last.map { if case .disconnected = $0 { true } else { false } } ?? false })
+        #expect(await client.send(.nextSlide).message == "Not connected.")
+        host.stop()
+    }
+
+    @Test func recordingCommandsWaitLonger() {
+        #expect(RemoteClient.timeout(for: .startRecording) > RemoteClient.timeout(for: .nextSlide))
+        #expect(RemoteClient.timeout(for: .stopRecording) >= 30)
+    }
+}
+
 @Suite struct WatchLinkTests {
     @Test func stateIsTrimmedAndRoundTrips() throws {
         let status = RemoteStatus(hostName: "Mac", recording: "recording", elapsed: 30, micLevel: 0.7, slideIndex: 1, slideCount: 5, notes: "Long notes")
         let state = WatchState(problem: nil, status: status, sentAt: Date(timeIntervalSince1970: 1000))
         #expect(state.status?.notes == nil)
+        var moving = status
+        moving.prompter = PrompterState(running: true, progress: 0.4)
+        let a = WatchState(problem: nil, status: moving)
+        moving.prompter?.progress = 0.6
+        // Scrolling doesn't count as a change for the watch; pausing does.
+        #expect(a.matches(WatchState(problem: nil, status: moving)))
+        moving.prompter?.running = false
+        #expect(!a.matches(WatchState(problem: nil, status: moving)))
         #expect(state.status?.micLevel == 0)
         let back = try #require(WatchLink.decode(WatchState.self, WatchLink.encode(state)))
         #expect(back == state)
@@ -156,6 +227,7 @@ final class Box<T: Sendable>: @unchecked Sendable {
         #expect(WatchLink.allows(.stopRecording))
         #expect(!WatchLink.allows(.chat("hi")))
         #expect(!WatchLink.allows(.openPresentWindow))
+        #expect(WatchLink.allows(.prompter(.toggle)))
     }
 }
 

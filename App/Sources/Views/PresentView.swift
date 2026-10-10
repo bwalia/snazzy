@@ -1,5 +1,6 @@
 import Builder
 import CaptureEngine
+import Remote
 import SwiftUI
 
 /// Presenting the open Builder deck: slide list, speaker notes as a
@@ -102,6 +103,7 @@ struct PresentView: View {
 
     private var teleprompter: some View {
         let builder = model.builder
+        let prompter = model.prompter
         let i = builder.currentSlide
         let slide = builder.deckSlides.indices.contains(i) ? builder.deckSlides[i] : nil
         let next = builder.deckSlides.indices.contains(i + 1) ? builder.deckSlides[i + 1] : nil
@@ -115,17 +117,15 @@ struct PresentView: View {
                     .help("Larger notes")
             }
             .buttonStyle(.borderless)
-            ScrollView {
-                Group {
-                    if let slide, !slide.notes.isEmpty {
-                        Text(slide.notes).font(.system(size: notesSize)).lineSpacing(notesSize * 0.3)
-                    } else {
-                        Text("No notes for this slide. Ask the assistant: “Write speaker notes for every slide.”")
-                            .font(.callout).foregroundStyle(.secondary)
-                    }
+            if let slide, !slide.notes.isEmpty {
+                PrompterScroller(text: slide.notes, fontSize: notesSize, state: prompter.anchored, since: prompter.anchor) {
+                    prompter.move(to: $0)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
+                prompterControls
+            } else {
+                Text("No notes for this slide. Ask the assistant: “Write speaker notes for every slide.”")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             if let next {
                 Text("Next: \(next.displayTitle)").font(.callout).foregroundStyle(.secondary).lineLimit(1)
@@ -134,6 +134,32 @@ struct PresentView: View {
             }
         }
         .padding(14)
+        .onChange(of: "\(i)|\(slide?.notes ?? "")", initial: true) {
+            prompter.show(slide: i, notes: slide?.notes)
+        }
+    }
+
+    /// Play/pause and speed; the iPhone/iPad remote has the same controls.
+    private var prompterControls: some View {
+        let prompter = model.prompter
+        return HStack(spacing: 8) {
+            Button { prompter.move(to: 0) } label: { Image(systemName: "backward.end.fill") }
+                .help("Back to the top")
+            Button { prompter.setRunning(!prompter.running) } label: {
+                Label(prompter.running ? "Pause" : "Scroll", systemImage: prompter.running ? "pause.fill" : "play.fill")
+                    .frame(minWidth: 70)
+            }
+            .keyboardShortcut("p", modifiers: [.command, .option])
+            .help("Scroll the notes at reading speed (⌥⌘P). Drag the notes to move through them.")
+            Spacer()
+            Button { prompter.perform(.slower) } label: { Image(systemName: "tortoise.fill") }
+                .disabled(prompter.wordsPerMinute <= PrompterState.speeds.lowerBound)
+                .help("Slower")
+            Text("\(Int(prompter.wordsPerMinute)) wpm").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            Button { prompter.perform(.faster) } label: { Image(systemName: "hare.fill") }
+                .disabled(prompter.wordsPerMinute >= PrompterState.speeds.upperBound)
+                .help("Faster")
+        }
     }
 
     private var controls: some View {

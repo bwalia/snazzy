@@ -25,6 +25,7 @@ final class AppModel {
     @ObservationIgnored private(set) var chat: ChatSession!
     let capture: CaptureController
     let builder: BuilderController
+    let prompter = PrompterController()
     @ObservationIgnored private(set) var presets: PresetController!
     @ObservationIgnored private(set) var mcp: MCPManager!
     @ObservationIgnored private(set) var developer: DeveloperController!
@@ -68,6 +69,9 @@ final class AppModel {
         capture.onRecordingEvent = { [weak self] type, fields in
             guard let self else { return }
             chat.logSession(type, fields)
+            // The teleprompter waits while the recording is paused.
+            if type == "recording_paused" { prompter.recordingPaused() }
+            if type == "recording_resumed" { prompter.recordingResumed() }
             // The first chapter is the slide showing when recording starts.
             if type == "recording_started", capture.setup.source == .slides, builder.isDeckOpen {
                 let i = builder.currentSlide
@@ -100,6 +104,7 @@ final class AppModel {
         builder.onSlideChange = { [weak self] index, slide in
             guard let self else { return }
             markSlide(index, slide)
+            prompter.show(slide: index, notes: slide?.notes)
             live.publishStatus()
             chat.logSession("slide", ["index": .number(Double(index)), "title": .string(slide?.displayTitle ?? "")])
         }
