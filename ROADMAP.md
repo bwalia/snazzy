@@ -178,6 +178,11 @@ Already available meanwhile: Continuity Camera gives the Mac an iPhone's camera
 and mic wirelessly, and Snazzy Pro lists it as a camera. It covers the iPhone
 camera case today, but not remote control, iPad, or full-quality local recording.
 
+### Windows and Linux (planned, not started)
+One Rust codebase (Tauri UI, GStreamer for recording and streaming) for both,
+compatible with the Mac app and the iPhone/Watch remotes through shared formats
+and protocols. Plan and reasoning: `docs/plans/WINDOWS_LINUX.md`.
+
 ### Phase 3 follow-ups
 - Give vision-capable models a screenshot of the result after each write
   (`check_preview` already has the snapshot plumbing), so they catch visual
