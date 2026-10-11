@@ -5,7 +5,7 @@ import SwiftUI
 /// Record / pause / stop with elapsed time and mic level, in the toolbar.
 struct RecordingControls: View {
     @Environment(AppModel.self) private var model
-    @State private var error: String?
+    @State private var showProblem = false
 
     var body: some View {
         let capture = model.capture
@@ -47,20 +47,31 @@ struct RecordingControls: View {
                 Text("Saving…")
             case .idle, .failed:
                 Button {
-                    Task {
-                        do { error = nil; try await capture.startRecording() } catch let e { error = e.localizedDescription }
-                    }
+                    Task { try? await capture.startRecording() }
                 } label: {
                     Label("Record", systemImage: "record.circle").foregroundStyle(.red)
                 }
-                .help(error ?? "Record the selected screen with camera inset and mic (⇧⌘R)")
-                if case .failed(let message) = recorder.state {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).help(message)
-                } else if error != nil {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).help(error ?? "")
+                .help("Record the selected screen with camera inset and mic (⇧⌘R)")
+                if let problem = Self.problem(capture) {
+                    Button { showProblem.toggle() } label: {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    }
+                    .buttonStyle(.borderless)
+                    .help(problem)
+                    .popover(isPresented: $showProblem, arrowEdge: .bottom) {
+                        Text(problem).padding().frame(width: 300).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
         }
+        .onChange(of: Self.problem(capture)) { _, problem in showProblem = problem != nil }
+    }
+
+    /// Why recording didn't start, or why the last one failed.
+    static func problem(_ capture: CaptureController) -> String? {
+        if let error = capture.startError { return error }
+        if case .failed(let message) = capture.recorder.state { return message }
+        return nil
     }
 
     static func format(_ t: TimeInterval) -> String {

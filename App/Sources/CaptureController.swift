@@ -36,6 +36,9 @@ final class CaptureController {
     /// Shown while waiting for an iOS device to appear.
     private(set) var searchStatus: String?
     private(set) var micWarning: String?
+    /// Why the last attempt to record didn't start, for every way of starting
+    /// (toolbar, menu, ⇧⌘R). Cleared on the next attempt.
+    var startError: String?
     private(set) var openPreviewIDs: Set<String> = []
 
     @ObservationIgnored private let store: CaptureSetupStore
@@ -55,6 +58,7 @@ final class CaptureController {
         self.feeds = FeedManager(diagnostics: diagnostics)
         self.screen = ScreenFeed(diagnostics: diagnostics)
         catalog.onDevicesChanged = { [weak self] in self?.devicesChanged() }
+        recorder.onAutoStopped = { [weak self] result in self?.recordingEnded(result) }
         checkMic()
     }
 
@@ -541,6 +545,16 @@ final class CaptureController {
 
     /// Starts recording the selected screen, the inset camera and the mic.
     func startRecording(countdown: Int = 3) async throws {
+        startError = nil
+        do {
+            try await beginRecording(countdown: countdown)
+        } catch {
+            startError = error.localizedDescription
+            throw error
+        }
+    }
+
+    private func beginRecording(countdown: Int) async throws {
         if setup.source == .slides {
             if let problem = prepareSlidesStage?() { throw CaptureActionError(message: problem) }
             // The window needs a moment to appear before it can be captured.
@@ -580,13 +594,18 @@ final class CaptureController {
     @discardableResult
     func stopRecording() async -> RecordingResult? {
         let result = await recorder.stop()
+        recordingEnded(result)
+        return result
+    }
+
+    /// Tidies up after a recording, whether it was stopped or stopped by itself.
+    private func recordingEnded(_ result: RecordingResult?) {
         useScreen("recorder", false)
         releaseSlidesStage?()
         if let result {
             onRecordingSaved?()
             onRecordingEvent?("recording_saved", ["file": .string(result.composite.path), "seconds": .number(result.duration)])
         }
-        return result
     }
 
     func recordingJSON() -> JSONValue {

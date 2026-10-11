@@ -11,7 +11,11 @@ import SwiftUI
 @MainActor @Observable
 final class PrompterController {
     var settings: PrompterSettings {
-        didSet { save(); speed = nil }
+        didSet {
+            save()
+            speed = nil
+            if settings.source != oldValue.source { keepScrolling() }
+        }
     }
     private(set) var isShown = false
     /// Scrolling is on. With slide notes it stays on at the end of a slide's
@@ -196,6 +200,13 @@ final class PrompterController {
     func restart() {
         offset = 0
         lastTick = nil
+        keepScrolling()
+    }
+
+    /// Slide notes that reached the end stop the timer but stay "playing";
+    /// moving back (restart, seek, another source) starts them moving again.
+    private func keepScrolling() {
+        if isScrolling, timer == nil { run() }
     }
 
     /// Moves the text by hand (dragging or the arrow buttons).
@@ -271,6 +282,7 @@ final class PrompterController {
         case .seek(let p):
             offset = (p.isFinite ? min(1, max(0, p)) : 0) * max(0, contentHeight)
             lastTick = nil
+            keepScrolling()
         }
     }
 
