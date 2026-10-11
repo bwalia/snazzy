@@ -186,14 +186,19 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
         case .startRecording:
             do {
                 try await capture.startRecording()
-                done("Recording started")
+                done(capture.recorder.state == .recording ? "Recording started" : "Recording didn't start")
             } catch {
                 done("Couldn't start recording: \(error.localizedDescription)", isError: true)
             }
         case .stopRecording:
             guard capture.recorder.isActive else { return done("Nothing is recording") }
-            await capture.stopRecording()
-            done("Recording stopped and saved")
+            if await capture.stopRecording() != nil {
+                done("Recording stopped and saved")
+            } else if case .failed(let message) = capture.recorder.state {
+                done("The recording couldn't be saved: \(message)", isError: true)
+            } else {
+                done("Recording cancelled")
+            }
         case .pauseRecording:
             guard state == .recording else { return done(state == .paused ? "Recording is already paused" : "Nothing is recording") }
             capture.pauseRecording()

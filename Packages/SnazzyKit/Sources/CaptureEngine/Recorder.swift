@@ -36,6 +36,9 @@ public final class Recorder {
     public private(set) var lastResult: RecordingResult?
     public private(set) var micLevel: Double = 0
     public private(set) var warning: String?
+    /// Called when a recording stops by itself (disk full, capture failed), so
+    /// the owner can tidy up as it does after its own stop.
+    @ObservationIgnored public var onAutoStopped: (@MainActor (RecordingResult?) -> Void)?
 
     public static var defaultFolder: URL {
         FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask)[0]
@@ -121,8 +124,9 @@ public final class Recorder {
                     let diskFull = ticks % 20 == 0 && (Self.freeSpace(folder) ?? .max) < Self.minFreeWhileRecording
                     if let error = session.failure ?? (diskFull ? "The disk is almost full, so recording stopped. Everything up to now is saved." : nil) {
                         self.diagnostics.log("Recording failed: \(error)", category: "recording", level: .error)
-                        _ = await self.stop()
+                        let result = await self.stop()
                         self.state = .failed(error)
+                        self.onAutoStopped?(result)
                         return
                     }
                 }
@@ -182,6 +186,7 @@ public final class Recorder {
         self.session = nil
         cameraFeed = nil
         micLevel = 0
+        warning = nil
         switch result {
         case .success(let r):
             lastResult = r

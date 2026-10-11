@@ -94,7 +94,8 @@ final class DeveloperController {
 
     func refresh() {
         let files = (try? FileManager.default.contentsOfDirectory(
-            at: folder, includingPropertiesForKeys: [.creationDateKey, .fileSizeKey])) ?? []
+            at: folder, includingPropertiesForKeys: [.creationDateKey, .fileSizeKey],
+            options: [.skipsHiddenFiles])) ?? []  // New Layout writes a hidden .partial file until it's done
         recordings = files.filter { ["mov", "mp4"].contains($0.pathExtension.lowercased()) }.map { url in
             let values = try? url.resourceValues(forKeys: [.creationDateKey, .fileSizeKey])
             return RecordingItem(id: url.deletingPathExtension().lastPathComponent, url: url,

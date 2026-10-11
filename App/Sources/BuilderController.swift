@@ -290,6 +290,8 @@ final class BuilderController {
         try workspace.deleteProject(name)
         if current?.name == Workspace.slug(name) {
             current = nil
+            deckSlides = []
+            currentSlide = 0
             files = []
             selectedFile = nil
             webView.loadHTMLString("", baseURL: nil)

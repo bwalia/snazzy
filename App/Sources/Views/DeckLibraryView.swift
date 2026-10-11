@@ -11,6 +11,8 @@ struct DeckLibraryView: View {
     @State private var sort: Sort = .name
     @State private var editing: DeckSearch.Deck?
     @State private var error: String?
+    @State private var errorTitle = "Couldn't open the deck"
+    @State private var deleting: DeckSearch.Deck?
     @FocusState private var searchFocused: Bool
 
     enum Sort: String, CaseIterable { case name = "Name", recent = "Recent" }
@@ -47,10 +49,20 @@ struct DeckLibraryView: View {
         .sheet(item: $editing) { deck in
             DeckDetailsSheet(deck: deck, categories: Array(Set(decks.compactMap(\.category))).sorted(), allTags: allTags) { category, tags in
                 guard case .project(let name) = deck.source else { return }
-                do { try model.builder.setDetails(project: name, category: category, tags: tags) } catch { self.error = error.localizedDescription }
+                do { try model.builder.setDetails(project: name, category: category, tags: tags) } catch { fail("Couldn't save the details", error) }
             }
         }
-        .alert("Couldn't open the deck", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+        .confirmationDialog("Delete “\(deleting?.title ?? "")”?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                            presenting: deleting) { deck in
+            Button("Delete", role: .destructive) { delete(deck) }
+        } message: { _ in
+            Text("Its slides and files are removed from this Mac. Recordings made with it are kept.")
+        }
+        .onChange(of: allTags) { _, tags in
+            // The tag's last deck lost it: don't leave the list filtered by a tag that's gone.
+            if let t = tag, !tags.contains(where: { $0.caseInsensitiveCompare(t) == .orderedSame }) { tag = nil }
+        }
+        .alert(errorTitle, isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
     }
@@ -131,7 +143,8 @@ struct DeckLibraryView: View {
                 ForEach(groups, id: \.0) { category, list in
                     Section {
                         ForEach(list) { deck in
-                            DeckRow(deck: deck, isOpen: isOpen(deck), open: { open(deck, slide: 0) }, edit: { editing = deck })
+                            DeckRow(deck: deck, isOpen: isOpen(deck), open: { open(deck, slide: 0) }, edit: { editing = deck },
+                                    delete: { deleting = deck })
                         }
                     } header: {
                         Text("\(category) · \(list.count)")
@@ -200,8 +213,23 @@ struct DeckLibraryView: View {
             }
             model.slidesMode = .present
         } catch {
-            self.error = error.localizedDescription
+            fail("Couldn't open the deck", error)
         }
+    }
+
+    private func delete(_ deck: DeckSearch.Deck) {
+        guard case .project(let name) = deck.source else { return }
+        if isOpen(deck), model.capture.recorder.isActive || model.live.isRunning {
+            errorTitle = "Couldn't delete the deck"
+            error = "“\(deck.title)” is open while you're recording or live. Stop first, then delete it."
+            return
+        }
+        do { try model.builder.deleteProject(name) } catch { fail("Couldn't delete the deck", error) }
+    }
+
+    private func fail(_ title: String, _ error: Error) {
+        errorTitle = title
+        self.error = error.localizedDescription
     }
 }
 
@@ -210,6 +238,7 @@ private struct DeckRow: View {
     let isOpen: Bool
     let open: () -> Void
     let edit: () -> Void
+    let delete: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -234,6 +263,8 @@ private struct DeckRow: View {
             Menu {
                 Button("Category & Tags…", action: edit)
                 Button("Open", action: open)
+                Divider()
+                Button("Delete…", role: .destructive, action: delete)
             } label: { Image(systemName: "ellipsis.circle") }
                 .menuStyle(.borderlessButton).fixedSize()
                 .help("Organise this deck")
@@ -244,6 +275,8 @@ private struct DeckRow: View {
         .contextMenu {
             Button("Open", action: open)
             Button("Category & Tags…", action: edit)
+            Divider()
+            Button("Delete…", role: .destructive, action: delete)
         }
     }
 }

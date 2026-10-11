@@ -36,7 +36,8 @@ final class RemoteController {
         return id
     }
 
-    var hostName: String { Host.current().localizedName ?? "Mac" }
+    /// Looked up once: the status is built four times a second.
+    @ObservationIgnored private(set) lazy var hostName: String = Host.current().localizedName ?? "Mac"
 
     // MARK: Host
 

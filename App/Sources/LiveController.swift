@@ -182,6 +182,7 @@ final class LiveController {
             try encoder.start(micID: app.capture.setup.mic?.uniqueID, quality: quality.encoder)
             self.encoder = encoder
             if counted { restarts += 1 }
+            if error?.hasPrefix("Live video") == true { error = nil }  // it's back
         } catch {
             self.error = "Live video couldn't restart: \(error.localizedDescription)"
             isStreaming = false
@@ -210,6 +211,7 @@ final class LiveController {
         viewers = 0
         joinURL = nil
         qrCode = nil
+        error = nil
         app.chat.logSession("live_room_stopped", ["ideas": .number(Double(board.notes.count))])
     }
 
@@ -231,6 +233,7 @@ final class LiveController {
         }
         joinURL = URL(string: "http://\(ip):\(server.port)/?k=\(server.code)")
         qrCode = joinURL.flatMap { Self.qr($0.absoluteString) }
+        if joinURL != nil, error?.hasPrefix("This Mac isn't on a network") == true { error = nil }
     }
 
     private func updateSource(_ encoder: LiveEncoder) {
