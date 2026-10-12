@@ -3567,11 +3567,16 @@ dependencies = [
 name = "snazzy-pro"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "serde",
  "serde_json",
+ "snazzy-agent",
  "snazzy-core",
+ "snazzy-platform",
  "tauri",
  "tauri-build",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
