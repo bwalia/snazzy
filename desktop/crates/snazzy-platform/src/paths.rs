@@ -165,6 +165,8 @@ mod tests {
         assert_eq!(f.recordings(), f.movies.join("Recordings"));
     }
 
+    // Unix paths aren't absolute on Windows, so these run on Linux and macOS.
+    #[cfg(not(windows))]
     #[test]
     fn linux_defaults() {
         let f = folders_for("linux", &env(&[("HOME", "/home/ana")], &[])).unwrap();
@@ -176,6 +178,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(windows))]
     #[test]
     fn linux_follows_xdg_settings() {
         let dirs = "# written by xdg-user-dirs-update\nXDG_VIDEOS_DIR=\"$HOME/Vídeos\"\n";
