@@ -4,15 +4,15 @@
     {
       "hostID" : "host-abc",
       "hostName" : "Studio Mac",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?v=2&h=host-abc&n=Studio%20Mac&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=host-abc&n=Studio%20Mac&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
       "address" : "192.168.1.20:52000,10.8.0.2:52000",
       "hostID" : "E3B0C442-98FC-1C14",
       "hostName" : "Ada's MacBook Pro (2) & co",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?v=2&h=E3B0C442-98FC-1C14&n=Ada's%20MacBook%20Pro%20(2)%20%26%20co&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA&a=192.168.1.20:52000,10.8.0.2:52000"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=E3B0C442-98FC-1C14&n=Ada's%20MacBook%20Pro%20(2)%20%26%20co&s=ERERERERERERERERERERERERERERERERERERERERERE&a=192.168.1.20:52000,10.8.0.2:52000"
     },
     {
       "address" : "[fe80::1]:5000",
@@ -154,15 +154,15 @@
     {
       "hostID" : "host-abc",
       "hostName" : "Studio Mac",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?v=2&h=host-abc&n=Studio%20Mac&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=host-abc&n=Studio%20Mac&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
       "address" : "192.168.1.20:52000,10.8.0.2:52000",
       "hostID" : "E3B0C442-98FC-1C14",
       "hostName" : "Ada's MacBook Pro (2) & co",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?v=2&h=E3B0C442-98FC-1C14&n=Ada's%20MacBook%20Pro%20(2)%20%26%20co&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA&a=192.168.1.20:52000,10.8.0.2:52000"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=E3B0C442-98FC-1C14&n=Ada's%20MacBook%20Pro%20(2)%20%26%20co&s=ERERERERERERERERERERERERERERERERERERERERERE&a=192.168.1.20:52000,10.8.0.2:52000"
     },
     {
       "address" : "[fe80::1]:5000",
@@ -174,27 +174,27 @@
     {
       "hostID" : "host",
       "hostName" : "Mac",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?h=host&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
       "address" : "10.0.0.2:5000",
       "hostID" : "host",
       "hostName" : "My Mac",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?v=2&h=host&n=My%20Mac&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA&a=10.0.0.2:5000&extra=1"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=host&n=My%20Mac&s=ERERERERERERERERERERERERERERERERERERERERERE&a=10.0.0.2:5000&extra=1"
     },
     {
       "hostID" : "first",
       "hostName" : "Mac",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?h=first&h=second&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?h=first&h=second&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
-      "url" : "snazzypro://pair?n=Mac&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "url" : "snazzypro://pair?n=Mac&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
-      "url" : "snazzypro://pair?h=&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "url" : "snazzypro://pair?h=&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
       "url" : "snazzypro://pair?h=host&s=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ"
@@ -209,34 +209,34 @@
       "url" : "snazzypro://pair?h=host"
     },
     {
-      "url" : "snazzypro://other?h=host&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "url" : "snazzypro://other?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
-      "url" : "https://pair?h=host&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "url" : "https://pair?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
-      "url" : "SNAZZYPRO://pair?h=host&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "url" : "SNAZZYPRO://pair?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
-      "url" : "snazzypro://PAIR?h=host&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "url" : "snazzypro://PAIR?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
       "hostID" : "host",
       "hostName" : "Mac",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair/?h=host&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair/?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
       "hostID" : "a+b",
       "hostName" : "a+b",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?h=a+b&n=a+b&s=__79_Pv6-fj39vX08_Lx8O_u7ezr6uno5-bl5OPi4eA"
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?h=a+b&n=a+b&s=ERERERERERERERERERERERERERERERERERERERERERE"
     },
     {
       "hostID" : "東",
       "hostName" : "Mac",
-      "secret" : "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
-      "url" : "snazzypro://pair?h=%E6%9D%B1&s=//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA="
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?h=%E6%9D%B1&s=ERERERERERERERERERERERERERERERERERERERERERE="
     }
   ],
   "pairingIdentity" : "pair:host-abc",

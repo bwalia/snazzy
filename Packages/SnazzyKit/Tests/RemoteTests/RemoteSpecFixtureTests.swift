@@ -134,7 +134,8 @@ import Testing
             #expect(RemoteSecurity.verify(Data(base64Encoded: p.proof), deviceID: p.deviceID, key: Data(base64Encoded: p.key)!))
         }
 
-        let secret = Data((0..<32).map { UInt8(255 - $0) })
+        // Obviously fake and low-entropy, so secret scanners don't flag the fixture.
+        let secret = Data(repeating: 0x11, count: 32)
         let invites = [PairingInvite(hostID: "host-abc", hostName: "Studio Mac", secret: secret, address: nil),
                        PairingInvite(hostID: "E3B0C442-98FC-1C14", hostName: "Ada's MacBook Pro (2) & co", secret: secret, address: "192.168.1.20:52000,10.8.0.2:52000"),
                        PairingInvite(hostID: "h", hostName: "Café 東京 +=?/#%", secret: Data(repeating: 0xFB, count: 32), address: "[fe80::1]:5000")]
