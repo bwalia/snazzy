@@ -1,0 +1,25 @@
+:root {
+  --bg: #12141b;
+  --panel: #191c25;
+  --fg: #eef0f6;
+  --muted: #9aa3b5;
+  --line: #2a2f3c;
+  --accent: #6c5cff;
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; background: var(--bg); color: var(--fg); }
+.muted { color: var(--muted); }
+.shell { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(420px, 1fr); height: 100%; }
+.chat { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-width: 0; }
+.chat-head { display: flex; gap: 12px; align-items: baseline; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.transcript { flex: 1; overflow: auto; padding: 16px 20px; }
+.composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+.composer textarea { flex: 1; resize: none; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; }
+.composer button, .tabs button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.composer button { background: var(--accent); border-color: var(--accent); }
+.panel { display: flex; flex-direction: column; min-width: 0; }
+.tabs { display: flex; gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); }
+.panel-body { padding: 16px; }
