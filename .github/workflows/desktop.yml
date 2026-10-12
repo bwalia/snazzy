@@ -36,7 +36,13 @@ jobs:
         working-directory: desktop
     steps:
       # Only what the desktop app needs: other folders have file names Windows can't
-      # check out (the proxy config uses "host:name.json").
+      # check out (the proxy config uses "host:name.json"). Git for Windows rejects such
+      # names even outside the sparse folders unless NTFS path protection is off; it's
+      # safe here because those files are never written.
+      - name: Allow the repo's file names on Windows
+        if: runner.os == 'Windows'
+        working-directory: .
+        run: git config --global core.protectNTFS false
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
