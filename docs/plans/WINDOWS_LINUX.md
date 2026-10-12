@@ -2,6 +2,8 @@
 
 Status: **planned, not started** (decided 2026-10-11). Nothing here is built yet.
 
+The build prompt for this work is [`PROMPT_WINDOWS_LINUX.md`](PROMPT_WINDOWS_LINUX.md).
+
 ## Decision
 
 - **One Rust codebase for Windows and Linux**, as a separate app from the Mac app.
