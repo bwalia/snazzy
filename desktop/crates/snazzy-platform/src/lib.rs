@@ -1,14 +1,5 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! The thin per-platform layer: where things are stored, and secrets in the
+//! OS credential store. Everything else is shared (docs/plans/PROMPT_WINDOWS_LINUX.md §2).
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub mod paths;
+pub mod secrets;
