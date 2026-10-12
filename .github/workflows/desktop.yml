@@ -35,7 +35,15 @@ jobs:
       run:
         working-directory: desktop
     steps:
+      # Only what the desktop app needs: other folders have file names Windows can't
+      # check out (the proxy config uses "host:name.json").
       - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            desktop
+            docs/specs
+            decks
+          sparse-checkout-cone-mode: true
       - name: Linux system libraries (WebKitGTK, GTK, Secret Service)
         if: runner.os == 'Linux'
         working-directory: .
