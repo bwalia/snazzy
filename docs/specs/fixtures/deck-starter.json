@@ -1,0 +1,32 @@
+{
+  "accent" : "#6C5CFF",
+  "slides" : [
+    {
+      "heading" : "New deck",
+      "items" : [
+        "Subtitle"
+      ],
+      "layout" : "title",
+      "notes" : "Introduce yourself and the topic."
+    },
+    {
+      "heading" : "What we'll cover",
+      "items" : [
+        "First point",
+        "Second point",
+        "Third point"
+      ],
+      "layout" : "bullets",
+      "notes" : ""
+    },
+    {
+      "heading" : "Thank you",
+      "items" : [
+        "Questions?"
+      ],
+      "layout" : "closing",
+      "notes" : ""
+    }
+  ],
+  "title" : "New deck"
+}

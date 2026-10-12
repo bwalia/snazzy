@@ -1,0 +1,1661 @@
+{
+  "allowedExtensions" : [
+    "avif",
+    "css",
+    "gif",
+    "htm",
+    "html",
+    "jpeg",
+    "jpg",
+    "js",
+    "json",
+    "m4a",
+    "md",
+    "mp3",
+    "mp4",
+    "otf",
+    "png",
+    "svg",
+    "ttf",
+    "txt",
+    "vtt",
+    "webm",
+    "webp",
+    "woff",
+    "woff2"
+  ],
+  "catalogueFile" : "snazzy-decks.json",
+  "decks" : [
+    {
+      "branch" : "main",
+      "catalogue" : {
+        "decks" : [
+          {
+            "author" : "Zoo",
+            "category" : "Animals",
+            "description" : "Listed first",
+            "path" : "zebra",
+            "tags" : [
+              "#Wild",
+              "wild",
+              " Stripes "
+            ],
+            "title" : "Zebra first"
+          },
+          {
+            "path" : "/build-ship-ai/ ",
+            "tags" : [
+              "AI"
+            ],
+            "title" : "Build & Ship AI"
+          },
+          {
+            "path" : "zebra",
+            "title" : "Duplicate entry ignored"
+          },
+          {
+            "path" : "missing",
+            "title" : "Not in the tree"
+          }
+        ],
+        "title" : "Snazzy decks"
+      },
+      "decks" : [
+        {
+          "author" : "Zoo",
+          "branch" : "main",
+          "bytes" : 100,
+          "category" : "Animals",
+          "description" : "Listed first",
+          "files" : [
+            "index.html"
+          ],
+          "folder" : "decks/zebra",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+            "Wild",
+            "Stripes"
+          ],
+          "title" : "Zebra first"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 205400,
+          "description" : "",
+          "files" : [
+            "deck.css",
+            "deck.js",
+            "deck.json",
+            "img/hero.png",
+            "index.html",
+            "inner/index.html"
+          ],
+          "folder" : "decks/build-ship-ai",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+            "AI"
+          ],
+          "title" : "Build & Ship AI"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 100,
+          "description" : "",
+          "files" : [
+            "index.html"
+          ],
+          "folder" : "decks/Apple",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Apple"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 200,
+          "category" : "B",
+          "description" : "",
+          "files" : [
+            "d/index.html",
+            "index.html"
+          ],
+          "folder" : "decks/a/b/c",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "C"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 100,
+          "category" : "Education",
+          "description" : "",
+          "files" : [
+            "deck.css",
+            "index.html"
+          ],
+          "folder" : "decks/education/photosynthesis",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Photosynthesis"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 200,
+          "description" : "",
+          "files" : [
+            "Deck.CSS",
+            "index.html"
+          ],
+          "folder" : "decks/q3_results",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Q3 results"
+        }
+      ],
+      "name" : "official",
+      "origins" : [
+        "github:bwalia/snazzy/decks/zebra",
+        "github:bwalia/snazzy/decks/build-ship-ai",
+        "github:bwalia/snazzy/decks/Apple",
+        "github:bwalia/snazzy/decks/a/b/c",
+        "github:bwalia/snazzy/decks/education/photosynthesis",
+        "github:bwalia/snazzy/decks/q3_results"
+      ],
+      "repo" : {
+        "owner" : "bwalia",
+        "path" : "decks",
+        "repo" : "snazzy"
+      },
+      "tree" : [
+        {
+          "path" : "README.md",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks",
+          "type" : "tree"
+        },
+        {
+          "path" : "decks/README.md",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/snazzy-decks.json",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/index.html",
+          "size" : 5000,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/deck.css",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/deck.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/deck.json",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/img/hero.png",
+          "size" : 200000,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/.DS_Store",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/notes.exe",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/huge.mp4",
+          "size" : 3000000,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/inner/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/education/photosynthesis/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/education/photosynthesis/deck.css",
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/q3_results/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/q3_results/Deck.CSS",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/a/b/c/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/a/b/c/d/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/.hidden/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/x/.git/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/zebra/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/Apple/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "other/index.html",
+          "size" : 100,
+          "type" : "blob"
+        }
+      ],
+      "webURLs" : [
+        "https://github.com/bwalia/snazzy/tree/main/decks/zebra",
+        "https://github.com/bwalia/snazzy/tree/main/decks/build-ship-ai",
+        "https://github.com/bwalia/snazzy/tree/main/decks/Apple",
+        "https://github.com/bwalia/snazzy/tree/main/decks/a/b/c",
+        "https://github.com/bwalia/snazzy/tree/main/decks/education/photosynthesis",
+        "https://github.com/bwalia/snazzy/tree/main/decks/q3_results"
+      ]
+    },
+    {
+      "branch" : "main",
+      "decks" : [
+        {
+          "branch" : "main",
+          "bytes" : 100,
+          "description" : "",
+          "files" : [
+            "index.html"
+          ],
+          "folder" : "decks/Apple",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Apple"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 205400,
+          "description" : "",
+          "files" : [
+            "deck.css",
+            "deck.js",
+            "deck.json",
+            "img/hero.png",
+            "index.html",
+            "inner/index.html"
+          ],
+          "folder" : "decks/build-ship-ai",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Build ship ai"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 200,
+          "category" : "B",
+          "description" : "",
+          "files" : [
+            "d/index.html",
+            "index.html"
+          ],
+          "folder" : "decks/a/b/c",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "C"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 100,
+          "category" : "Education",
+          "description" : "",
+          "files" : [
+            "deck.css",
+            "index.html"
+          ],
+          "folder" : "decks/education/photosynthesis",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Photosynthesis"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 200,
+          "description" : "",
+          "files" : [
+            "Deck.CSS",
+            "index.html"
+          ],
+          "folder" : "decks/q3_results",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Q3 results"
+        },
+        {
+          "branch" : "main",
+          "bytes" : 100,
+          "description" : "",
+          "files" : [
+            "index.html"
+          ],
+          "folder" : "decks/zebra",
+          "repo" : {
+            "owner" : "bwalia",
+            "path" : "decks",
+            "repo" : "snazzy"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Zebra"
+        }
+      ],
+      "name" : "official without catalogue",
+      "origins" : [
+        "github:bwalia/snazzy/decks/Apple",
+        "github:bwalia/snazzy/decks/build-ship-ai",
+        "github:bwalia/snazzy/decks/a/b/c",
+        "github:bwalia/snazzy/decks/education/photosynthesis",
+        "github:bwalia/snazzy/decks/q3_results",
+        "github:bwalia/snazzy/decks/zebra"
+      ],
+      "repo" : {
+        "owner" : "bwalia",
+        "path" : "decks",
+        "repo" : "snazzy"
+      },
+      "tree" : [
+        {
+          "path" : "README.md",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks",
+          "type" : "tree"
+        },
+        {
+          "path" : "decks/README.md",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/snazzy-decks.json",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/index.html",
+          "size" : 5000,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/deck.css",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/deck.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/deck.json",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/img/hero.png",
+          "size" : 200000,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/.DS_Store",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/notes.exe",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/huge.mp4",
+          "size" : 3000000,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/build-ship-ai/inner/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/education/photosynthesis/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/education/photosynthesis/deck.css",
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/q3_results/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/q3_results/Deck.CSS",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/a/b/c/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/a/b/c/d/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/.hidden/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/x/.git/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/zebra/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "decks/Apple/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "other/index.html",
+          "size" : 100,
+          "type" : "blob"
+        }
+      ],
+      "webURLs" : [
+        "https://github.com/bwalia/snazzy/tree/main/decks/Apple",
+        "https://github.com/bwalia/snazzy/tree/main/decks/build-ship-ai",
+        "https://github.com/bwalia/snazzy/tree/main/decks/a/b/c",
+        "https://github.com/bwalia/snazzy/tree/main/decks/education/photosynthesis",
+        "https://github.com/bwalia/snazzy/tree/main/decks/q3_results",
+        "https://github.com/bwalia/snazzy/tree/main/decks/zebra"
+      ]
+    },
+    {
+      "branch" : "main",
+      "decks" : [
+        {
+          "branch" : "main",
+          "bytes" : 300,
+          "description" : "",
+          "files" : [
+            "deck.css",
+            "img/a.png",
+            "index.html"
+          ],
+          "folder" : "",
+          "repo" : {
+            "owner" : "o",
+            "path" : "",
+            "repo" : "my-talk"
+          },
+          "tags" : [
+
+          ],
+          "title" : "My talk"
+        }
+      ],
+      "name" : "repo is one deck",
+      "origins" : [
+        "github:o/my-talk/"
+      ],
+      "repo" : {
+        "owner" : "o",
+        "path" : "",
+        "repo" : "my-talk"
+      },
+      "tree" : [
+        {
+          "path" : "index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "deck.css",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "img/a.png",
+          "size" : 100,
+          "type" : "blob"
+        }
+      ],
+      "webURLs" : [
+        "https://github.com/o/my-talk/tree/main/"
+      ]
+    },
+    {
+      "branch" : "main",
+      "decks" : [
+        {
+          "branch" : "main",
+          "bytes" : 300,
+          "description" : "",
+          "files" : [
+            "index.html",
+            "one/index.html",
+            "two/index.html"
+          ],
+          "folder" : "",
+          "repo" : {
+            "owner" : "o",
+            "path" : "",
+            "repo" : "r"
+          },
+          "tags" : [
+
+          ],
+          "title" : "R"
+        }
+      ],
+      "name" : "top page plus decks",
+      "origins" : [
+        "github:o/r/"
+      ],
+      "repo" : {
+        "owner" : "o",
+        "path" : "",
+        "repo" : "r"
+      },
+      "tree" : [
+        {
+          "path" : "index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "one/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "two/index.html",
+          "size" : 100,
+          "type" : "blob"
+        }
+      ],
+      "webURLs" : [
+        "https://github.com/o/r/tree/main/"
+      ]
+    },
+    {
+      "branch" : "main",
+      "decks" : [
+        {
+          "branch" : "main",
+          "bytes" : 100,
+          "description" : "",
+          "files" : [
+            "index.html"
+          ],
+          "folder" : "ok",
+          "repo" : {
+            "owner" : "o",
+            "path" : "",
+            "repo" : "r"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Ok"
+        }
+      ],
+      "name" : "too many files",
+      "origins" : [
+        "github:o/r/ok"
+      ],
+      "repo" : {
+        "owner" : "o",
+        "path" : "",
+        "repo" : "r"
+      },
+      "tree" : [
+        {
+          "path" : "big/f0.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f1.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f2.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f3.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f4.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f5.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f6.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f7.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f8.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f9.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f10.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f11.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f12.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f13.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f14.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f15.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f16.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f17.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f18.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f19.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f20.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f21.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f22.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f23.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f24.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f25.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f26.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f27.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f28.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f29.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f30.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f31.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f32.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f33.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f34.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f35.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f36.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f37.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f38.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f39.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f40.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f41.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f42.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f43.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f44.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f45.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f46.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f47.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f48.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f49.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f50.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f51.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f52.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f53.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f54.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f55.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f56.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f57.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f58.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f59.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f60.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f61.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f62.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f63.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f64.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f65.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f66.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f67.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f68.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f69.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f70.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f71.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f72.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f73.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f74.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f75.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f76.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f77.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f78.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f79.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/f80.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "big/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "ok/index.html",
+          "size" : 100,
+          "type" : "blob"
+        }
+      ],
+      "webURLs" : [
+        "https://github.com/o/r/tree/main/ok"
+      ]
+    },
+    {
+      "branch" : "main",
+      "decks" : [
+        {
+          "branch" : "main",
+          "bytes" : 100,
+          "description" : "",
+          "files" : [
+            "index.html"
+          ],
+          "folder" : "small",
+          "repo" : {
+            "owner" : "o",
+            "path" : "",
+            "repo" : "r"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Small"
+        }
+      ],
+      "name" : "too big",
+      "origins" : [
+        "github:o/r/small"
+      ],
+      "repo" : {
+        "owner" : "o",
+        "path" : "",
+        "repo" : "r"
+      },
+      "tree" : [
+        {
+          "path" : "heavy/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v0.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v1.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v2.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v3.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v4.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v5.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v6.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v7.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v8.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v9.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v10.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v11.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v12.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v13.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v14.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v15.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v16.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v17.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v18.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v19.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "heavy/v20.mp4",
+          "size" : 1999999,
+          "type" : "blob"
+        },
+        {
+          "path" : "small/index.html",
+          "size" : 100,
+          "type" : "blob"
+        }
+      ],
+      "webURLs" : [
+        "https://github.com/o/r/tree/main/small"
+      ]
+    },
+    {
+      "branch" : "main",
+      "decks" : [
+        {
+          "branch" : "main",
+          "bytes" : 200,
+          "category" : "2026",
+          "description" : "",
+          "files" : [
+            "deck.js",
+            "index.html"
+          ],
+          "folder" : "talks/2026/keynote",
+          "repo" : {
+            "branch" : "dev",
+            "owner" : "o",
+            "path" : "talks",
+            "repo" : "r"
+          },
+          "tags" : [
+
+          ],
+          "title" : "Keynote"
+        }
+      ],
+      "name" : "subfolder repo path",
+      "origins" : [
+        "github:o/r/talks/2026/keynote"
+      ],
+      "repo" : {
+        "branch" : "dev",
+        "owner" : "o",
+        "path" : "talks",
+        "repo" : "r"
+      },
+      "tree" : [
+        {
+          "path" : "talks/2026/keynote/index.html",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "talks/2026/keynote/deck.js",
+          "size" : 100,
+          "type" : "blob"
+        },
+        {
+          "path" : "talksx/index.html",
+          "size" : 100,
+          "type" : "blob"
+        }
+      ],
+      "webURLs" : [
+        "https://github.com/o/r/tree/main/talks/2026/keynote"
+      ]
+    }
+  ],
+  "limits" : {
+    "maxDeckBytes" : 40000000,
+    "maxDepth" : 3,
+    "maxFileBytes" : 2000000,
+    "maxFilesPerDeck" : 80
+  },
+  "official" : {
+    "owner" : "bwalia",
+    "path" : "decks",
+    "repo" : "snazzy"
+  },
+  "parse" : [
+    {
+      "bwalia/snazzy" : {
+        "id" : "bwalia/snazzy",
+        "name" : "bwalia/snazzy",
+        "owner" : "bwalia",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/bwalia/snazzy/main/decks/my%20deck/index.html",
+        "repo" : "snazzy",
+        "repoAPI" : "https://api.github.com/repos/bwalia/snazzy",
+        "treeAPI" : "https://api.github.com/repos/bwalia/snazzy/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/bwalia/snazzy"
+      }
+    },
+    {
+      "bwalia/snazzy/decks" : {
+        "id" : "bwalia/snazzy/decks",
+        "name" : "bwalia/snazzy/decks",
+        "owner" : "bwalia",
+        "path" : "decks",
+        "rawURL" : "https://raw.githubusercontent.com/bwalia/snazzy/main/decks/my%20deck/index.html",
+        "repo" : "snazzy",
+        "repoAPI" : "https://api.github.com/repos/bwalia/snazzy",
+        "treeAPI" : "https://api.github.com/repos/bwalia/snazzy/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/bwalia/snazzy/tree/HEAD/decks"
+      }
+    },
+    {
+      "  github.com/bwalia/snazzy  " : {
+        "id" : "bwalia/snazzy",
+        "name" : "bwalia/snazzy",
+        "owner" : "bwalia",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/bwalia/snazzy/main/decks/my%20deck/index.html",
+        "repo" : "snazzy",
+        "repoAPI" : "https://api.github.com/repos/bwalia/snazzy",
+        "treeAPI" : "https://api.github.com/repos/bwalia/snazzy/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/bwalia/snazzy"
+      }
+    },
+    {
+      "https://github.com/bwalia/snazzy/tree/main/decks" : {
+        "branch" : "main",
+        "id" : "bwalia/snazzy/decks@main",
+        "name" : "bwalia/snazzy/decks",
+        "owner" : "bwalia",
+        "path" : "decks",
+        "rawURL" : "https://raw.githubusercontent.com/bwalia/snazzy/main/decks/my%20deck/index.html",
+        "repo" : "snazzy",
+        "repoAPI" : "https://api.github.com/repos/bwalia/snazzy",
+        "treeAPI" : "https://api.github.com/repos/bwalia/snazzy/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/bwalia/snazzy/tree/main/decks"
+      }
+    },
+    {
+      "http://www.github.com/bwalia/snazzy.git" : {
+        "id" : "bwalia/snazzy",
+        "name" : "bwalia/snazzy",
+        "owner" : "bwalia",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/bwalia/snazzy/main/decks/my%20deck/index.html",
+        "repo" : "snazzy",
+        "repoAPI" : "https://api.github.com/repos/bwalia/snazzy",
+        "treeAPI" : "https://api.github.com/repos/bwalia/snazzy/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/bwalia/snazzy"
+      }
+    },
+    {
+      "https://github.com/o/r/blob/feature/x/index.html" : {
+        "branch" : "feature",
+        "id" : "o/r/x/index.html@feature",
+        "name" : "o/r/x/index.html",
+        "owner" : "o",
+        "path" : "x/index.html",
+        "rawURL" : "https://raw.githubusercontent.com/o/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/o/r",
+        "treeAPI" : "https://api.github.com/repos/o/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r/tree/feature/x/index.html"
+      }
+    },
+    {
+      "https://github.com/o/r/tree/HEAD" : {
+        "id" : "o/r",
+        "name" : "o/r",
+        "owner" : "o",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/o/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/o/r",
+        "treeAPI" : "https://api.github.com/repos/o/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r"
+      }
+    },
+    {
+      "https://github.com/o/r?tab=readme#top" : {
+        "id" : "o/r",
+        "name" : "o/r",
+        "owner" : "o",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/o/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/o/r",
+        "treeAPI" : "https://api.github.com/repos/o/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r"
+      }
+    },
+    {
+      "GitHub.com/o/r" : {
+        "id" : "o/r",
+        "name" : "o/r",
+        "owner" : "o",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/o/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/o/r",
+        "treeAPI" : "https://api.github.com/repos/o/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r"
+      }
+    },
+    {
+      "o" : null
+    },
+    {
+      "" : null
+    },
+    {
+      "o/.." : null
+    },
+    {
+      "o/." : null
+    },
+    {
+      "o/r/../x" : null
+    },
+    {
+      "bad_owner/r" : null
+    },
+    {
+      "o/r/a b" : null
+    },
+    {
+      "o/r.js" : {
+        "id" : "o/r.js",
+        "name" : "o/r.js",
+        "owner" : "o",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/o/r.js/main/decks/my%20deck/index.html",
+        "repo" : "r.js",
+        "repoAPI" : "https://api.github.com/repos/o/r.js",
+        "treeAPI" : "https://api.github.com/repos/o/r.js/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r.js"
+      }
+    },
+    {
+      "o/r/tree" : {
+        "id" : "o/r/tree",
+        "name" : "o/r/tree",
+        "owner" : "o",
+        "path" : "tree",
+        "rawURL" : "https://raw.githubusercontent.com/o/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/o/r",
+        "treeAPI" : "https://api.github.com/repos/o/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r/tree/HEAD/tree"
+      }
+    },
+    {
+      "o/r/tree/main" : {
+        "branch" : "main",
+        "id" : "o/r@main",
+        "name" : "o/r",
+        "owner" : "o",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/o/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/o/r",
+        "treeAPI" : "https://api.github.com/repos/o/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r/tree/main"
+      }
+    },
+    {
+      "o/r/tree/../x" : null
+    },
+    {
+      "-o-/r_x.y" : {
+        "id" : "-o-/r_x.y",
+        "name" : "-o-/r_x.y",
+        "owner" : "-o-",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/-o-/r_x.y/main/decks/my%20deck/index.html",
+        "repo" : "r_x.y",
+        "repoAPI" : "https://api.github.com/repos/-o-/r_x.y",
+        "treeAPI" : "https://api.github.com/repos/-o-/r_x.y/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/-o-/r_x.y"
+      }
+    },
+    {
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r" : null
+    },
+    {
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r" : {
+        "id" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r",
+        "name" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r",
+        "owner" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "path" : "",
+        "rawURL" : "https://raw.githubusercontent.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r",
+        "treeAPI" : "https://api.github.com/repos/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r"
+      }
+    },
+    {
+      "o/rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr" : null
+    },
+    {
+      "ö/r" : null
+    },
+    {
+      "o/r//deep///path/" : {
+        "id" : "o/r/deep/path",
+        "name" : "o/r/deep/path",
+        "owner" : "o",
+        "path" : "deep/path",
+        "rawURL" : "https://raw.githubusercontent.com/o/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/o/r",
+        "treeAPI" : "https://api.github.com/repos/o/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r/tree/HEAD/deep/path"
+      }
+    },
+    {
+      "https://github.com/o/r/tree/v1.0/a/b?x=1" : {
+        "branch" : "v1.0",
+        "id" : "o/r/a/b@v1.0",
+        "name" : "o/r/a/b",
+        "owner" : "o",
+        "path" : "a/b",
+        "rawURL" : "https://raw.githubusercontent.com/o/r/main/decks/my%20deck/index.html",
+        "repo" : "r",
+        "repoAPI" : "https://api.github.com/repos/o/r",
+        "treeAPI" : "https://api.github.com/repos/o/r/git/trees/feature/a%20b?recursive=1",
+        "webURL" : "https://github.com/o/r/tree/v1.0/a/b"
+      }
+    }
+  ],
+  "prettify" : [
+    [
+      "build-ship-ai",
+      "Build ship ai"
+    ],
+    [
+      "q3_results",
+      "Q3 results"
+    ],
+    [
+      "already Fine",
+      "Already Fine"
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "-",
+      "-"
+    ],
+    [
+      "élan-vital",
+      "Élan vital"
+    ],
+    [
+      "a--b",
+      "A b"
+    ]
+  ]
+}

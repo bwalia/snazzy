@@ -1,0 +1,278 @@
+{
+  "cleanTags" : [
+    [
+      [
+        "  Q3 ",
+        "#Board",
+        "q3",
+        "",
+        "  ",
+        "board",
+        "Sales#Team"
+      ],
+      [
+        "Q3",
+        "Board",
+        "SalesTeam"
+      ]
+    ],
+    [
+      [
+
+      ],
+      [
+
+      ]
+    ],
+    [
+      [
+        "#",
+        "A",
+        "a",
+        "B"
+      ],
+      [
+        "A",
+        "B"
+      ]
+    ]
+  ],
+  "maxFileBytes" : 2000000,
+  "resolve" : [
+    {
+      "path" : "index.html",
+      "resolved" : "index.html"
+    },
+    {
+      "path" : "js/app.js",
+      "resolved" : "js/app.js"
+    },
+    {
+      "path" : "  css/a.css  ",
+      "resolved" : "css/a.css"
+    },
+    {
+      "error" : "Use a relative path inside the project, like \"index.html\" or \"js/app.js\".",
+      "path" : "/etc/passwd"
+    },
+    {
+      "error" : "Use a relative path inside the project, like \"index.html\" or \"js/app.js\".",
+      "path" : "~/x"
+    },
+    {
+      "error" : "Use a relative path inside the project, like \"index.html\" or \"js/app.js\".",
+      "path" : ""
+    },
+    {
+      "error" : "Use a relative path inside the project, like \"index.html\" or \"js/app.js\".",
+      "path" : "   "
+    },
+    {
+      "error" : "Path \"../x\" is outside the project.",
+      "path" : "../x"
+    },
+    {
+      "error" : "Path \"a/../../x\" is outside the project.",
+      "path" : "a/../../x"
+    },
+    {
+      "path" : "a/../b.html",
+      "resolved" : "b.html"
+    },
+    {
+      "path" : "./c.html",
+      "resolved" : "c.html"
+    },
+    {
+      "error" : "That file is reserved.",
+      "path" : ".snazzy-project.json"
+    },
+    {
+      "error" : "That file is reserved.",
+      "path" : "sub/.snazzy-x"
+    },
+    {
+      "path" : ".hidden",
+      "resolved" : ".hidden"
+    },
+    {
+      "error" : "Path \"link/file.txt\" is outside the project.",
+      "path" : "link/file.txt"
+    },
+    {
+      "error" : "Path \"link\" is outside the project.",
+      "path" : "link"
+    },
+    {
+      "path" : "real/file.txt",
+      "resolved" : "real/file.txt"
+    },
+    {
+      "path" : "a//b",
+      "resolved" : "a/b"
+    },
+    {
+      "error" : "Path \"..\" is outside the project.",
+      "path" : ".."
+    },
+    {
+      "error" : "Path \".\" is outside the project.",
+      "path" : "."
+    }
+  ],
+  "setDetails" : [
+    {
+      "category" : "  Finance  ",
+      "origin" : "github:o/r/d",
+      "resultCategory" : "Finance",
+      "resultOrigin" : "github:o/r/d",
+      "resultTags" : [
+        "Board",
+        "Q3"
+      ],
+      "tags" : [
+        "Board",
+        "board",
+        "#Q3"
+      ]
+    },
+    {
+      "category" : "",
+      "resultOrigin" : "github:o/r/d",
+      "tags" : [
+
+      ]
+    },
+    {
+      "category" : "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "resultCategory" : "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "resultOrigin" : "github:o/r/d",
+      "resultTags" : [
+        "tttttttttttttttttttttttttttttttttttttttt",
+        "tag1",
+        "tag2",
+        "tag3",
+        "tag4",
+        "tag5",
+        "tag6",
+        "tag7",
+        "tag8",
+        "tag9",
+        "tag10",
+        "tag11",
+        "tag12",
+        "tag13",
+        "tag14",
+        "tag15",
+        "tag16",
+        "tag17",
+        "tag18",
+        "tag19"
+      ],
+      "tags" : [
+        "tttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "tag1",
+        "tag2",
+        "tag3",
+        "tag4",
+        "tag5",
+        "tag6",
+        "tag7",
+        "tag8",
+        "tag9",
+        "tag10",
+        "tag11",
+        "tag12",
+        "tag13",
+        "tag14",
+        "tag15",
+        "tag16",
+        "tag17",
+        "tag18",
+        "tag19",
+        "tag20",
+        "tag21",
+        "tag22",
+        "tag23",
+        "tag24",
+        "tag25"
+      ]
+    },
+    {
+      "resultOrigin" : "github:o/r/d",
+      "tags" : [
+        "  "
+      ]
+    }
+  ],
+  "slug" : [
+    [
+      "Q3 DevOps Results!",
+      "q3-devops-results"
+    ],
+    [
+      "Café déjà vu",
+      "cafe-deja-vu"
+    ],
+    [
+      "  --Hello__World--  ",
+      "hello-world"
+    ],
+    [
+      "Ünïcödé Straße",
+      "unicode-stra-e"
+    ],
+    [
+      "",
+      "project"
+    ],
+    [
+      "!!!",
+      "project"
+    ],
+    [
+      "ÆØÅ æøå",
+      "a-a"
+    ],
+    [
+      "Ça va? Œuvre",
+      "ca-va-uvre"
+    ],
+    [
+      "Crème brûlée & piña colada",
+      "creme-brulee-pina-colada"
+    ],
+    [
+      "naïve façade",
+      "naive-facade"
+    ],
+    [
+      "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij",
+      "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+    ],
+    [
+      "日本",
+      "ri-ben"
+    ],
+    [
+      "Привет мир",
+      "privet-mir"
+    ],
+    [
+      "a/b\\c.d",
+      "a-b-c-d"
+    ],
+    [
+      "Tab\tNew\nLine",
+      "tab-new-line"
+    ],
+    [
+      "x1 2y",
+      "x1-2y"
+    ]
+  ],
+  "writeLimit" : {
+    "2000000" : "ok",
+    "2000001" : "File too large (max 2 MB)."
+  }
+}
