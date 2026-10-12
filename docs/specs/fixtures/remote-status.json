@@ -1,0 +1,27 @@
+{
+  "broadcast" : "YouTube, Twitch",
+  "countdown" : 3,
+  "deckName" : "Q3 review",
+  "elapsed" : 125.5,
+  "hostName" : "Studio Mac",
+  "liveRoomViewers" : 7,
+  "micLevel" : 0.42,
+  "nextSlideTitle" : "Costs / margins",
+  "notes" : "Mention the café \"partnership\".\nThen pause.",
+  "prompter" : {
+    "progress" : 0.25,
+    "running" : true,
+    "script" : "Line one\nLine two",
+    "visible" : true,
+    "wordsPerMinute" : 160
+  },
+  "recording" : "recording",
+  "slideCount" : 12,
+  "slideIndex" : 2,
+  "slideTitle" : "Revenue",
+  "source" : "Slides",
+  "warnings" : [
+    "Low disk space",
+    "Camera stalled"
+  ]
+}

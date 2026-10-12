@@ -1,0 +1,4 @@
+:root { color-scheme: light dark; --accent: #4f7cff; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 -apple-system, system-ui, sans-serif; }
+main { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
