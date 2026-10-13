@@ -13,7 +13,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Download · Snazzy Pro</title>
-<meta name="description" content="Download Snazzy Pro for Mac (free beta): Apple Silicon and Intel, macOS 15 or later. iPhone, iPad and Apple Watch apps coming with the App Store launch.">
+<meta name="description" content="Download Snazzy Pro for Mac (free beta): Apple Silicon and Intel, macOS 15 or later. Early beta for Windows and Linux. iPhone, iPad and Apple Watch apps coming with the App Store launch.">
 <meta name="theme-color" content="#0B1020">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -28,7 +28,7 @@
   <div class="wrap">
     <p class="eyebrow">Download</p>
     <h1>Get Snazzy Pro.</h1>
-    <p class="section-lede">Free beta for Mac today. The iPhone, iPad and Apple Watch apps arrive with the App Store launch.</p>
+    <p class="section-lede">Free beta for Mac today, and an early beta for Windows and Linux. The iPhone, iPad and Apple Watch apps arrive with the App Store launch.</p>
 
     <div class="dl-grid">
       <article class="dl-card main">
@@ -71,6 +71,25 @@
           <p>SHA-256 of SnazzyPro.dmg:</p>
           <code class="sha">c4963f595205aee8e720ccbd16d82e9e3482ee15992da95ff01ba1abc699f6a3</code>
           <p>In Terminal: <code>shasum -a 256 ~/Downloads/SnazzyPro.dmg</code></p>
+        </details>
+      </article>
+
+      <article class="dl-card">
+        <h2>Windows and Linux</h2>
+        <p class="muted">Early beta · version 0.1</p>
+        <p>The first steps of Snazzy Pro for Windows and Linux: chat with the assistant to plan and write a talk, with <a href="https://ollama.com">Ollama</a> or Claude with your own key (kept in your system's credential store). Decks, recording and the live room come next.</p>
+        <div class="dl-btns">
+          <a class="btn secondary small" href="https://github.com/bwalia/snazzy/releases/download/desktop-beta/SnazzyPro-Windows-x64.msi">Windows (x64)</a>
+          <a class="btn secondary small" href="https://github.com/bwalia/snazzy/releases/download/desktop-beta/SnazzyPro-Linux-x64.deb">Linux .deb (x64)</a>
+          <a class="btn secondary small" href="https://github.com/bwalia/snazzy/releases/download/desktop-beta/SnazzyPro-Linux-arm64.deb">Linux .deb (ARM64)</a>
+        </div>
+        <ul class="dl-facts">
+          <li>Windows 10 or 11. Not code-signed yet: if SmartScreen warns, choose More info › Run anyway.</li>
+          <li>Ubuntu 24.04 or later, or another Debian-based distribution: <code>sudo apt install ./SnazzyPro-Linux-x64.deb</code></li>
+          <li>Linux keeps your key in the Secret Service (GNOME Keyring or KWallet).</li>
+        </ul>
+        <details class="dl-more"><summary>Check the download</summary>
+          <p>SHA-256 sums: <a href="https://github.com/bwalia/snazzy/releases/download/desktop-beta/SHA256SUMS">SHA256SUMS</a>. Windows: <code>certutil -hashfile SnazzyPro-Windows-x64.msi SHA256</code>. Linux: <code>sha256sum -c SHA256SUMS --ignore-missing</code></p>
         </details>
       </article>
 

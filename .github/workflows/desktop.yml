@@ -94,3 +94,35 @@ jobs:
             desktop/target/release/bundle/deb/*.deb
           if-no-files-found: error
           retention-days: 14
+
+  # Every desktop change on main replaces the installers on the desktop-beta pre-release
+  # under fixed names, which www.snazzy.pro/download.html links to (like mac-beta).
+  publish:
+    name: Publish beta
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: snazzy-pro-*
+          path: dist
+      - name: Upload to the desktop-beta release
+        run: |
+          set -euo pipefail
+          one() { find "dist/$1" -name "*.$2" | head -n 1; }
+          mkdir out
+          cp "$(one snazzy-pro-Windows-X64 msi)" out/SnazzyPro-Windows-x64.msi
+          cp "$(one snazzy-pro-Linux-X64 deb)" out/SnazzyPro-Linux-x64.deb
+          cp "$(one snazzy-pro-Linux-ARM64 deb)" out/SnazzyPro-Linux-arm64.deb
+          (cd out && sha256sum * > SHA256SUMS)
+          notes="Snazzy Pro for Windows and Linux, free beta, built from ${GITHUB_SHA::7}. Windows 10 or 11 (x64; not code-signed yet). Ubuntu 24.04 or later, or another Debian-based distribution (x64 and ARM64). SHA-256 sums are in SHA256SUMS."
+          gh release view desktop-beta >/dev/null 2>&1 || gh release create desktop-beta --prerelease \
+            --target "$GITHUB_SHA" --title "Snazzy Pro for Windows and Linux (beta)" --notes "$notes"
+          gh release upload desktop-beta out/* --clobber
+          gh release edit desktop-beta --notes "$notes"

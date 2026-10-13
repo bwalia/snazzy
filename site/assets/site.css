@@ -375,7 +375,8 @@ footer a { text-decoration: none; } footer a:hover { color: var(--fg); }
 /* Downloads */
 .dl-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px; margin-top: 32px; }
 .dl-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; background: linear-gradient(180deg, var(--night), #10152C); }
-.dl-card.main { grid-row: span 3; }
+.dl-card.main { grid-row: span 4; }
+.dl-btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
 .dl-card h2 { margin: 0 0 4px; font-size: 24px; letter-spacing: -0.02em; }
 .dl-card h3 { margin: 22px 0 8px; font-size: 17px; }
 .dl-card p, .dl-card li { color: #CDD2E8; }
