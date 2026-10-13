@@ -1,0 +1,133 @@
+{
+  "cases" : [
+    {
+      "file" : "U05aU0hSMDGdVFtzEjEU/itMXnwoi8ulapnxoaW1Mra1ApZa9eGwOezGzSbbXKClw3/3JCBWnbEz3RfIybl+33fywGaQlbnRXnHL+l8fGAcHrM8OPw2P9xaLN6zJBKfzLE/a9F9BhXQaO8+FbixBSrb+3mSZQXAY/Dpp51WStpO0M0m7/bTXT/dvKG6uTQWO7q2C1eo+sQUYDPm0C/neo8EXtuEKbHDMyga5N8614nBPPrVBi27THdQ169NP5sQCJ2BLCq4lKCVUTq4gl3BvLxD5FEqcakMtzUFapCvlCqNrkR2Bxc+jMwosnKtt/9vLby+hFq2dQyvTFXsUcDKndkLvFXLhw9XMC8lDRWql0hwlXWYSPMdE194m+8l+7FsvBEdDl7tcbE1gFeAmeOfGYkWzt3tkkdrzgVYWFdX5SoBWcPfRu9q7iS5R0ezdTpqmTaalhAr+HCFOIHUGstDW9dvtXrcXyv+C5VlN3nqRlQNdVRCF8U8Kq5VC90QSgxlRMEZrhQ5DOOOJCVsjlCOspcDHNsyKEQQ1pK39JltokeGhd3qM6jeJ0TrkBJOYi1iPqi93VLNxVFewGeGeOXtgCGrnSZ8ULYgUd4wLqhuOpQjdkEOFBv7Zh53ZK3HrcXi8caXNoaQS7rV3IcmMmkUzFdwVRCyV00bFLmbaOV2d4dyxX9YRkOZsACV9FWRhcqHiqUMg2aigtNVdx2HmQmLkalMzVNotd5ylgnwz1G6j47Q0eFwqIiGjBtut13995EOQo7nekrM5fdmeVpr2hf4eBMa1A0dkU36lVdjwgLA+Rpr+PIyx3lR84rnYwnpGytGqQQz4evtYUA42iDA3NmglcgOXr/n/coZXiiD6ESd8YFuofr93l4N35axzkeL1kRyeFulsuty7fD+q+emdvJQnq+HgTZ5VVx2YXnUvBwcpXI/szaT3IcgIAo+kFI53rcJV9CQ2d3nF1dHH0TL9cJrrQ/ouwq72DufLt28fRVZ5WOBct2qSbOh0K7P48qktojtUbruJIUHiMqjKCSeD8VO3sTUS5Ghs5KC9/gk=",
+      "name" : "valid"
+    },
+    {
+      "error" : "This isn't a Snazzy Pro share file.",
+      "file" : "U05aU0hSMDKdVFtzEjEU/itMXnwoi8ulapnxoaW1Mra1ApZa9eGwOezGzSbbXKClw3/3JCBWnbEz3RfIybl+33fywGaQlbnRXnHL+l8fGAcHrM8OPw2P9xaLN6zJBKfzLE/a9F9BhXQaO8+FbixBSrb+3mSZQXAY/Dpp51WStpO0M0m7/bTXT/dvKG6uTQWO7q2C1eo+sQUYDPm0C/neo8EXtuEKbHDMyga5N8614nBPPrVBi27THdQ169NP5sQCJ2BLCq4lKCVUTq4gl3BvLxD5FEqcakMtzUFapCvlCqNrkR2Bxc+jMwosnKtt/9vLby+hFq2dQyvTFXsUcDKndkLvFXLhw9XMC8lDRWql0hwlXWYSPMdE194m+8l+7FsvBEdDl7tcbE1gFeAmeOfGYkWzt3tkkdrzgVYWFdX5SoBWcPfRu9q7iS5R0ezdTpqmTaalhAr+HCFOIHUGstDW9dvtXrcXyv+C5VlN3nqRlQNdVRCF8U8Kq5VC90QSgxlRMEZrhQ5DOOOJCVsjlCOspcDHNsyKEQQ1pK39JltokeGhd3qM6jeJ0TrkBJOYi1iPqi93VLNxVFewGeGeOXtgCGrnSZ8ULYgUd4wLqhuOpQjdkEOFBv7Zh53ZK3HrcXi8caXNoaQS7rV3IcmMmkUzFdwVRCyV00bFLmbaOV2d4dyxX9YRkOZsACV9FWRhcqHiqUMg2aigtNVdx2HmQmLkalMzVNotd5ylgnwz1G6j47Q0eFwqIiGjBtut13995EOQo7nekrM5fdmeVpr2hf4eBMa1A0dkU36lVdjwgLA+Rpr+PIyx3lR84rnYwnpGytGqQQz4evtYUA42iDA3NmglcgOXr/n/coZXiiD6ESd8YFuofr93l4N35axzkeL1kRyeFulsuty7fD+q+emdvJQnq+HgTZ5VVx2YXnUvBwcpXI/szaT3IcgIAo+kFI53rcJV9CQ2d3nF1dHH0TL9cJrrQ/ouwq72DufLt28fRVZ5WOBct2qSbOh0K7P48qktojtUbruJIUHiMqjKCSeD8VO3sTUS5Ghs5KC9/gk=",
+      "name" : "bad magic"
+    },
+    {
+      "error" : "This share file is damaged.",
+      "file" : "U05aU0hSMDFub3QgY29tcHJlc3NlZCBhdCBhbGw=",
+      "name" : "not deflate"
+    },
+    {
+      "error" : "This file needs a newer version of Snazzy Pro.",
+      "file" : "U05aU0hSMDGdVFtz2joQ/iuMX/pQTIWBnoSZPiSkJ2WapinQkN4eFmuxdSxLji6QkOG/n5WgNGln2pnqxdZqtZfv+7QPyQLyqjDaK26T4ZeHhIODZJicfBifPV+tjpJ2IjjtF0XapX8FNdJu6jwXurUGKZPtt3aSGwSHwS9j2cuUdVOWzVhvyPpDNvhM95ba1ODo3CrYbO5TW4LBEE+7EO8NGnxmW67EFse8apF7651WHO7JpzFo0e2qg6ZJhvTJnVjhDGxFlxsJSglVkCvINdzbS0Q+hwrn2lBJS5AW6Ui50uhG5Kdg8ePkgi6WzjV2+PXF1xfQiM7BoZPrOnl04fWSygm118iFD0cLLyQPGamUWnOUdJhL8BxT3XibDtJBrFuvBEdDh4dYyZbAKsHN8M5NxYZ67/bJIrXnI60sKsrzhQCt4e69d413M12hot57GWOsnWgpoYanLcQOpM5Bltq6Ybfb7/VD+u+w/FWRt17k1UjXNURh/BLCaqXQ/SGIwZwomKK1QocmnPHEhG0Qqgk2UuBjG+blBIIaWGfQTlZa5HjinZ6i+kFitI45wSSWIuaj7OsD1ck0qivYjHB/2XtgCBrnSZ90WxAp7gxXlDdsKxGqIYcaDfzyHg5mr8Stx/HZzpVeDgWVcK+9C0EWVCyaueCuJGIpnTYqVrHQzun6Apcu+W6dAGnOBlDY4PjpOgoyMYVQ8TQbsCerS6BGgbFO9tPF423sfSkkRmp3JYbCDrMgtl5DscPgMAAiOIRTfIPEWU79dDv//LTIhxhCc7Pncrf7tN9tND0v+j1+Wi/LgmC0A0daoXxKqzAgAkH6DAm8dwGF7a6CP0ybPSsXJDytWkSgb/azhmIko8hSawd2Kndo+4b/LmYYcgTZf7Hjh2QP3Y9xeTX6t1pklwxvTuX4vGSL+fr51ZtJw8/v5JV8vRmPjoq8vs5gft27Gh0zuJnYz7P+26BCCDIgoXG865SuponaPsQV16fvJ2v29rzQJ7Quw1PvnyzXr149ulkX4f0XutOQ4kOle5XGwan2iB5Que2lhvSM6yBKJ5wMxg+91t5IkKOxkYNs+z8=",
+      "name" : "newer version"
+    },
+    {
+      "error" : "This isn't a Snazzy Pro share file.",
+      "file" : "U05aU0hSMDGdVMtyGjsQ/RVKmyzCEDFArk1VFjbOdag4jgPEOK9FM2pmdEcjjfUAGxf/flsDIXZSlVRlNqBHd58+56gf2AKyMrcmaOHY8MsDE+CBDdnJh/HZ89XqiLWZFLRe5EmX/muokFZTH4Q0rTUoxbbf2iyzCB7jvZSnLxPeTXg6470h7w/54DPFLY2twNO5MxX6Quo8QeUwZjQ+ZnyDFp+5li+wJTArWxTQeme0gHu6U1t06Hf4oK7ZkH4yL1c4A1dScK1Aa8pJV0Gt4d5dIoo5lDg3lkAtgUrRkfaFNbXMTsHhx8kFBRbe12749cXXF1DLzuFCJzMVexTweklwIvoKhQzxaBGkErEiQamMQEWHmYIgMDF1cMkgGTS4zUoKtHR4yMW2RFcBfoZ3fio31Hu3TzvKBDEy2qGmOl+I0gru3gdfBz8zJWrqvZdyztvMKAUVPG2h6UCZDFRhnB92u/1eP5b/TstfgbwNMitHpqqgscYvKZzRGv0fkljMSIIpOidNbMLbQEq4GqGcYK0kPt7DrJhAdAPvDNpsZWSGJ8GbKeofIja7Y0E0yaVs6lH19UFqNtWw2UTPrK30f9l7VAhqHyzGaEmi+DNcUd24LGVEQxcqtPDLizhsBy1vA47Pdlfp7VBSBfcm+JhkQWDRzqXwBQlL5YzVDYqF8d5UF7j07PvuBMhzLpLCB8dPv6NoE5tL3ZymA/7k6xKpjcF4J/0p8Hjb9L6UChtpdxAjsMM0aFqvIN9xcBgBDTnEU/MGSbOM+ul2/vnpozukENqbvZa71af9amPoedHf46d4eRoNYzx48grV00bHAREFMmdI5L2LLGx3CP4wb/aqXJDxjG6RgKHezxrKwUaNSq0d2YnasR1q8bucccwRZf81HT+wPXU/BubV6N9ykV5yvDlV4/OCL+br51dvJrU4v1NX6vVmPDrKs+o6hfl172p0zOFm4j7P+m+jCyHagIwm8K5T+IpmavuQV16fvp+s+dvz3JzQdxmfev9kuX716lFklcf3n5tOTY6PSPcubQan3jN6YOW2l1jyM66jKb30Km5+6LX2m0Q5Wtdo0N3+Dw==",
+      "name" : "other format"
+    },
+    {
+      "error" : "This share file is damaged or from a newer version of Snazzy Pro.",
+      "file" : "U05aU0hSMDGdVF1z2joQ/SuMX+5DMRUGbhNm+pCQ3pRpmqZAQ/r1sFiLrWtZcvQBCRn+e1eC0qSdaWfqF5C02j17ztE+JAvIq8Jor7hNhp8fEg4OkmFy8n589my1OkraieC0XhRpl/4rqJFWU+e50K01SJlsv7aT3CA4DHEZy/5NWTdl2Yz1hqw/ZINPdG+pTQ2Ozq2CzeY+tSUYDPm0C/leo8F/bMuV2OKYVy0Kb73VisM9xTQGLbodOmiaZEg/uRMrnIGt6HIjQSmhCgoFuYZ7e4nI51DhXBuCtARpkY6UK41uRH4KFj9MLuhi6Vxjh1+ef3kOjegcAjq5rpNHF14tCU7AXiMXPhwtvJA8VCQoteYo6TCX4DmmuvE2HaSDiFuvBEdDh4dcyZbIKsHN8M5NxYZ67/ZpR2rPR1pZVFTnMxFaw9077xrvZrpCRb33MsZYO9FSQg1PW4gdSJ2DLLV1w2633+uH8t9p+SuQt17k1UjXNURj/JLCaqXQ/SGJwZwkmKK1QocmnPGkhG0Qqgk2UuDjPczLCQQ3sM6gnay0yPHEOz1F9UPEuDvmRJNYiliPqq8PUifT6K6wZ4T7y96DQtA4T/6k24JEcWe4orphWYmAhgJqNPDLezhseyVuPY7PdqH0ciiphHvtXUiyILBo5oK7koSlctqoiGKhndP1BS5d8n13AuQ5G0hhg+On31GwiSmEiqfZgD35ukRqNBjrZD9dPN7G3pdCYpR2BzEAO8yC2HoNxY6DwwCI5BBP8Q2SZjn10+28+OmjGFIIzc1ey93q43610fS86O/xU7wsC4bRDhx5heoprcKACALpMyTy3gYWtjsEf5g2e1UuyHhatUhA3+xnDeVIRlGl1o7sVO7Y9g3/Xc4w5Iiy/2PHD8meuh/j8mr0X7XILhnenMrxeckW8/Wzq9eThp/fySv5ajMeHRV5fZ3B/Lp3NTpmcDOxn2b9N8GFEGxARuN41yldTRO1fcgrrk/fTdbszXmhT+i7DE+9f7Jcv3z56GZdhPdf6E5Djg9I9y6Ng1PtGT2wcttLDfkZ18GUKzQ28t3dfgM=",
+      "name" : "missing title"
+    },
+    {
+      "file" : "U05aU0hSMDGdVF1z2jgU/SuMXvahmNoGdhNm+pCQbso0TVNgQ7btPlzsi621LDn6AEKG/75XMqFJO7OdqZ6kK92vc47uI1tCVhVaOZkbNvryyHKwwEbs7NPk4tV6fcK6jOd0XhZRQnsJNdJpZl3OVWcDQrD9P12WaQSL/l0ap79HcRLF6Tzuj+LBKB5+Jr+V0jVYujcSdruHyJSg0duddbQZPbItGyV7SqCsT/AONf5mOrbETo5Z1SH/zgclc3ggp0ajQduWC03jvSGzfI1zMBU5NwKk5LKgpyA28GCuEfMFVLhQmmpcgTBIV9KWWjU8OweDf02vyLG0tjGjr6+/voaG944Pepmq2TOHtysqxzdTY86dv1o6LnKfkUqpVY6CLjMBLsdINc5Ew2gY6lZrnqOmy2MsRj1nJdg5bu2M76j3ZEAWoVw+VtKgpDxfCOEath+dbZydqwol9d5P4zjuMiUE1PCyhdCBUBmIUhk7SpJBf+DTP8HyS0XeO55VY1XXEJTyQwijpET7kyAaM6JghsZw5Zuw2hETpkGoptgIjs9tmJVT8GqIe8MuWyue4ZmzaobyG4nBOskJJr7iIR9l3xypZrMgN2/T3P5i754haJ50yokUe4FryuuPFffV0IMaNfzwQY5mJ/m9w8lF+5S+EgUV8KCc9UGWVCzqBc9tScRSOqVlqGKprFX1Fa4se7JOgTRnPCjx8PTlOvEy0QWX4TYdxi9WQqAGgcW99DvH033ofcUFBmrbEn1hx+EQWq+haDE4ToQADuEU/iBxllE/Se+P7xa9IYZQ3x24bE9/H047Rd+Ltqcv641TLxhlwZJWKJ9U0k8MT5C6QALvg0dh31bwk/FzYOWKhKdkhwh0DWtnDcVg48BSpwU7Ei3arsn/L6afegTZv6HjR3aA7tv8vBn/WS3T6xjvzsXksoyXi82rm3fTJr/cihvxdjcZnxRZfZvC4rZ/Mz6N4W5qPs8H770KwcuAhJbjtlfamkZs9xiX355/nG7i95eFOqN17b/64Gy1efPmmWdd+P9fqF5DiveVHlQaBqc8IHpE5b4fadIzbrwoLbfCGz/1OwcjQY7aBA6S/X8=",
+      "name" : "unknown field ignored"
+    },
+    {
+      "error" : "Unsafe file path in share: ../evil.html",
+      "file" : "U05aU0hSMDGdVE1v2zAM/SuGLjssTu18bG2AHbpm2Ap0G9pk6LZ2B8ZmYs2y5OojaVLkv4+S3bRpgRWoLrYoinx8j+Idm0FWLrRyMjdsdHXHcrDARuz4/HT8drk8ZB3Gc9rPFnFK/xIqpN3EupyraAVCsO2fDss0gkXv10t67+IkjZPeNOmPksEoGf6me3OlK7B0biRsNuvYFKDRx1PWx/uCGt+YyBYY5ZiVEblHX5XMYU0+tUaDtkEHdc1G9MksX+IUTEmXawFScrkgVxArWJtviPkllHipNEGagzBIR9IWWtU8+wgGf1yc0cXC2tqMrg+uD6Dm3Z1DN1MVe3Th05zgeOwV5tz5o5njIvcZCUqlchR0mAlwOcaqdiYexsOAWy15jpoOd7HYlsgqwE7x1k74hmpPB2QRyuUnShqUlOeKCK3g9ruztbNTVaKk2vu9JEk6TAkBFeyXECoQKgNRKGNHaTroD3z6e1peBfLG8aw8UVUFoTGehTBKSrQvBNGYkQQTNIYrX4TVjpQwNUJ5gbXg+NiGWXEBvhuS7rDDlopneOysmqB8EDFYT3Oiic95yEfZVzup2SR0l7dpbl9Zu1cIauuoP+k2J1HsGJeU129L7tGQQ4Uanr2HndlJfuPwdNy40suhoALWylkfZEZgUV/y3BYkLKVTWgYUM2Wtqs5wbtm99QKo54wnJRke7a9D3yZ6wWU47Q2TvZUSqaHBkm7vycWjbah9zgUGaRuIHthuFoTSK1g0HOwGQCCHeApvkDTLqJ60+/7JIh9SCPXPVstm96vdbRQ9L/o92seb9HzDKAuWeoXySSX9gPACqTESeV89C9sGwQvTplXljBpPyYgEdHU7aygGOwkqRQ3ZsWjYdnX+v5h+yBFlf0PFd6yl7mFcwufyg+8o8JKybvf6gFpGdAtbNQOy7ZswymRb4w7nTT/W5I4r3yaWW+GN5/2oNRIJqE1gJd3+Aw==",
+      "name" : "parent path"
+    },
+    {
+      "error" : "Unsafe file path in share: /etc/passwd",
+      "file" : "U05aU0hSMDGdVNtuGjEQ/RXklz6UhV0ubYLUhzRUbaS0VQJV2oY+DOuBdddrb3yBQMS/d2wICYnUSNkX8HguZ84Zzx2bQl7OjfaKWza4vmMcHLABO7k4G75dLI5YkwlO5+k8yei/ggrpNHKeC91YgpRs86fJcoPgMPh10s67JM2StDNOu4O0N0j7vylupk0Fju6tgvV6ldgCDIZ82oV8X9DgG9twBTY45mWD3BtfteKwIp/aoEW3RQd1zQb0kzuxwDHYkoJrCUoJNSdXkEtY2W+I/ApKvNKGIM1AWqQr5Qqja5F/BIs/Ls8psHCutoNJe9KGWrT2Dq1cV+xRwKcZwQnYK+TCh6upF5KHigSl0hwlXeYSPMdE194m/aQfceuF4Gjocp+LbYisAtwYb91IrKn3rEcWqT0/1cqiojrXRGgFt9+9q70b6xIV9d7tpGnaZFpKqOCwhdiB1DnIQls3yLJetxfK39PyKpA3XuTlqa4qiIPxLIXVSqF7IYnBnCQYobVChyac8aSErRHKS6ylwMc2zItLCNOQtvpNttAixxPv9AjVg4jResaJJjETsR5VX+6lZqM4XcFmhHtl70EhqJ2n+aRoQaK4IS6objiWIqAhhwoNPHsPe7NX4sbj2XDrSi+HkkpYae9CkimBRXMluCtIWCqnjYoopto5XZ3jzLF76yXQzNlASto/PvyOwpiYuVDxttNPD76MSI0DlrY6TwKPN7H3mZAYpd1CDMD2uyC2XsF8y8F+AURyiKf4BkmznPrJWu+ffORDCqH5udNye/q1O601PS/6e3yIN+2EgdEOHM0K1VNahQURBNJDJPK+BhY2WwQvbJudKuc0eFo1SEBf73YN5WCnUaXGluxEbtn2Nf9fzrDkiLK/seM7tqPuYV3C5/JDmCgIkrJJG10+addg7ZLH2N3cxFWmdj3ucd50E0MThsswJk44GYwX3cbOSCSgsZGVbPMP",
+      "name" : "absolute path"
+    },
+    {
+      "error" : "Unsafe file path in share: .htaccess",
+      "file" : "U05aU0hSMDGdVE1P20AQ/SvWXnpoHOyEtBCpB0qqFom2IklFW+hhYk/irde7Zj8SEpT/3tm1CQSkIuFLsrPz8ea92bljM8jKhVZO5oYNr+5YDhbYkJ1cnI3eLpdHrMN4TufZIk7pv4QK6TSxLucqWoEQbPunwzKNYNH79ZLeuzhJ46Q3TfrD5HCYDH5T3FzpCizdGwmbzTo2BWj0+ZT1+b6gxjcmsgVGOWZlRO7RVyVzWJNPrdGgbdBBXbMh/WSWL3EKpqTgWoCUXC7IFcQK1uYbYn4JJV4qTZDmIAzSlbSFVjXPPoLBH+NzCiysrc3w+uD6AGre3Tl0M1WxRwGf5gTHY68w585fzRwXua9IUCqVo6DLTIDLMVa1M/EgHgTcaslz1HS5y8W2RFYBdoq3dsI31Ht6SBahXH6qpEFJda6I0ApuvztbOztVJUrqvd9LkqTDlBBQwX4LoQOhMhCFMnaYpof9Q1/+npZXgbxxPCtPVVVBGIxnKYySEu0LSTRmJMEEjeHKN2G1IyVMjVCOsRYcH9swK8bgpyHpDjpsqXiGJ86qCcoHEYP1LCea+JyHelR9tZOaTcJ0eZvm9pW9e4Wgto7mk6I5iWJHuKS6/lhyj4YcKtTw7D3szE7yG4dno8aVXg4lFbBWzvokMwKL+pLntiBhqZzSMqCYKWtVdY5zy+6tY6CZM56UZHC8/x35MdELLsNtb5DsfSmRGgYs6faeBB5vQ+9zLjBI20D0wHa7ILRewaLhYLcAAjnEU3iDpFlG/aTd908+8iGFUP9stWxOv9rTRtHzor/H+3iTnh8YZcHSrFA9qaRfEF4gNUIi76tnYdsgeGHbtKqc0+ApGZGArm53DeVgp0GlqCE7Fg3brs7/l9MvOaLsb+j4jrXUPaxL+Fx+8BMFXlLWLSxkGVUPce3MhDUm2/52GG/6sabpwpUfEcut8MaLftQaiQDUJjCSbv8B",
+      "name" : "hidden file"
+    },
+    {
+      "error" : "Unsafe file path in share: a/.git/config",
+      "file" : "U05aU0hSMDGdVNtu2kAQ/RW0L30oBptLmyD1IQ1VGyltlUCVtqEPgz3grde7zl4gEPHvnV07JCRSI8UvsLNzOXPO7NyxOaTFUisnM8NG13csAwtsxE4uzsZvV6sj1mY8o/N8GSX0X0KJdJpYl3HVWoMQbPenzVKNYNH79eLeuyhOorg3jfujeDCKh78pbqF0CZbujYTtdhOZHDT6fMr6fF9Q4xvTsjm2MkyLFrm3viqZwYZ8Ko0GbY0OqoqN6Ce1fIVTMAUFVwKk5HJJriDWsDHfELMrKPBKaYK0AGGQrqTNtap4+hEM/rg8p8Dc2sqMZt1ZFyre2Tt0UlWyRwGfFgTHYy8x485fzR0Xma9IUEqVoaDLVIDLMFKVM9EwGgbcasUz1HS5z8V2RFYOdoq3dsK31HsyIItQLjtV0qCkOtdEaAm3352tnJ2qAiX13u/FcdxmSggo4bCF0IFQKYhcGTtKkkF/4Mvf0/IqkDeOp8WpKksIg/EshVFSon0hicaUJJigMVz5Jqx2pISpEIpLrATHxzZM80vw0xB3hm22UjzFE2fVBOWDiMF6lhFNfMFDPaq+3kvNJmG6vE1z+8revUJQWUfzSdGcRLFjXFFdfyy4R0MOJWp49h72Zif5jcOzce1KL4eSCtgoZ32SOYFFfcUzm5OwVE5pGVDMlbWqPMeFZffWS6CZM56UeHh8+B35MdFLLsNtbxgffAmRGgYs7vSeBB7vQu8LLjBIW0P0wPa7ILRewrLmYL8AAjnEU3iDpFlK/SSd908+8iGFUP9stKxPv5rTVtHzor/Hh3jjnh8YZcHSrFA9qaRfEF4gNUYi76tnYVcjeGHbNKqc0+Ap2SIBXdXsGsrBToNKrZrsSNRsuyr7X06/5Iiyv6HjO9ZQ97Au4XPxwU8UeEkZzLqdJbezbqrkgi9DdDM5YZnJpss90pt+pGnGcO0HxXIrvPGi32qMRANqE3hJdv8A",
+      "name" : "hidden folder"
+    },
+    {
+      "error" : "Unsafe file path in share: a\\b.html",
+      "file" : "U05aU0hSMDGdVE1v2zAM/SuBLjssTu18bG2AHbpm2Ap0G5pk6LZmB8ZmYs2y5OojaVLkv4+S3bRpgRWoLrYoinx8j+Idm0NaLLVyMjNseH3HMrDAhuz08nz0drU6Zm3GM9rPl1FC/xJKpN3Euoyr1hqEYLs/bZZqBIverxt330VxEsXdadwbxv1hPPhN9xZKl2Dp3EjYbjeRyUGjj6esj/cFNb4xLZtjK8O0aJF766uSGWzIp9Jo0NbooKrYkD6p5SucginociVASi6X5ApiDRvzDTG7ggKvlCZICxAG6UjaXKuKpx/B4I/xBV3Mra3McHY0O4KKd/YOnVSV7NGFTwuC47GXmHHnj+aOi8xnJCilylDQYSrAZRipyploEA0CbrXiGWo63MdiOyIrBzvFWzvhW6o96ZNFKJedKWlQUp5rIrSE2+/OVs5OVYGSau914zhuMyUElHBYQqhAqBRErowdJkm/1/fp72l5Fcgbx9PiTJUlhMZ4FsIoKdG+EERjShJM0BiufBFWO1LCVAjFGCvB8bEN03wMvhvizqDNVoqneOqsmqB8EDFYzzOiiS94yEfZ13up2SR0l7dpbl9Zu1cIKuuoP+k2J1HsCFeU128L7tGQQ4kanr2HvdlJfuPwfFS70suhoAI2ylkfZE5gUV/xzOYkLKVTWgYUc2WtKi9wYdm9dQzUc8aTEg9ODtexbxO95DKcdgfxwUqI1NBgcaf75OLJLtS+4AKDtDVED2w/C0LpJSxrDvYDIJBDPIU3SJqlVE/Sef9kkQ8phPpno2W9+9XstoqeF/2eHOKNu75hlAVLvUL5pJJ+QHiB1AiJvK+ehV2N4IVp06hyQY2nZIsEdFUzaygGOwsqtWqyI1Gz7arsfzH9kCPK/oaK71hD3cO4hM/FB99R4CVlMJvNO7kt6+HY9EwYY7Kpb4/xphdp6i5c+xax3ApvvOy1GiMRgNoERpLdPw==",
+      "name" : "backslash"
+    },
+    {
+      "error" : "Unsafe file path in share: a\u0007.html",
+      "file" : "U05aU0hSMDGdVN9P2zAQ/lcqv+xhTUn6Y0ClPTA6bUiwibYT22AP1+TaeHHs4B8tLer/vrMTCgVpSPgl8fl89933ne+ezSAtFlo5mRk2vL5nGVhgQ3ZyeTZ6v1wesTbjGe1niyihfwkl0m5iXcZVawVCsO2fNks1gkXv1427H6I4ieLuNO4N4/4wHvyme3OlS7B0biRsNuvI5KDRx1PWx/uKGt+Zls2xlWFatMi9daFkBmvyqTQatDU6qCo2pE9q+RKnYAq6XAmQkssFuYJYwdp8Q8yuoMArpQnSHIRBOpI216ri6Scw+GN8ThdzayszvDm4OYCKd3YOnVSV7MmFz3OC47GXmHHnj2aOi8xnJCilylDQYSrAZRipyploEA0CbrXkGWo63MViWyIrBzvFOzvhG6o96ZNFKJedKmlQUp5rIrSEu+/OVs5OVYGSau914zhuMyUElLBfQqhAqBRErowdJkm/1/fpH2h5E8hbx9PiVJUlhMZ4EcIoKdG+EkRjShJM0BiufBFWO1LCVAjFGCvB8akN03wMvhvizqDNloqneOKsmqB8FDFYzzKiic95yEfZVzup2SR0l7dpbt9Yu1cIKuuoP+k2J1HsCJeU128L7tGQQ4kaXryHndlJfuvwbFS70suhoALWylkfZEZgUV/xzOYkLKVTWgYUM2WtKs9xbtmDdQzUc8aTEg+O99eRbxO94DKcdgfx3kqI1NBgcaf77OLxNtQ+5wKDtDVED2w3C0LpJSxqDnYDIJBDPIU3SJqlVE/SOXy2yIcUQv2z0bLe/Wp2G0XPi36P9/HGXd8wyoKlXqF8Ukk/ILxAaoRE3oVnYVsjeGXaNKqcU+Mp2SIBXdXMGorBToNKrZrsSNRsuyr7X0w/5Iiyv6Hie9ZQ9zgu4Uvx0XcUeEkZ3Dgq6LCT27Kej03bhEkmmxJ3MG97kaYGw5XvEsut8MbLXqsxEgeoTSAl2f4D",
+      "name" : "control char"
+    },
+    {
+      "error" : "Unsafe file path in share: a//b.html",
+      "file" : "U05aU0hSMDGdVN9P2zAQ/lciv+xhTUlaukGlPTA6bUhsE20ntsEersm18eLYwT9aWtT/fWcnFArSkPBL4vP57rvvO98dm0FWLrRyMjdseHXHcrDAhuzk4mz0drk8Yh3Gc9rPFnFK/xIqpN3EupyraAVCsO2fDss0gkXv10t67+IkjZPeNOkPk8NhMvhN9+ZKV2Dp3EjYbNaxKUCjj6esj/cFNb4xkS0wyjErI3KPviqZw5p8ao0GbYMO6poN6ZNZvsQpmJIu1wKk5HJBriBWsDbfEPNLKPFSaYI0B2GQjqQttKp59hEM/hif08XC2toMrw+uD6Dm3Z1DN1MVe3Th05zgeOwV5tz5o5njIvcZCUqlchR0mAlwOcaqdiYexIOAWy15jpoOd7HYlsgqwE7x1k74hmpPD8kilMtPlTQoKc8VEVrB7Xdna2enqkRJtfd7SZJ0mBICKtgvIVQgVAaiUMYO0/Swf+jT39PyKpA3jmflqaoqCI3xLIRRUqJ9IYjGjCSYoDFc+SKsdqSEqRHKMdaC42MbZsUYfDck3UGHLRXP8MRZNUH5IGKwnuVEE5/zkI+yr3ZSs0noLm/T3L6ydq8Q1NZRf9JtTqLYES4pr9+W3KMhhwo1PHsPO7OT/Mbh2ahxpZdDQQWslbM+yIzAor7kuS1IWEqntAwoZspaVZ3j3LJ76xio54wnJRkc768j3yZ6wWU47Q2SvZUSqaHBkm7vycXjbah9zgUGaRuIHthuFoTSK1g0HOwGQCCHeApvkDTLqJ60+/7JIh9SCPXPVstm96vdbRQ9L/o93seb9HzDKAuWeoXySSX9gPACqRESeV89C9sGwQvTplXlnBpPyYgEdHU7aygGOw0qRQ3ZsWjYdnX+v5h+yBFlf0PFd6yl7mFcwufyg+8o8JIy8C9y1i1s1YzHtmvCIJNthTuUN/1YU3/hyjeJ5VZ440U/ao1EAWoTOEm3/wA=",
+      "name" : "empty component"
+    },
+    {
+      "error" : "Unsafe file path in share: a/",
+      "file" : "U05aU0hSMDGdVNtO20AQ/RVrX/rQONi5tBCpD5RULRJtBUlFW+jDxJ7EW693zV4SEpR/7+zaBAJSkfBLsrNzOXPO7NyxGWTlQisnc8NGV3csBwtsxI7PT8dvl8tD1mE8p/NsEaf0X0KFdJpYl3MVrUAItv3TYZlGsOj9eknvXZykcdKbJv1RMhglw98UN1e6Akv3RsJms45NARp9PmV9vi+o8Y2JbIFRjlkZkXv0Vckc1uRTazRoG3RQ12xEP5nlS5yCKSm4FiAllwtyBbGCtfmGmF9CiZdKE6Q5CIN0JW2hVc2zj2Dwx8UZBRbW1mZ0fXB9ADXv7hy6marYo4BPc4LjsVeYc+evZo6L3FckKJXKUdBlJsDlGKvamXgYDwNuteQ5arrc5WJbIqsAO8VbO+Eb6j0dkEUol58oaVBSnSsitILb787Wzk5ViZJ67/eSJOkwJQRUsN9C6ECoDEShjB2l6aA/8OXvaXkVyBvHs/JEVRWEwXiWwigp0b6QRGNGEkzQGK58E1Y7UsLUCOUF1oLjYxtmxQX4aUi6ww5bKp7hsbNqgvJBxGA9zYkmPuehHlVf7aRmkzBd3qa5fWXvXiGoraP5pGhOotgxLqmuP5bcoyGHCjU8ew87s5P8xuHpuHGll0NJBayVsz7JjMCivuS5LUhYKqe0DChmylpVneHcsnvrBdDMGU9KMjza/w79mOgFl+G2N0z2vpRIDQOWdHtPAo+2ofc5FxikbSB6YLtdEFqvYNFwsFsAgRziKbxB0iyjftLu+ycf+ZBCqH+2WjanX+1po+h50d+jfbxJzw+MsmBpVqieVNIvCC+QGiOR99WzsG0QvLBtWlXOaPCUjEhAV7e7hnKwk6BS1JAdi4ZtV+f/y+mXHFH2N3R8x1rqHtYlfC4/+IkCLymD64MQ0U5LWGCy7WyH7qYfa5orXPnhsNwKbzzvR62RWkdtAhfp9h8=",
+      "name" : "trailing slash"
+    },
+    {
+      "error" : "Unsafe file path in share: ~/x",
+      "file" : "U05aU0hSMDGdVNtO20AQ/RVrX/rQONi5tBCpD5RULRK0IklFW+jDxJ4kW693zV4SEpR+e2fXJhCQioRfkp2dy5lzZueOTSEr5lo5mRs2uLpjOVhgA3Z8cTp8u1weshbjOZ2n8zil/xJKpNPYupyraAVCsO3vFss0gkXv10k67+IkjZPOJOkOkt4g6f+iuJnSJVi6NxI2m3VsFqDR51PW5/uCGt+YyC4wyjErInKPzpXMYU0+lUaDtkYHVcUG9JNZvsQJmIKCKwFScjknVxArWJuviPklFHipNEGagTBIV9IutKp49hEMfh+dUeDC2soMrg+uD6Di7Z1DO1MlexTwaUZwPPYSc+781dRxkfuKBKVUOQq6zAS4HGNVORP3437ArZY8R02Xu1xsS2QtwE7w1o75hnpPe2QRyuUnShqUVOeKCC3h9puzlbMTVaCk3rudJElaTAkBJey3EDoQKgOxUMYO0rTX7fny97S8CuSN41lxosoSwmA8S2GUlGhfSKIxIwnGaAxXvgmrHSlhKoRihJXg+NiG2WIEfhqSdr/FlopneOysGqN8EDFYT3Oiic94qEfVVzup2ThMl7dpbl/Zu1cIKutoPimakyh2iEuq648F92jIoUQNz97Dzuwkv3F4Oqxd6eVQUgFr5axPMiWwqC95bhckLJVTWgYUU2WtKs9wZtm9dQQ0c8aTkvSP9r9DPyZ6zmW47fSTvS8lUsOAJe3Ok8Cjbeh9xgUGaWuIHthuF4TWS5jXHOwWQCCHeApvkDTLqJ+0/f7JRz6kEOofjZb16Wdz2ih6XvT3aB9v0vEDoyxYmhWqJ5X0C8ILpIZI5J17FrY1ghe2TaPKGQ2ekhEJ6Kpm11AOdhJUimqyY1Gz7ar8fzn9kiPK/oSO71hD3cO6hM/FBz9R4CVlf68PbkNIMy5hg8mmtR28m26sabBw5afDciu88aIbNUbqHbUJZKTbfw==",
+      "name" : "tilde"
+    },
+    {
+      "error" : "Duplicate files in share.",
+      "file" : "U05aU0hSMDGdVNtO20AQ/RVrX/rQODi3FiL1gZKqRYJWJKloC32Y2JN46/Wu2UtCgvLvnV2bQEAtEn5JdmZ2LuecnTs2g7RYaOVkZtjw6o5lYIEN2fHF6ejtcnnIWoxndJ4t4g79l1AinSbWZVxFKxCCbX+3WKoRLPq4btJ9FyedOOlOk94w6Q+TwS+6N1e6BEt+I2GzWccmB40+n7I+3xfU+MZENscow7SIKDw6VzKDNcVUGg3aujuoKjakn9TyJU7BFHS5EiAllwsKBbGCtfmKmF1CgZdKU0tzEAbJJW2uVcXTj2Dw+/iMLubWVmZ4fXB9ABVv7wLaqSrZowuf5tSO773EjDvvmjkuMl+RWilVhoKcqQCXYawqZ+JBPAh9qyXPUJNzl4ttCawc7BRv7YRvaPZOnyxCuexESYOS6lwRoCXcfnO2cnaqCpQ0e6+bJEmLKSGghP0RwgRCpSByZeyw0+n3+r78PSyvavLG8bQ4UWUJQRjPUhglJdoXkmhMiYIJGsOVH8JqR0yYCqEYYyU4PrZhmo/BqyFpD1psqXiKx86qCcoHEoP1NCOY+JyHelR9taOaTYK6vE1z+8rZPUNQWUf6pNucSLEjXFJdfyy474YCStTw7D3szE7yG4enozqUXg4lFbBWzvokM2oW9SXPbE7EUjmlZehipqxV5RnOLbu3joE0ZzwoyeBo/zv0MtELLoO3O0j2vg6BGgSWtLtPLh5tw+xzLjBQW7foG9vtgjB6CYsag90CCOAQTuENEmcpzdNpv3/yUQwxhPpHw2V9+tmcNoqeF/092u836XrBKAuWtEL1pJJ+QXiC1AgJvHOPwrbu4IVt07ByRsJTMiICXdXsGsrBTgJLUQ12LGq0XZX9L6dfcgTZnzDxHWuge1iX8Ln44BUFnlJ23M5tSZux9Q8/NH5K2ggq7DjZDL8b4KYXa5Ierrx+LLfCGy96UWMkdFCbAFdn+xc=",
+      "name" : "duplicate ignoring case"
+    },
+    {
+      "error" : "Too many items in this share file.",
+      "file" : "U05aU0hSMDGdllFz2jgQx78K45d7OExt2bSBmT4kpJdmmqYp0JBrew/CXrAOWXIkOSRk8t1vJSgJ7cztTPWCvfprtfvblfBjNOfFaml0q0obDb89RiV3PBpGUTcSJf7OE3xSvAZ8VtFT91dBSgkYJcgoQU4J+pTgNSV4QwmOKMGAEqQ0SpJlSsJMSZopiTMleaYk0JQkmpJIU5IpI5kykikjmTKSKSOZMpIpI5kykikjmTKSaUYyzUimGck0I5lmJNOMZJqRTDOSaUYyzUimOck0J5nmJNOcZJqTTHOSaU4yzUmmOck0J5n2D5n+040KA9yBn2QJex0naZywaZINk3yY9L+ieqFNzR3OW8U3m4fYVtyA96Kd9/IeDPxhO66CTgnFqoPyzketSv6AmsaABbf9k+RNEw3xp3DiDqbcrnBxI7lSQi1RyuWaP9hLgHLGVzDTBkNacGkBp5SrjG5EccItfBlf4MLKucYOv7/6/oo3orcX9ApdRy8WvFtgOD72GkrR+ql5K2Tpd8RQal2CxMlC8raEWDetjftxP8St70QJBif3vpBnVFTcTeHeTcQGc09ztEjdliOtLCjc5xsCrfn9p9Y1rZvqFSjMPWNJknQjLSWv+WEKIQOpCy4rbd0wTfNwgPdYfivI21YUq5Guax6+T35xYbVS4AgnBgoswQSsFdon4UyLlbAN8NUYGingpQ2Kasx9NyS9fje606KA49bpCajnIgbreYmYxEKE/XD39b7U0SR0l7cZ4X4zd18h3rgW+xNXCyyKO4U73Ne/roSPBgU1GP58CiauLYXu7M2tErctnJ9upXHqYUj+oFvnncwxWDAzUboKC4vbaaNCFHPtnK4vYOGiH9Yxx56zHkrSHxyOI98mZilUmGX95GCkCDU0WNJjPy0cPIXcF0JCKO02RB/Y/pM0pF7z5ZZBOPVLn4aHg5zCGcSaFZhP2nvz00ANVgjMza6W27e/d28bjccLHweH8SbMN4x23GGv+ItFK39B+ALpU0B4Hz2Fp20ExG2zq8oFNp5WHSxg2+zuGvQRjUKVOlvYsdzSbpvy/3z6Sw6R/Rsyfox26J6/2q9Gf63m7DKBmxN5flYl89n6z6v346Y8u5dX8t3mfHS0LOprxmfX2dVokPCbsf06zT/4LuS+DbDRSrjvVa6WL+9ccX3yabxOPpwt9TGOS3/U8+PF+u3bFyvrpT//S91rsON9pLsuDRen2hHdU7nNYoP9DGvflE446Y2fs87OiMjB2FCD9Ok/",
+      "name" : "too many backgrounds"
+    },
+    {
+      "error" : "Unsafe file path in share: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "file" : "U05aU0hSMDHtVUtvEzEQ/iuRLxzIprt5QBuJQ2kQVCqgJkEFWg6T3UnWrNfe+pE0qfLfGXu3adNKVOoVfMl6PJ7H932e3LIZpMVCKyczw4aXtywDC2zIjs9PR6+Xy0PWZjyj/WwRJfQtoUTaTazLuGqtQAi2/dVmqUaw6P26cfdNFCdR3J3GvWHcH8aDn3RvrnQJls6NhM1mHZkcNPp4yvp4n1DjK9OyObYyTIsWubc+K5nBmnwqjQZtXR1UFRvST2r5EqdgCrpcCZCSywW5gljB2nxBzC6gwAulqaQ5CIN0JG2uVcXT92Dw2/iMLubWVmZ4dXB1ABXv7Bw6qSrZgwsf5lSOr73EjDt/NHNcZD4jlVKqDAUdpgJchpGqnIkG0SDUrZY8Q02Hu1hsS2DlYKd4Yyd8Q70nfbII5bITJQ1KynNJgJZw89XZytmpKlBS771uHMdtpoSAEvZbCB0IlYLIlbHDJOn3+j79HSwvKvLa8bQ4UWUJQRhPQhglJdpngmhMiYIJGsOVb8JqR0yYCqEYYyU4PrRhmo/BqyHuDNpsqXiKx86qCcp7EoP1NCOY+JyHfJR9taOaTYK6vE1z+8LePUNQWUf6pNucSLEjXFJevy24r4YcStTw5D3szE7ya4eno9qVXg4FFbBWzvogMyoW9QXPbE7EUjqlZahipqxV5RnOLbuzjoE0Zzwo8eBofx16megFl+G0O4j3VkKgBoHFne6ji0fb0PucCwzU1iX6wnazILRewqLGYDcAAjiEU3iDxFlK/SSdt48W+RBDqL83XNa7H81uo+h50efRfr1x1wtGWbCkFconlfQDwhOkRkjgffYobOsKnpk2DStnJDwlW0Sgq5pZQzHYSWCpVYMdiRptV2V/i+mHHEH2O3R8yxro7sclfCzeeUWBp5TB//VPryCXZlSEfy/ZyHonzetepGmo4MpPBsut8MbzXqsxku5Rm/AQku0f",
+      "name" : "long path"
+    },
+    {
+      "file" : "U05aU0hSMDHtVUtvEzEQ/iuRLxzIprt5QBuJQ2kQVCqgJkEFWg6T3UnWrNfe+pE0qfLfGXu3adNKVOoVfMl6PJ7H932e3LIZpMVCKyczw4aXtywDC2zIjs9PR6+Xy0PWZjyj/WwRJfQtoUTaTazLuGqtQAi2/dVmqUaw6P26cfdNFCdR3J3GvWHcH8aDn3RvrnQJls6NhM1mHZkcNPp4yvp4n1DjK9OyObYyTIsWubc+K5nBmnwqjQZtXR1UFRvST2r5EqdgCrpcCZCSywW5gljB2nxBzC6gwAulqaQ5CIN0JG2uVcXT92Dw2/iMLubWVmZ4dXB1ABXv7Bw6qSrZgwsf5lSOr73EjDt/NHNcZD4jlVKqDAUdpgJchpGqnIkG0SDUrZY8Q02Hu1hsS2DlYKd4Yyd8Q70nfbII5bITJQ1KynNJgJZw89XZytmpKlBS771uHMdtpoSAEvZbCB0IlYLIlbHDJOn3+j79HSwvKvLa8bQ4UWUJQRhPQhglJdpngmhMiYIJGsOVb8JqR0yYCqEYYyU4PrRhmo/BqyHuDNpsqXiKx86qCcp7EoP1NCOY+JyHfJR9taOaTYK6vE1z+8LePUNQWUf6pNucSLEjXFJevy24r4YcStTw5D3szE7ya4eno9qVXg4FFbBWzvogMyoW9QXPbE7EUjqlZahipqxV5RnOLbuzjoE0Zzwo8eBofx16megFl+G0O4j3VkKgBoHFne6ji0fb0PucCwzU1iX6wnazILRewqLGYDcAAjiEU3iDxFlK/SSdt48W+RBDqL83XNa7H81uo+h50efRfr1x1wtGWbCkFconlfQDwhOkRkjgffYobOsKnpk2DStnJDwlW0Sgq5pZQzHYSWCpVYMdiRptV2V/i+mHHEH2O3R8yxro7sclfCzeeUWBp5TB//Uvr6CWZlKEPy/ZqHqnzOtepGmm4MoPBsut8MbzXqsxkuxRm/AOku0f",
+      "name" : "path under 512"
+    }
+  ],
+  "imageIDs" : [
+    "bg-1"
+  ],
+  "limits" : {
+    "maxCompressedBytes" : 200000000,
+    "maxExpandedBytes" : 300000000,
+    "maxFileBytes" : 50000000,
+    "maxFiles" : 2000,
+    "maxImages" : 50,
+    "maxPresets" : 50,
+    "version" : 1
+  },
+  "safePaths" : {
+    "" : false,
+    "../x" : false,
+    "./a" : false,
+    ".a" : false,
+    "/a" : false,
+    "a\u0000b" : false,
+    "a b/c.html" : true,
+    "a/" : false,
+    "a/../b" : false,
+    "a/.b" : false,
+    "a//b" : false,
+    "a\\b" : false,
+    "ab" : false,
+    "ab" : false,
+    "café.html" : true,
+    "img/a.png" : true,
+    "index.html" : true,
+    "~a" : false
+  }
+}

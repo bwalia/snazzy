@@ -1,0 +1,12 @@
+{
+  "category" : "Finance",
+  "created" : "2026-01-02T03:04:05Z",
+  "kind" : "presentation",
+  "name" : "q3-review",
+  "origin" : "github:bwalia\/snazzy\/decks\/q3-review",
+  "shared" : true,
+  "tags" : [
+    "Board",
+    "Q3"
+  ]
+}

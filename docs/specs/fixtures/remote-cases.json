@@ -1,0 +1,270 @@
+{
+  "deviceIdentity" : "dev:dev-1234",
+  "invites" : [
+    {
+      "hostID" : "host-abc",
+      "hostName" : "Studio Mac",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=host-abc&n=Studio%20Mac&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "address" : "192.168.1.20:52000,10.8.0.2:52000",
+      "hostID" : "E3B0C442-98FC-1C14",
+      "hostName" : "Ada's MacBook Pro (2) & co",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=E3B0C442-98FC-1C14&n=Ada's%20MacBook%20Pro%20(2)%20%26%20co&s=ERERERERERERERERERERERERERERERERERERERERERE&a=192.168.1.20:52000,10.8.0.2:52000"
+    },
+    {
+      "address" : "[fe80::1]:5000",
+      "hostID" : "h",
+      "hostName" : "Café 東京 +=?/#%",
+      "secret" : "+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/s=",
+      "url" : "snazzypro://pair?v=2&h=h&n=Caf%C3%A9%20%E6%9D%B1%E4%BA%AC%20+%3D?/%23%25&s=-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s&a=%5Bfe80::1%5D:5000"
+    }
+  ],
+  "maxFrame" : 1000000,
+  "messages" : [
+    {
+      "json" : "{\"hello\":{\"deviceID\":\"dev-1234\",\"deviceName\":\"Ada's iPhone\",\"pairing\":true,\"proof\":\"+PmPKh1L2q3aPbhk\\/9fv07fq40bqPVsVgpUJQDpjYxs=\",\"version\":2}}",
+      "name" : "hello.pairing"
+    },
+    {
+      "json" : "{\"hello\":{\"deviceID\":\"dev-old\",\"deviceName\":\"Old iPad\",\"pairing\":false,\"version\":1}}",
+      "name" : "hello.old"
+    },
+    {
+      "json" : "{\"paired\":{\"deviceKey\":\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\",\"hostID\":\"host-abc\",\"hostName\":\"Studio Mac\"}}",
+      "name" : "paired"
+    },
+    {
+      "json" : "{\"welcome\":{\"hostID\":\"host-abc\",\"hostName\":\"Studio Mac\"}}",
+      "name" : "welcome"
+    },
+    {
+      "json" : "{\"status\":{\"_0\":{\"broadcast\":\"YouTube, Twitch\",\"countdown\":3,\"deckName\":\"Q3 review\",\"elapsed\":125.5,\"hostName\":\"Studio Mac\",\"liveRoomViewers\":7,\"micLevel\":0.42,\"nextSlideTitle\":\"Costs \\/ margins\",\"notes\":\"Mention the café \\\"partnership\\\".\\nThen pause.\",\"prompter\":{\"progress\":0.25,\"running\":true,\"script\":\"Line one\\nLine two\",\"visible\":true,\"wordsPerMinute\":160},\"recording\":\"recording\",\"slideCount\":12,\"slideIndex\":2,\"slideTitle\":\"Revenue\",\"source\":\"Slides\",\"warnings\":[\"Low disk space\",\"Camera stalled\"]}}}",
+      "name" : "status.full"
+    },
+    {
+      "json" : "{\"status\":{\"_0\":{\"elapsed\":0,\"hostName\":\"\",\"micLevel\":0,\"recording\":\"idle\",\"slideCount\":0,\"source\":\"\",\"warnings\":[]}}}",
+      "name" : "status.minimal"
+    },
+    {
+      "json" : "{\"result\":{\"id\":7,\"ok\":true}}",
+      "name" : "result.ok"
+    },
+    {
+      "json" : "{\"result\":{\"id\":8,\"message\":\"Nothing is recording.\",\"ok\":false}}",
+      "name" : "result.error"
+    },
+    {
+      "json" : "{\"chatReply\":{\"_0\":\"Done: 6 slides.\"}}",
+      "name" : "chatReply"
+    },
+    {
+      "json" : "{\"bye\":{\"_0\":\"This device was removed on the Mac.\"}}",
+      "name" : "bye"
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"startRecording\":{}},\"id\":1}}",
+      "name" : "command.startRecording",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"pauseRecording\":{}},\"id\":2}}",
+      "name" : "command.pauseRecording",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"resumeRecording\":{}},\"id\":3}}",
+      "name" : "command.resumeRecording",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"stopRecording\":{}},\"id\":4}}",
+      "name" : "command.stopRecording",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"nextSlide\":{}},\"id\":5}}",
+      "name" : "command.nextSlide",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"previousSlide\":{}},\"id\":6}}",
+      "name" : "command.previousSlide",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"goToSlide\":{\"_0\":4}},\"id\":7}}",
+      "name" : "command.goToSlide",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"openPresentWindow\":{}},\"id\":8}}",
+      "name" : "command.openPresentWindow",
+      "watchAllows" : false
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"chat\":{\"_0\":\"Make a deck about \\\"Q3\\\" \\/ results 📈\"}},\"id\":9}}",
+      "name" : "command.chat",
+      "watchAllows" : false
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"prompter\":{\"_0\":{\"play\":{}}}},\"id\":10}}",
+      "name" : "command.prompter.play",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"prompter\":{\"_0\":{\"pause\":{}}}},\"id\":11}}",
+      "name" : "command.prompter.pause",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"prompter\":{\"_0\":{\"toggle\":{}}}},\"id\":12}}",
+      "name" : "command.prompter.toggle",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"prompter\":{\"_0\":{\"faster\":{}}}},\"id\":13}}",
+      "name" : "command.prompter.faster",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"prompter\":{\"_0\":{\"slower\":{}}}},\"id\":14}}",
+      "name" : "command.prompter.slower",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"prompter\":{\"_0\":{\"restart\":{}}}},\"id\":15}}",
+      "name" : "command.prompter.restart",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"prompter\":{\"_0\":{\"seek\":{\"_0\":0.5}}}},\"id\":16}}",
+      "name" : "command.prompter.seek",
+      "watchAllows" : true
+    },
+    {
+      "json" : "{\"command\":{\"_1\":{\"ping\":{}},\"id\":17}}",
+      "name" : "command.ping",
+      "watchAllows" : true
+    }
+  ],
+  "pairing" : [
+    {
+      "hostID" : "host-abc",
+      "hostName" : "Studio Mac",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=host-abc&n=Studio%20Mac&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "address" : "192.168.1.20:52000,10.8.0.2:52000",
+      "hostID" : "E3B0C442-98FC-1C14",
+      "hostName" : "Ada's MacBook Pro (2) & co",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=E3B0C442-98FC-1C14&n=Ada's%20MacBook%20Pro%20(2)%20%26%20co&s=ERERERERERERERERERERERERERERERERERERERERERE&a=192.168.1.20:52000,10.8.0.2:52000"
+    },
+    {
+      "address" : "[fe80::1]:5000",
+      "hostID" : "h",
+      "hostName" : "Café 東京 +=?/#%",
+      "secret" : "+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/s=",
+      "url" : "snazzypro://pair?v=2&h=h&n=Caf%C3%A9%20%E6%9D%B1%E4%BA%AC%20+%3D?/%23%25&s=-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s&a=%5Bfe80::1%5D:5000"
+    },
+    {
+      "hostID" : "host",
+      "hostName" : "Mac",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "address" : "10.0.0.2:5000",
+      "hostID" : "host",
+      "hostName" : "My Mac",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?v=2&h=host&n=My%20Mac&s=ERERERERERERERERERERERERERERERERERERERERERE&a=10.0.0.2:5000&extra=1"
+    },
+    {
+      "hostID" : "first",
+      "hostName" : "Mac",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?h=first&h=second&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "url" : "snazzypro://pair?n=Mac&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "url" : "snazzypro://pair?h=&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "url" : "snazzypro://pair?h=host&s=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ"
+    },
+    {
+      "url" : "snazzypro://pair?h=host&s=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB"
+    },
+    {
+      "url" : "snazzypro://pair?h=host&s=not*base64"
+    },
+    {
+      "url" : "snazzypro://pair?h=host"
+    },
+    {
+      "url" : "snazzypro://other?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "url" : "https://pair?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "url" : "SNAZZYPRO://pair?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "url" : "snazzypro://PAIR?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "hostID" : "host",
+      "hostName" : "Mac",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair/?h=host&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "hostID" : "a+b",
+      "hostName" : "a+b",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?h=a+b&n=a+b&s=ERERERERERERERERERERERERERERERERERERERERERE"
+    },
+    {
+      "hostID" : "東",
+      "hostName" : "Mac",
+      "secret" : "ERERERERERERERERERERERERERERERERERERERERERE=",
+      "url" : "snazzypro://pair?h=%E6%9D%B1&s=ERERERERERERERERERERERERERERERERERERERERERE="
+    }
+  ],
+  "pairingIdentity" : "pair:host-abc",
+  "proofs" : [
+    {
+      "deviceID" : "dev-1234",
+      "key" : "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "proof" : "+PmPKh1L2q3aPbhk/9fv07fq40bqPVsVgpUJQDpjYxs="
+    },
+    {
+      "deviceID" : "",
+      "key" : "q6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6s=",
+      "proof" : "+F2IIH7jfdeY64lCHeMP86u31i+rBROZwauVSRJD1GA="
+    },
+    {
+      "deviceID" : "Ünïcode-device 📱",
+      "key" : "c2hvcnQga2V5",
+      "proof" : "L1FJbFTLqAbpKlAY698Fgw27V/Oy3V/RjagoSqXd0OM="
+    },
+    {
+      "deviceID" : "x",
+      "key" : "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw==",
+      "proof" : "HJUSmsIquPCvMIx8BDsZfo5+/j+0z1aXAwEvXJZq9tA="
+    }
+  ],
+  "serviceType" : "_snazzyremote._tcp",
+  "unknown" : [
+    "{\"somethingNew\":{\"x\":1}}"
+  ],
+  "version" : 2
+}

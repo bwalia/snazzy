@@ -1,0 +1,122 @@
+{
+  "accent" : "#D946EF",
+  "slides" : [
+    {
+      "heading" : "Q3 review",
+      "items" : [
+        "Café results, 2026"
+      ],
+      "layout" : "title",
+      "notes" : "Hello & welcome."
+    },
+    {
+      "heading" : "No subtitle",
+      "items" : [
+
+      ],
+      "layout" : "title",
+      "notes" : ""
+    },
+    {
+      "heading" : "What we'll cover",
+      "items" : [
+        "Wins",
+        "Misses",
+        "Next steps"
+      ],
+      "layout" : "bullets",
+      "notes" : "Keep it \"short\"."
+    },
+    {
+      "heading" : "Empty list",
+      "items" : [
+
+      ],
+      "layout" : "bullets",
+      "notes" : ""
+    },
+    {
+      "heading" : "Numbers",
+      "items" : [
+        "42%",
+        "growth",
+        "3×",
+        "faster",
+        "odd one out"
+      ],
+      "layout" : "stats",
+      "notes" : ""
+    },
+    {
+      "heading" : "One number",
+      "items" : [
+        "7"
+      ],
+      "layout" : "stats",
+      "notes" : ""
+    },
+    {
+      "heading" : "Before \/ after",
+      "items" : [
+        "Before",
+        "Slow",
+        "Manual",
+        "After",
+        "Fast"
+      ],
+      "layout" : "columns",
+      "notes" : ""
+    },
+    {
+      "heading" : "One column",
+      "items" : [
+        "Only"
+      ],
+      "layout" : "columns",
+      "notes" : ""
+    },
+    {
+      "heading" : "No columns",
+      "items" : [
+
+      ],
+      "layout" : "columns",
+      "notes" : ""
+    },
+    {
+      "heading" : "Ship small, ship often",
+      "items" : [
+        "Ada, CTO"
+      ],
+      "layout" : "quote",
+      "notes" : ""
+    },
+    {
+      "heading" : "Anonymous",
+      "items" : [
+
+      ],
+      "layout" : "quote",
+      "notes" : ""
+    },
+    {
+      "heading" : "How",
+      "items" : [
+        "Plan",
+        "Build",
+        "Record"
+      ],
+      "layout" : "steps",
+      "notes" : "Line one\nline two"
+    },
+    {
+      "heading" : "Thank you",
+      "items" : [
+        "Questions?"
+      ],
+      "layout" : "closing",
+      "notes" : ""
+    }
+  ],
+  "title" : "Q3 review: A\/B tests & <more>"
+}

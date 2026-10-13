@@ -1,0 +1,19 @@
+[package]
+name = "snazzy-remote"
+description = "The iPhone/iPad/Watch remote protocol of Snazzy Pro (messages, framing, proofs, pairing links)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+snazzy-core = { path = "../snazzy-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+hmac = "0.12"
+sha2 = "0.10"

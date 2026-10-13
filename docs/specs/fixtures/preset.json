@@ -1,0 +1,71 @@
+{
+  "app" : {
+    "activeTask" : "planning",
+    "alwaysNeedWakeWord" : false,
+    "anthropicBaseURL" : "https:\/\/api.anthropic.com",
+    "anthropicEffort" : "medium",
+    "building" : {
+      "model" : "claude-opus-5-5",
+      "provider" : "anthropic"
+    },
+    "chatTextSize" : 14,
+    "cloudConsent" : [
+
+    ],
+    "maxOutputTokens" : 32000,
+    "ollamaBaseURL" : "http:\/\/localhost:11434",
+    "planning" : {
+      "model" : "claude-opus-5-5",
+      "provider" : "anthropic"
+    },
+    "quickCommands" : {
+      "model" : "claude-sonnet-5-5",
+      "provider" : "anthropic"
+    },
+    "recordSessions" : true,
+    "speakReplies" : true,
+    "speechRate" : 0.5,
+    "voiceAutoSend" : false,
+    "voiceIdentifier" : "",
+    "wakeWord" : "Snazzy",
+    "writing" : {
+      "model" : "claude-opus-5-5",
+      "provider" : "anthropic"
+    }
+  },
+  "capture" : {
+    "insetDevice" : {
+      "kind" : "camera",
+      "name" : "Studio camera",
+      "uniqueID" : "cam-1"
+    },
+    "layout" : {
+      "borderWidth" : 3,
+      "corner" : "bottomLeft",
+      "cornerRadius" : 0.06,
+      "margin" : 0.025,
+      "size" : 0.3
+    },
+    "profiles" : {
+      "cam-1" : {
+        "background" : {
+          "image" : {
+            "id" : "bg-1"
+          }
+        },
+        "crop" : {
+          "aspect" : 1.7777777777777777,
+          "centerX" : 0.5,
+          "centerY" : 0.5,
+          "zoom" : 0.9
+        },
+        "rotation" : "none",
+        "videoDelayMs" : 0
+      }
+    }
+  },
+  "created" : "2026-01-02T03:04:05Z",
+  "name" : "Lesson setup",
+  "notes" : "Camera bottom-left",
+  "updated" : "2026-01-02T03:04:05Z"
+}

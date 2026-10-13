@@ -3,10 +3,10 @@ name: CI
 
 on:
   pull_request:
-    paths-ignore: ["site/**", "docs/**", "**/*.md"]
+    paths-ignore: ["site/**", "docs/**", "**/*.md", "desktop/**", ".github/workflows/desktop.yml"]
   push:
     branches: [main]
-    paths-ignore: ["site/**", "docs/**", "**/*.md"]
+    paths-ignore: ["site/**", "docs/**", "**/*.md", "desktop/**", ".github/workflows/desktop.yml"]
 
 permissions:
   contents: read

@@ -588,13 +588,14 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
         return .success(result)
     }
 
-    private func writeTimeline(_ result: RecordingResult, recordingStart: Date) {
-        let (markers, latencies) = stateLock.withLock { (_markers, _cameraLatencies.sorted()) }
+    /// What timeline.json holds (pure, so the spec fixture in docs/specs comes from this code).
+    nonisolated static func timeline(_ result: RecordingResult, recordingStart: Date, spec: CompositeSpec, fps: Int32, markers: [JSONValue],
+                                     sortedLatencies latencies: [Double], compositeStart: Double) -> JSONValue {
         let background = (try? JSONEncoder().encode(spec.profile.background)).flatMap { try? JSONValue.parse($0) } ?? .null
         let freezes: [JSONValue] = result.freezes.map {
             ["at_seconds": .number(max(0, $0.start.timeIntervalSince(recordingStart))), "duration_seconds": .number($0.duration)]
         }
-        let timeline: JSONValue = [
+        return [
             "version": 1,
             "created": .string(ISO8601DateFormatter().string(from: recordingStart)),
             "duration_seconds": .number(result.duration),
@@ -615,9 +616,15 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
             "camera_latency_ms": latencies.isEmpty ? .null : .number((latencies[latencies.count / 2] * 1000).rounded()),
             "camera_freezes": .array(freezes),
             "markers": .array(markers),
-            "composite_starts_at_seconds": .number(queue.sync { sessionStart?.seconds } ?? 0),
+            "composite_starts_at_seconds": .number(compositeStart),
             "note": "Times are seconds from the start of the recording with pauses removed. Raw tracks share this timeline; the composite movie begins at composite_starts_at_seconds. camera.mov keeps the camera's own times: shift it earlier by inset.video_delay_ms (lip sync) when laying it out again.",
         ]
+    }
+
+    private func writeTimeline(_ result: RecordingResult, recordingStart: Date) {
+        let (markers, latencies) = stateLock.withLock { (_markers, _cameraLatencies.sorted()) }
+        let timeline = Self.timeline(result, recordingStart: recordingStart, spec: spec, fps: fps, markers: markers,
+                                     sortedLatencies: latencies, compositeStart: queue.sync { sessionStart?.seconds } ?? 0)
         try? timeline.encoded().write(to: rawFolder.appending(path: "timeline.json"))
         // Slide changes become chapters (WebVTT) next to the movie.
         let start = queue.sync { sessionStart?.seconds } ?? 0
