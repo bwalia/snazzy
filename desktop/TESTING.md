@@ -76,3 +76,25 @@ Do each step on Windows and on Linux.
 - [ ] Send to Anthropic: the reply streams, with "Thinking…" first on thinking models.
 - [ ] Quit and reopen: no second consent prompt.
 - [ ] A wrong key shows Anthropic's error in the chat.
+
+**Decks**
+- [ ] Slides › Samples: Open Sample copies it into My Decks and shows it in the Builder,
+      with "Slide 1 of N" under the preview. ‹ and › change slides.
+- [ ] Edit Slides: change a heading and save. The preview reloads on the same slide with
+      the change. Esc with unsaved changes asks first.
+- [ ] New Deck makes a three-slide starter and opens the editor.
+- [ ] My Decks groups decks by category; a tag filters them. Details changes both.
+- [ ] Ctrl+Shift+F jumps to search. A word from a sample you haven't opened finds it;
+      clicking the result opens that sample at that slide.
+- [ ] Slides › Present: slide list, speaker notes (A− / A+), next slide, timer.
+- [ ] Open Present Window "In a window": the deck alone; Next in the main window moves
+      both; arrow keys in the Present window move both; F toggles full screen, Esc leaves it.
+- [ ] With a second display: Present Window goes full screen on it.
+- [ ] Share saves `<deck>.snazzy` in Downloads. Open .snazzy adds it back as a new deck with
+      the "no internet" banner; Allow Internet asks first and removes the banner.
+- [ ] Double-clicking a `.snazzy` file (installed app) opens Snazzy Pro and asks before adding it.
+- [ ] Get Decks lists Snazzy Pro's decks from GitHub; Add to My Decks downloads and opens
+      one, filed under its category with the "no internet" banner. Adding a repo by
+      `owner/repo` lists its decks; a bad name gives a readable message.
+- [ ] A web link in a deck opens in the browser, not inside the app.
+- [ ] Delete asks first, then the deck is gone from My Decks and the disk.

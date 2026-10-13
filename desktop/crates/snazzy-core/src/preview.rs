@@ -24,7 +24,8 @@ pub const BRIDGE_FILE: &str = ".snazzy-bridge.js";
 /// slide whenever it changes, to the window around it. Works with any deck that
 /// exposes `window.snazzyDeck` (the presentation template does). Messages:
 /// `{snazzy: "deck", index, slides?}`, `{snazzy: "console", level, message}`,
-/// `{snazzy: "open", url}`; it obeys `{snazzy: "show", index}`.
+/// `{snazzy: "open", url}`, `{snazzy: "key", key}` (F and Esc, for full
+/// screen); it obeys `{snazzy: "show", index}` and `{snazzy: "refresh"}`.
 pub const BRIDGE_JS: &str = r#"(function () {
   if (window.parent === window || window.__snazzyBridge) return;
   window.__snazzyBridge = true;
@@ -54,6 +55,10 @@ pub const BRIDGE_JS: &str = r#"(function () {
     if (m.snazzy === 'refresh') tick(true);
   });
   addEventListener('error', (e) => post({ snazzy: 'console', level: 'error', message: String(e.message || e) }));
+  // Full screen keys reach the Present window even while the deck has focus.
+  addEventListener('keydown', (e) => {
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && ['f', 'F', 'Escape'].includes(e.key)) post({ snazzy: 'key', key: e.key });
+  });
   addEventListener('click', (e) => {
     const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!a) return;
