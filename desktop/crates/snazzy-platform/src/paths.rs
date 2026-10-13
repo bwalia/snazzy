@@ -34,6 +34,8 @@ pub struct Folders {
     pub projects: PathBuf,
     /// `Recordings/` and `Sessions/` live here.
     pub movies: PathBuf,
+    /// Where exported files (`.snazzy`) are saved.
+    pub downloads: PathBuf,
 }
 
 impl Folders {
@@ -52,17 +54,22 @@ pub fn folders() -> Option<Folders> {
 
 /// The folders for `os` ("windows", "linux", "macos") with the given environment.
 pub fn folders_for(os: &str, env: &dyn Env) -> Option<Folders> {
-    let (data, videos) = match os {
+    let (data, videos, downloads) = match os {
         "windows" => {
             let appdata = env.var("APPDATA").map(PathBuf::from)?;
             let profile = env.var("USERPROFILE").map(PathBuf::from)?;
-            (appdata.join("Snazzy Pro"), profile.join("Videos"))
+            (
+                appdata.join("Snazzy Pro"),
+                profile.join("Videos"),
+                profile.join("Downloads"),
+            )
         }
         "macos" => {
             let home = env.var("HOME").map(PathBuf::from)?;
             (
                 home.join("Library/Application Support/Snazzy Pro Desktop"),
                 home.join("Movies"),
+                home.join("Downloads"),
             )
         }
         _ => {
@@ -72,23 +79,25 @@ pub fn folders_for(os: &str, env: &dyn Env) -> Option<Folders> {
                 .map(PathBuf::from)
                 .filter(|p| p.is_absolute())
                 .unwrap_or_else(|| home.join(".local/share"));
-            (data_home.join("snazzy-pro"), xdg_videos(&home, env))
+            (
+                data_home.join("snazzy-pro"),
+                xdg_dir(&home, env, "XDG_VIDEOS_DIR", "Videos"),
+                xdg_dir(&home, env, "XDG_DOWNLOAD_DIR", "Downloads"),
+            )
         }
     };
     Some(Folders {
         projects: data.join("Projects"),
         data,
         movies: videos.join("Snazzy Pro"),
+        downloads,
     })
 }
 
-/// `$XDG_VIDEOS_DIR`, then `XDG_VIDEOS_DIR` in `user-dirs.dirs`, then `~/Videos`.
-fn xdg_videos(home: &Path, env: &dyn Env) -> PathBuf {
-    if let Some(v) = env
-        .var("XDG_VIDEOS_DIR")
-        .map(PathBuf::from)
-        .filter(|p| p.is_absolute())
-    {
+/// `$<key>` (e.g. `XDG_VIDEOS_DIR`), then `<key>` in `user-dirs.dirs`, then
+/// `~/<fallback>`.
+fn xdg_dir(home: &Path, env: &dyn Env, key: &str, fallback: &str) -> PathBuf {
+    if let Some(v) = env.var(key).map(PathBuf::from).filter(|p| p.is_absolute()) {
         return v;
     }
     let config = env
@@ -99,20 +108,20 @@ fn xdg_videos(home: &Path, env: &dyn Env) -> PathBuf {
     if let Some(text) = env.read(&config.join("user-dirs.dirs")) {
         for line in text.lines() {
             let line = line.trim();
-            if let Some(value) = line.strip_prefix("XDG_VIDEOS_DIR=") {
+            if let Some(value) = line.strip_prefix(key).and_then(|l| l.strip_prefix('=')) {
                 let value = value.trim().trim_matches('"');
                 let path = match value.strip_prefix("$HOME") {
                     Some(rest) => home.join(rest.trim_start_matches('/')),
                     None => PathBuf::from(value),
                 };
-                // A videos folder equal to home means "not set".
+                // A folder equal to home means "not set".
                 if path.is_absolute() && path != home {
                     return path;
                 }
             }
         }
     }
-    home.join("Videos")
+    home.join(fallback)
 }
 
 #[cfg(test)]
@@ -163,6 +172,10 @@ mod tests {
                 .join("Snazzy Pro")
         );
         assert_eq!(f.recordings(), f.movies.join("Recordings"));
+        assert_eq!(
+            f.downloads,
+            PathBuf::from(r"C:\Users\ana").join("Downloads")
+        );
     }
 
     // Unix paths aren't absolute on Windows, so these run on Linux and macOS.
@@ -172,6 +185,7 @@ mod tests {
         let f = folders_for("linux", &env(&[("HOME", "/home/ana")], &[])).unwrap();
         assert_eq!(f.data, PathBuf::from("/home/ana/.local/share/snazzy-pro"));
         assert_eq!(f.movies, PathBuf::from("/home/ana/Videos/Snazzy Pro"));
+        assert_eq!(f.downloads, PathBuf::from("/home/ana/Downloads"));
         assert_eq!(
             f.sessions(),
             PathBuf::from("/home/ana/Videos/Snazzy Pro/Sessions")
@@ -181,7 +195,7 @@ mod tests {
     #[cfg(not(windows))]
     #[test]
     fn linux_follows_xdg_settings() {
-        let dirs = "# written by xdg-user-dirs-update\nXDG_VIDEOS_DIR=\"$HOME/Vídeos\"\n";
+        let dirs = "# written by xdg-user-dirs-update\nXDG_VIDEOS_DIR=\"$HOME/Vídeos\"\nXDG_DOWNLOAD_DIR=\"$HOME/Descargas\"\n";
         let e = env(
             &[("HOME", "/home/ana"), ("XDG_DATA_HOME", "/data/ana")],
             &[("/home/ana/.config/user-dirs.dirs", dirs)],
@@ -189,6 +203,7 @@ mod tests {
         let f = folders_for("linux", &e).unwrap();
         assert_eq!(f.data, PathBuf::from("/data/ana/snazzy-pro"));
         assert_eq!(f.movies, PathBuf::from("/home/ana/Vídeos/Snazzy Pro"));
+        assert_eq!(f.downloads, PathBuf::from("/home/ana/Descargas"));
         // Relative XDG paths are ignored, as the spec says.
         let e = env(&[("HOME", "/home/ana"), ("XDG_DATA_HOME", "rel")], &[]);
         assert_eq!(

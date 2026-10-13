@@ -9,6 +9,7 @@ pub mod fold;
 mod fold_table;
 pub mod iso8601;
 pub mod json;
+pub mod preview;
 pub mod project;
 pub mod samples;
 pub mod search;
