@@ -30,6 +30,8 @@ jobs:
             os: windows-latest
           - name: Linux
             os: ubuntu-24.04
+          - name: Linux ARM64
+            os: ubuntu-24.04-arm
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -68,8 +70,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             desktop/target
-          key: desktop-${{ runner.os }}-${{ hashFiles('desktop/Cargo.lock') }}
-          restore-keys: desktop-${{ runner.os }}-
+          key: desktop-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('desktop/Cargo.lock') }}
+          restore-keys: desktop-${{ runner.os }}-${{ runner.arch }}-
       - name: UI
         working-directory: desktop/app
         run: |
@@ -86,7 +88,7 @@ jobs:
         run: npx tauri build --bundles ${{ runner.os == 'Windows' && 'msi' || 'deb' }}
       - uses: actions/upload-artifact@v4
         with:
-          name: snazzy-pro-${{ runner.os }}
+          name: snazzy-pro-${{ runner.os }}-${{ runner.arch }}
           path: |
             desktop/target/release/bundle/msi/*.msi
             desktop/target/release/bundle/deb/*.deb
