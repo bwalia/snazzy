@@ -9,6 +9,8 @@ use crate::deck::{DeckOutline, OUTLINE_FILE, template_files};
 use crate::fold;
 use crate::iso8601::Date;
 use crate::project::{BuilderProject, METADATA_FILE, ProjectKind, trim};
+use crate::samples::SampleDeck;
+use crate::share;
 
 /// Largest file the workspace reads or writes (the assistant's context would flood).
 pub const MAX_FILE_BYTES: usize = 2_000_000;
@@ -267,6 +269,120 @@ impl Workspace {
             }
         }
         Ok(())
+    }
+}
+
+impl Workspace {
+    /// `Workspace.shareProject`: the project's files for a `.snazzy` file, without
+    /// hidden files or Snazzy metadata.
+    pub fn share_project(&self, name: &str) -> Result<share::Project, WorkspaceError> {
+        let project = self
+            .project(name)
+            .ok_or_else(|| WorkspaceError::new(format!("No project named {name}")))?;
+        let mut files = Vec::new();
+        let mut total = 0;
+        for path in self.files(&project.name) {
+            if !share::is_safe_relative_path(&path) {
+                continue;
+            }
+            let data = fs::read(self.resolve(&project.name, &path)?).map_err(io)?;
+            total += data.len();
+            if total > share::MAX_EXPANDED_BYTES {
+                return Err(WorkspaceError::new("This project is too big to share."));
+            }
+            files.push(share::File { path, data });
+        }
+        Ok(share::Project {
+            name: project.name,
+            kind: project.kind,
+            files,
+        })
+    }
+
+    /// `Workspace.importProject`: a project from someone else, under a free name
+    /// ("deck", "deck-2", …), marked shared (no internet until allowed). Nothing is
+    /// left behind if a file can't be written.
+    pub fn import_project(
+        &self,
+        shared: &share::Project,
+    ) -> Result<BuilderProject, WorkspaceError> {
+        let base = slug(&shared.name);
+        let existing: Vec<String> = self.list_projects().into_iter().map(|p| p.name).collect();
+        let mut name = base.clone();
+        let mut n = 2;
+        while existing.contains(&name) || self.root.join(&name).exists() {
+            name = format!("{base}-{n}");
+            n += 1;
+        }
+        let dir = self.root.join(&name);
+        fs::create_dir_all(&dir).map_err(io)?;
+        let mut project = BuilderProject::new(name.clone(), shared.kind, Date::now());
+        project.set_shared(true);
+        let written = self.save_project(&project).and_then(|_| {
+            for file in &shared.files {
+                if !share::is_safe_relative_path(&file.path) {
+                    return Err(WorkspaceError::new(format!(
+                        "Unsafe file path: {}",
+                        file.path
+                    )));
+                }
+                let url = self.resolve(&name, &file.path)?;
+                if let Some(parent) = url.parent() {
+                    fs::create_dir_all(parent).map_err(io)?;
+                }
+                atomic_write(&url, &file.data)?;
+            }
+            Ok(())
+        });
+        if let Err(e) = written {
+            let _ = fs::remove_dir_all(&dir);
+            return Err(e);
+        }
+        Ok(project)
+    }
+
+    /// `Workspace.createSample`: copies a sample into the workspace (or returns the
+    /// copy already there), editable in the slide editor, filed under its sector.
+    pub fn create_sample(&self, sample: &SampleDeck) -> Result<BuilderProject, WorkspaceError> {
+        if let Some(existing) = self.project(&sample.project_name) {
+            return Ok(existing);
+        }
+        let project = self.create_project(
+            &sample.project_name,
+            ProjectKind::Presentation,
+            Some(&sample.title),
+        )?;
+        for (path, content) in sample.files() {
+            self.write(&project.name, path, &content)?;
+        }
+        let outline = DeckOutline {
+            title: sample.title.clone(),
+            accent: sample.accent.clone(),
+            slides: sample.slides.clone(),
+        };
+        self.save_outline(&outline, &project.name, false)?;
+        self.set_details(
+            &project.name,
+            Some(&sample.sector),
+            &["Sample".to_string()],
+            None,
+        )
+    }
+
+    /// `DeckOutline.create`: a new deck from the slide editor, under a free name.
+    pub fn create_deck(&self, outline: &DeckOutline) -> Result<BuilderProject, WorkspaceError> {
+        let base = slug(&outline.title);
+        let existing: Vec<String> = self.list_projects().into_iter().map(|p| p.name).collect();
+        let mut name = base.clone();
+        let mut n = 2;
+        while existing.contains(&name) {
+            name = format!("{base}-{n}");
+            n += 1;
+        }
+        let project =
+            self.create_project(&name, ProjectKind::Presentation, Some(&outline.title))?;
+        self.save_outline(outline, &project.name, true)?;
+        Ok(project)
     }
 }
 

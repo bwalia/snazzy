@@ -232,6 +232,19 @@ impl RemoteDeck {
     }
 }
 
+/// `DeckRepoCatalogue.project(for:files:)`: a downloaded deck, ready for
+/// `Workspace::import_project`, named after its folder.
+pub fn project_for(deck: &RemoteDeck, files: Vec<(String, Vec<u8>)>) -> crate::share::Project {
+    crate::share::Project {
+        name: deck.project_name(),
+        kind: crate::project::ProjectKind::Presentation,
+        files: files
+            .into_iter()
+            .map(|(path, data)| crate::share::File { path, data })
+            .collect(),
+    }
+}
+
 /// What `snazzy-decks.json` may say. Everything but `path` is optional.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Catalogue {

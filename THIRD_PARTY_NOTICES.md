@@ -100,5 +100,6 @@ each under the licence named (MIT and Apache-2.0 texts as in each crate's source
 | subtle | 2.6.1 | BSD-3-Clause | constant-time comparison (hmac) |
 | itoa, zmij | 1.0.18, 1.0.23 | MIT OR Apache-2.0, MIT | used by serde_json |
 | cfg-if, libc | 1.0.5, 0.2.190 | MIT OR Apache-2.0 | platform glue |
+| uuid, getrandom | 1.26.1, 0.4.3 | MIT OR Apache-2.0 | random preview links (deck previews) |
 | proc-macro2, quote, syn, unicode-ident | build time only | MIT OR Apache-2.0 (unicode-ident also Unicode-3.0) | derive macros |
 | tempfile | 3.27.0 (tests only) | MIT OR Apache-2.0 | temporary folders in tests |

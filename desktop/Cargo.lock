@@ -3549,6 +3549,7 @@ dependencies = [
  "tempfile",
  "thiserror 1.0.69",
  "time",
+ "uuid",
 ]
 
 [[package]]
@@ -3577,6 +3578,7 @@ name = "snazzy-pro"
 version = "0.1.0"
 dependencies = [
  "futures-util",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "snazzy-agent",
@@ -3584,6 +3586,7 @@ dependencies = [
  "snazzy-platform",
  "tauri",
  "tauri-build",
+ "tempfile",
  "tokio",
  "tracing",
 ]
