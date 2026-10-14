@@ -580,3 +580,13 @@ func engine(_ kit: RoleKit, clock: TestClock, name: String = "Sam Taylor") -> In
         #expect(e.session.state == .completed)
     }
 }
+
+@Suite struct OpsAPILinkTests {
+    @Test func usesOpsAPIsIntegrationPaths() {
+        let link = OpsAPILink(baseURL: URL(string: "https://api.example.com")!, token: "snz_test")
+        let r = link.request("interviews", method: "POST", body: Data("{}".utf8))
+        #expect(r.url?.absoluteString == "https://api.example.com/api/v2/public/ats/integration/interviews")
+        #expect(r.value(forHTTPHeaderField: "Authorization") == "Bearer snz_test")
+        #expect(r.httpMethod == "POST")
+    }
+}

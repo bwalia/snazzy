@@ -85,7 +85,7 @@ public struct OpsAPILink: Sendable {
     }
 
     func request(_ path: String, method: String = "GET", body: Data? = nil) -> URLRequest {
-        var r = URLRequest(url: baseURL.appendingPathComponent("api/v2/ats/public/integration").appendingPathComponent(path))
+        var r = URLRequest(url: baseURL.appendingPathComponent("api/v2/public/ats/integration").appendingPathComponent(path))
         r.httpMethod = method
         r.timeoutInterval = 30
         r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
