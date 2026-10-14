@@ -183,6 +183,14 @@ struct KitEditorView: View {
                 Button { showInvite = true } label: { Label("Interview a Candidate", systemImage: "person.badge.plus") }
                     .disabled(saved?.isApproved != true || dirty || !iv.isActive)
                 Menu {
+                    if let prep = InterviewController.prepKits.first(where: { $0.role == kit.title || $0.practice.title == kit.title }) {
+                        Button("Copy Free Prep Kit Link for Candidates") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString("https://www.snazzy.pro/prep.html#\(prep.slug)", forType: .string)
+                        }
+                        .help("Every candidate gets the same free preparation: topics, exercises and a practice interview.")
+                        Divider()
+                    }
                     Button("Delete Role…", role: .destructive) {
                         if confirmDelete() { iv.delete(kit); onDelete() }
                     }

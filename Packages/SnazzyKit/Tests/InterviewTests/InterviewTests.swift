@@ -700,3 +700,45 @@ func engine(_ kit: RoleKit, clock: TestClock, name: String = "Sam Taylor") -> In
         #expect(kit.warnings == ["'Rockstar' may put people off; say 'experienced'."])
     }
 }
+
+@Suite struct PrepKitTests {
+    static var dir: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("prep-kits")
+    }
+
+    @Test func everyPrepKitLoadsAndItsPracticeRuns() throws {
+        let slugs = try FileManager.default.contentsOfDirectory(atPath: Self.dir.path).filter { !$0.hasPrefix(".") && !$0.hasSuffix(".md") && !$0.hasSuffix(".json") }
+        #expect(slugs.count >= 4)
+        for slug in slugs {
+            let kit = try PrepKit.decode(Data(contentsOf: Self.dir.appendingPathComponent("\(slug)/prep-kit.json")))
+            #expect(kit.slug == slug)
+            #expect(kit.topics.count >= 3, "\(slug)")
+            #expect(kit.exercises.allSatisfy { !$0.steps.isEmpty }, "\(slug)")
+            #expect(kit.topics.flatMap(\.links).allSatisfy { $0.url.hasPrefix("https://") }, "\(slug)")
+            #expect(kit.practice.isApproved, "\(slug)")
+            let errors = KitValidator.check(kit.practice).filter { $0.severity == .error }
+            #expect(errors.isEmpty, "\(slug): \(errors.map(\.message))")
+            #expect(kit.studySlides.count == kit.topics.count + 2)
+            // The practice interview runs through the same engine.
+            var e = InterviewEngine(session: InterviewSession(kit: kit.practice, candidate: Candidate(name: "Me"), channel: .thisMac))
+            #expect(e.start() == .waitForCandidate)
+            #expect(e.currentQuestionID == kit.practice.questions.first?.id)
+        }
+    }
+
+    @Test func coachingShowsWhatAStrongAnswerCovers() throws {
+        let kit = try PrepKit.decode(Data(contentsOf: Self.dir.appendingPathComponent("devops-engineer/prep-kit.json")))
+        var s = InterviewSession(kit: kit.practice, candidate: Candidate(name: "Me"), channel: .thisMac)
+        s.turns = [Turn(id: "t1", role: .candidate, text: "I added canary deploys to our pipeline.", kind: .answer)]
+        s.evaluation = Evaluation(competencies: [CompetencyResult(id: "c1", evidence: [Quote(turn: "t1", quote: "canary deploys")], level: 3, reason: "", probeNext: "What did the canary measure?")])
+        let items = Coaching.items(for: s)
+        #expect(items.count == kit.practice.competencies.count)
+        #expect(items[0].heard == ["canary deploys"])
+        #expect(items[0].strongAnswer == kit.practice.competencies[0].anchors.level5)
+        #expect(items[0].nextTime == "What did the canary measure?")
+        #expect(items[1].level == nil)
+    }
+}

@@ -125,6 +125,12 @@ struct SnazzyProApp: App {
         }
         .defaultSize(width: 1180, height: 780)
 
+        Window("Interview Prep", id: "interview-prep") {
+            PrepView()
+                .environment(model)
+        }
+        .defaultSize(width: 1000, height: 720)
+
         Window("Interview", id: "candidate-interview") {
             CandidateInterviewView()
                 .environment(model)
@@ -257,6 +263,7 @@ struct AppCommands: Commands {
         CommandMenu("Interviews") {
             Button("Interviews…") { openWindow(id: "interviews") }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
+            Button("Interview Prep (Free)…") { openWindow(id: "interview-prep") }
             Button("Candidate Window") { openWindow(id: "candidate-interview") }
                 .disabled(model.interviews.auto.sessionID == nil)
         }

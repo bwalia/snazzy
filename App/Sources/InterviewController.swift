@@ -1,5 +1,6 @@
 import AppKit
 import Assistant
+import Builder
 import Foundation
 import Interview
 import LocalAuthentication
@@ -502,7 +503,7 @@ final class InterviewController {
     /// saved as a `.snazzy_interview` file. If sending fails, the file is saved too.
     func deliver(_ id: UUID) async {
         guard let s = session(id) else { return }
-        if s.candidate.reference.hasPrefix("Simulation:") { return }
+        if s.candidate.reference.hasPrefix("Simulation:") || s.candidate.reference == Self.practiceReference { return }
         if isLinked, (try? await sendToOpsAPI(id)) != nil { return }
         _ = try? saveFile(s)
     }
@@ -631,6 +632,59 @@ final class InterviewController {
             }
             try await Task.sleep(for: .milliseconds(100))
         }
+    }
+
+    // MARK: Interview Prep (free, for candidates)
+
+    /// Practice interviews are the user's own; they never appear with candidates.
+    static let practiceReference = "Practice"
+
+    /// The prep kits that come with the app (prep-kits/ in the repo).
+    static let prepKits: [PrepKit] = {
+        guard let dir = Bundle.main.url(forResource: "prep-kits", withExtension: nil),
+              let slugs = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return [] }
+        return slugs.sorted().compactMap { slug in
+            (try? Data(contentsOf: dir.appendingPathComponent("\(slug)/prep-kit.json"))).flatMap { try? PrepKit.decode($0) }
+        }
+    }()
+
+    var practiceSessions: [InterviewSession] {
+        interviews.filter { $0.candidate.reference == Self.practiceReference }
+    }
+
+    /// Candidates' interviews (practice ones left out).
+    var candidateInterviews: [InterviewSession] {
+        interviews.filter { $0.candidate.reference != Self.practiceReference }
+    }
+
+    /// Starts a practice interview at this Mac with the user's own models. Free:
+    /// no subscription, no recording, and the feedback is for the user.
+    func startPractice(_ prep: PrepKit, speak: Bool, listen: Bool) async throws -> UUID {
+        for p in Set([app.settings.selection(for: .quickCommands).provider, app.settings.selection(for: .planning).provider]) {
+            if let reason = app.unavailableReason(p) { throw InterviewError(reason) }
+            guard ChatSession.hasCloudConsent(p, app: app) else { throw InterviewError("Cancelled.") }
+        }
+        var kit = prep.practice
+        kit.settings.offerCamera = false
+        var session = InterviewSession(kit: kit, candidate: Candidate(name: NSFullUserName(), reference: Self.practiceReference), channel: .thisMac)
+        session.cameraOffered = false
+        session.models["interviewer"] = describe(app.settings.selection(for: .quickCommands)) + " · " + InterviewPrompts.interviewerVersion
+        session.log("practice", by: reviewer, detail: prep.slug)
+        try store.save(session)
+        reload()
+        await auto.prepare(session.id, options: AutoInterview.Options(speak: speak, listen: listen, showDeck: true))
+        candidateWindowRequest += 1
+        return session.id
+    }
+
+    /// The study deck for a prep kit, opened in the Builder.
+    func openStudyDeck(_ prep: PrepKit) throws {
+        let slides = prep.studySlides.enumerated().map { i, s in
+            SampleDeck.Slide(i == 0 ? .title : .bullets, s.heading, s.items, notes: s.notes)
+        }
+        try app.builder.createDeck(DeckOutline(title: "Prep: \(prep.role)", slides: slides))
+        app.sidePanelTab = .slides
+        NSApp.windows.first { $0.title == "Snazzy Pro" }?.makeKeyAndOrderFront(nil)
     }
 
     // MARK: Interview mode (this Mac belongs to the candidate)

@@ -365,6 +365,38 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--prep-test") {
+            // Interview Prep, free: the bundled kits, a practice interview with no
+            // subscription (a simulated candidate on the local model), then coaching.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let saved = app.settings
+            defer { app.settings = saved }
+            let restore = Tours.useLocalModel(app)
+            defer { restore() }
+            let iv = app.interviews!
+            let kits = InterviewController.prepKits
+            report("prep kits bundled", kits.count >= 4, kits.map(\.role).joined(separator: ", "))
+            report("practice needs no subscription", true, "active: \(iv.isActive)")
+            guard let kit = kits.first(where: { $0.slug == "devops-engineer" }) else { return false }
+            do {
+                let id = try await iv.startPractice(kit, speak: false, listen: false)
+                iv.start(id, noticeHash: "practice", adjustments: [])  // the person clicks Start after the notice
+                try await iv.playCandidate(SimulatedCandidate.all[0], in: id)
+                for _ in 0..<1200 where iv.session(id)?.evaluation == nil { try await Task.sleep(for: .milliseconds(500)) }
+                guard let s = iv.session(id) else { report("practice", false, "gone"); return false }
+                let items = Coaching.items(for: s)
+                report("practice completes", s.state == .completed, "\(s.turns.count) turns")
+                report("coaching for every skill", items.count == kit.practice.competencies.count && s.evaluation != nil,
+                       items.map { "\($0.competency)=\($0.level.map(String.init) ?? "–")" }.joined(separator: ", "))
+                report("practice stays out of the recruiter's list", !iv.candidateInterviews.contains { $0.id == id }, "")
+                iv.auto.stop()
+                iv.delete(s)
+            } catch {
+                report("practice", false, error.localizedDescription)
+            }
+            return ok
+        }
         if arguments.contains("--interview-mode-test") {
             // Interview mode: the candidate can't reach the assistant, Voice Mode or the prompter.
             let app = AppModel()

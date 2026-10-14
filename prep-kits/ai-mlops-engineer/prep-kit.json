@@ -1,0 +1,226 @@
+{
+  "format": "snazzy-prep-kit",
+  "version": 1,
+  "slug": "ai-mlops-engineer",
+  "role": "AI MLOps Engineer",
+  "summary": "Prepare for MLOps and AI platform roles: reproducible training and evaluation, deploying and serving models and LLM services, and monitoring quality, drift and cost.",
+  "updated": "2026-10-14",
+  "topics": [
+    {
+      "title": "From experiment to production",
+      "why": "The core MLOps story.",
+      "points": [
+        "Reproducible training: data, code and environment versions",
+        "Model registries",
+        "Evaluation gates before release"
+      ],
+      "links": [
+        {
+          "title": "MLflow documentation",
+          "url": "https://mlflow.org/docs/latest/index.html"
+        }
+      ]
+    },
+    {
+      "title": "Serving models",
+      "why": "Expect questions on latency, scale and cost.",
+      "points": [
+        "Batch versus online serving",
+        "GPUs and autoscaling",
+        "Serving LLMs: batching, caching and limits"
+      ],
+      "links": [
+        {
+          "title": "Kubernetes documentation",
+          "url": "https://kubernetes.io/docs/home/"
+        }
+      ]
+    },
+    {
+      "title": "Evaluating LLM applications",
+      "why": "Increasingly asked in AI roles.",
+      "points": [
+        "Test sets and graders",
+        "Regression testing prompts and models",
+        "Human review and safety checks"
+      ],
+      "links": [
+        {
+          "title": "Anthropic documentation: testing and evaluation",
+          "url": "https://docs.anthropic.com/"
+        },
+        {
+          "title": "Anthropic courses",
+          "url": "https://github.com/anthropics/courses"
+        }
+      ]
+    },
+    {
+      "title": "Monitoring models",
+      "why": "How you'd notice a model getting worse.",
+      "points": [
+        "Data and prediction drift",
+        "Quality metrics and feedback loops",
+        "Latency and cost dashboards"
+      ],
+      "links": []
+    },
+    {
+      "title": "Cloud certifications",
+      "why": "Optional, but a structured way to learn.",
+      "points": [
+        "AWS Certified Machine Learning, Google Cloud ML Engineer, Azure AI Engineer: pick the cloud you use"
+      ],
+      "links": [
+        {
+          "title": "AWS certifications",
+          "url": "https://aws.amazon.com/certification/"
+        },
+        {
+          "title": "Google Cloud certifications",
+          "url": "https://cloud.google.com/learn/certification"
+        }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "title": "Ship a model with a gate",
+      "goal": "Have a pipeline story with evaluation.",
+      "steps": [
+        "Train a small model on a public dataset in your code editor.",
+        "Track the run and save the model with its metrics.",
+        "Add a check that blocks release if accuracy drops.",
+        "Record a walkthrough of the pipeline and the gate."
+      ],
+      "record": true
+    },
+    {
+      "title": "Evaluate an LLM feature",
+      "goal": "Show you can measure quality.",
+      "steps": [
+        "Pick a small task (for example classifying support tickets) and write 20 test cases.",
+        "Run them against your AI model and score the results.",
+        "Change the prompt and compare.",
+        "Record yourself explaining what improved and how you know."
+      ],
+      "record": true
+    },
+    {
+      "title": "Monitor for drift",
+      "goal": "Practise the monitoring question.",
+      "steps": [
+        "Simulate a shift in your input data.",
+        "Show a metric that catches it.",
+        "Record a short explanation of what you'd alert on and what you'd do next."
+      ],
+      "record": true
+    }
+  ],
+  "practice": {
+    "id": "4E0B5C1A-0000-4000-8000-0000000000C4",
+    "format": 1,
+    "version": 1,
+    "title": "AI MLOps Engineer",
+    "organisation": "Practice",
+    "summary": "Practice interview for an AI MLOps engineer: delivery pipelines for models, serving, evaluation and monitoring.",
+    "language": "en-GB",
+    "competencies": [
+      {
+        "id": "c1",
+        "name": "Model delivery",
+        "description": "Takes models to production reproducibly and safely.",
+        "weight": 30,
+        "source": "",
+        "anchors": {
+          "1": "Deploys by hand.",
+          "3": "Built a pipeline with versioning.",
+          "5": "Built end-to-end pipelines with evaluation gates, rollout and rollback."
+        }
+      },
+      {
+        "id": "c2",
+        "name": "Serving",
+        "description": "Runs models efficiently.",
+        "weight": 25,
+        "source": "",
+        "anchors": {
+          "1": "Names tools only.",
+          "3": "Set up or improved serving with one concrete decision.",
+          "5": "Served several models under real constraints with measured results."
+        }
+      },
+      {
+        "id": "c3",
+        "name": "Evaluation",
+        "description": "Measures model and LLM quality.",
+        "weight": 20,
+        "source": "",
+        "anchors": {
+          "1": "Checks outputs by eye.",
+          "3": "Built a test set and measured changes.",
+          "5": "Runs regression evaluations that block bad releases."
+        }
+      },
+      {
+        "id": "c4",
+        "name": "Monitoring",
+        "description": "Notices and fixes quality, drift and cost problems.",
+        "weight": 25,
+        "source": "",
+        "anchors": {
+          "1": "Monitors uptime only.",
+          "3": "Monitors quality or drift and acted on it.",
+          "5": "Covers quality, drift, latency and cost and changed something as a result."
+        }
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Tell me about a time you took a model into production. What made it safe to release?",
+        "competency": "c1",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q2",
+        "text": "Tell me about a model or AI service you ran in production. What serving decisions did you make?",
+        "competency": "c2",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q3",
+        "text": "How would you test that a change to an LLM prompt didn't make answers worse?",
+        "competency": "c3",
+        "kind": "situational"
+      },
+      {
+        "id": "q4",
+        "text": "Imagine a model's answers slowly get worse over a month. What would you put in place?",
+        "competency": "c4",
+        "kind": "situational"
+      },
+      {
+        "id": "q5",
+        "text": "Tell me about a time you reduced the cost or latency of a model in production.",
+        "competency": "c2",
+        "kind": "behavioural"
+      }
+    ],
+    "eligibility": [],
+    "company_facts": "This is a practice interview. There is no real employer: questions about pay, hours or the team can't be answered here.",
+    "settings": {
+      "interviewer_name": "Practice Interviewer",
+      "minutes": 30,
+      "max_follow_ups": 2,
+      "ratings_enabled": true,
+      "offer_camera": false,
+      "next_steps": "Your coaching feedback appears as soon as the interview ends."
+    },
+    "approved_at": "2026-10-14T00:00:00Z",
+    "approved_by": "Snazzy Pro",
+    "warnings": [],
+    "created": "2026-10-14T00:00:00Z",
+    "updated": "2026-10-14T00:00:00Z"
+  }
+}

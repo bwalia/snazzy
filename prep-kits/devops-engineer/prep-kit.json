@@ -1,0 +1,232 @@
+{
+  "format": "snazzy-prep-kit",
+  "version": 1,
+  "slug": "devops-engineer",
+  "role": "DevOps Engineer",
+  "summary": "Prepare for DevOps and platform roles: CI/CD, infrastructure as code, containers and Kubernetes, observability and incident response.",
+  "updated": "2026-10-14",
+  "topics": [
+    {
+      "title": "CI/CD pipelines",
+      "why": "Almost every DevOps interview asks how you ship changes safely.",
+      "points": [
+        "Build, test and deploy stages",
+        "Deployment strategies: rolling, blue-green, canary",
+        "Secrets in pipelines",
+        "Fast feedback versus thorough checks"
+      ],
+      "links": [
+        {
+          "title": "GitHub Actions documentation",
+          "url": "https://docs.github.com/en/actions"
+        }
+      ]
+    },
+    {
+      "title": "Infrastructure as code",
+      "why": "Expect questions on state, drift and team workflows.",
+      "points": [
+        "Terraform state and locking",
+        "Modules and environments",
+        "Plans, reviews and applying safely",
+        "Drift and how to handle it"
+      ],
+      "links": [
+        {
+          "title": "Terraform documentation",
+          "url": "https://developer.hashicorp.com/terraform/docs"
+        }
+      ]
+    },
+    {
+      "title": "Containers and Kubernetes",
+      "why": "Many roles run workloads on Kubernetes.",
+      "points": [
+        "Images, registries and small secure images",
+        "Deployments, services and ingress",
+        "Resource requests, limits and autoscaling",
+        "Rolling updates and health checks"
+      ],
+      "links": [
+        {
+          "title": "Kubernetes documentation",
+          "url": "https://kubernetes.io/docs/home/"
+        },
+        {
+          "title": "CNCF certifications (CKA, CKAD)",
+          "url": "https://www.cncf.io/training/certification/"
+        }
+      ]
+    },
+    {
+      "title": "Observability",
+      "why": "You'll be asked how you'd know something is wrong.",
+      "points": [
+        "Metrics, logs and traces",
+        "Service level objectives and error budgets",
+        "Alerting on symptoms, not causes"
+      ],
+      "links": [
+        {
+          "title": "Google SRE book (free online)",
+          "url": "https://sre.google/sre-book/table-of-contents/"
+        }
+      ]
+    },
+    {
+      "title": "Incident response",
+      "why": "A good incident story is one of the strongest answers you can give.",
+      "points": [
+        "Roles during an incident",
+        "Communicating status",
+        "Blameless post-incident reviews"
+      ],
+      "links": [
+        {
+          "title": "Google SRE book: managing incidents",
+          "url": "https://sre.google/sre-book/managing-incidents/"
+        }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "title": "Build a pipeline",
+      "goal": "Have a real pipeline to describe.",
+      "steps": [
+        "Create a small app in your code editor with one test.",
+        "Add a CI pipeline that tests and builds a container image.",
+        "Add a deploy step to a local cluster (kind or minikube) or a mock.",
+        "Record a walkthrough of the pipeline and what you'd improve."
+      ],
+      "record": true
+    },
+    {
+      "title": "Break and fix a deployment",
+      "goal": "Practise an incident story end to end.",
+      "steps": [
+        "Deploy the app to a local Kubernetes cluster.",
+        "Introduce a fault (a bad image tag, a failing health check).",
+        "Find it using kubectl and logs, fix it, and write a short post-incident note.",
+        "Record yourself telling the story: detection, steps, fix, prevention."
+      ],
+      "record": true
+    },
+    {
+      "title": "Infrastructure as code with review",
+      "goal": "Show safe infrastructure changes.",
+      "steps": [
+        "Write Terraform for a small resource (a local or sandbox provider).",
+        "Show plan output and how a reviewer would read it.",
+        "Record a short explanation of how you'd apply it across environments."
+      ],
+      "record": true
+    }
+  ],
+  "practice": {
+    "id": "4E0B5C1A-0000-4000-8000-0000000000C2",
+    "format": 1,
+    "version": 1,
+    "title": "DevOps Engineer",
+    "organisation": "Practice",
+    "summary": "Practice interview for a DevOps engineer: pipelines, infrastructure as code, Kubernetes and reliability.",
+    "language": "en-GB",
+    "competencies": [
+      {
+        "id": "c1",
+        "name": "Delivery pipelines",
+        "description": "Ships changes quickly and safely.",
+        "weight": 30,
+        "source": "",
+        "anchors": {
+          "1": "Uses pipelines others built.",
+          "3": "Built or improved a pipeline with a measurable effect.",
+          "5": "Designed a pipeline with tests, security checks, rollout and rollback, with results."
+        }
+      },
+      {
+        "id": "c2",
+        "name": "Infrastructure as code",
+        "description": "Manages infrastructure with code and review.",
+        "weight": 25,
+        "source": "",
+        "anchors": {
+          "1": "Changes infrastructure by hand.",
+          "3": "Manages infrastructure as code with reviews.",
+          "5": "Structures code for teams and environments, handling state and drift."
+        }
+      },
+      {
+        "id": "c3",
+        "name": "Kubernetes and containers",
+        "description": "Runs workloads reliably on containers.",
+        "weight": 20,
+        "source": "",
+        "anchors": {
+          "1": "Knows terms only.",
+          "3": "Describes deploying and running a service on Kubernetes.",
+          "5": "Describes tuning resources, scaling and safe rollouts with results."
+        }
+      },
+      {
+        "id": "c4",
+        "name": "Reliability and incidents",
+        "description": "Keeps services healthy and learns from incidents.",
+        "weight": 25,
+        "source": "",
+        "anchors": {
+          "1": "Mentions incidents without own actions.",
+          "3": "Walks through an incident they handled.",
+          "5": "Walks through an incident end to end, including communication and prevention."
+        }
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Tell me about a pipeline you built or improved. What did you change, and what difference did it make?",
+        "competency": "c1",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q2",
+        "text": "Tell me about a time you managed infrastructure with code. How did you keep changes safe?",
+        "competency": "c2",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q3",
+        "text": "Imagine a deployment to Kubernetes keeps restarting. How would you find out why?",
+        "competency": "c3",
+        "kind": "situational"
+      },
+      {
+        "id": "q4",
+        "text": "Tell me about an incident you were part of. What did you do, and what changed afterwards?",
+        "competency": "c4",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q5",
+        "text": "How would you decide what to alert on for a new service?",
+        "competency": "c4",
+        "kind": "situational"
+      }
+    ],
+    "eligibility": [],
+    "company_facts": "This is a practice interview. There is no real employer: questions about pay, hours or the team can't be answered here.",
+    "settings": {
+      "interviewer_name": "Practice Interviewer",
+      "minutes": 30,
+      "max_follow_ups": 2,
+      "ratings_enabled": true,
+      "offer_camera": false,
+      "next_steps": "Your coaching feedback appears as soon as the interview ends."
+    },
+    "approved_at": "2026-10-14T00:00:00Z",
+    "approved_by": "Snazzy Pro",
+    "warnings": [],
+    "created": "2026-10-14T00:00:00Z",
+    "updated": "2026-10-14T00:00:00Z"
+  }
+}

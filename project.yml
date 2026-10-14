@@ -33,6 +33,10 @@ targets:
       # The sample role kit (shared with OpsAPI's tests).
       - path: docs/specs/fixtures/interview-kit.json
         buildPhase: resources
+      # Free interview prep kits (also downloadable from the repo).
+      - path: prep-kits
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: SnazzyKit
         product: SnazzyCore

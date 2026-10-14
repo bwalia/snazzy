@@ -1,0 +1,222 @@
+{
+  "format": "snazzy-prep-kit",
+  "version": 1,
+  "slug": "forward-deployed-engineer",
+  "role": "Forward Deployed Engineer",
+  "summary": "Prepare for forward deployed and solutions engineering roles: discovering customer problems, building integrations fast, working with data and APIs, and explaining trade-offs.",
+  "updated": "2026-10-14",
+  "topics": [
+    {
+      "title": "Discovery with customers",
+      "why": "The best answers show you found the real problem.",
+      "points": [
+        "Asking about the last time the problem happened",
+        "Separating the request from the need",
+        "Writing up what you heard"
+      ],
+      "links": [
+        {
+          "title": "The Mom Test (book summary)",
+          "url": "https://www.momtestbook.com/"
+        }
+      ]
+    },
+    {
+      "title": "APIs and integrations",
+      "why": "You'll build glue between systems.",
+      "points": [
+        "REST and webhooks",
+        "Authentication (API keys, OAuth)",
+        "Retries, idempotency and rate limits"
+      ],
+      "links": [
+        {
+          "title": "MDN: HTTP overview",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Overview"
+        }
+      ]
+    },
+    {
+      "title": "Working with data",
+      "why": "Customer data is messy.",
+      "points": [
+        "SQL basics and joins",
+        "Cleaning and validating data",
+        "Building a small pipeline that can be re-run"
+      ],
+      "links": [
+        {
+          "title": "PostgreSQL tutorial",
+          "url": "https://www.postgresql.org/docs/current/tutorial.html"
+        }
+      ]
+    },
+    {
+      "title": "Building with AI models",
+      "why": "Many forward deployed roles now involve AI.",
+      "points": [
+        "Prompting and tool use",
+        "Evaluating outputs",
+        "Cost, latency and privacy trade-offs"
+      ],
+      "links": [
+        {
+          "title": "Anthropic documentation",
+          "url": "https://docs.anthropic.com/"
+        },
+        {
+          "title": "Anthropic courses",
+          "url": "https://github.com/anthropics/courses"
+        }
+      ]
+    },
+    {
+      "title": "Explaining trade-offs",
+      "why": "Interviewers test how you talk to non-engineers.",
+      "points": [
+        "Quick fix versus robust solution",
+        "Writing a one-page decision note",
+        "Handling disagreement"
+      ],
+      "links": []
+    }
+  ],
+  "exercises": [
+    {
+      "title": "Integrate two APIs",
+      "goal": "Have a concrete build story.",
+      "steps": [
+        "In your code editor, write a small script that reads from one public API and writes to another (or a file).",
+        "Handle errors, retries and a rate limit.",
+        "Record a 3-minute walkthrough explaining your choices and what you'd do for a real customer."
+      ],
+      "record": true
+    },
+    {
+      "title": "Clean a messy dataset",
+      "goal": "Practise working with real-world data.",
+      "steps": [
+        "Take a public CSV with missing and inconsistent values.",
+        "Clean it with SQL or Python and write checks that fail on bad data.",
+        "Record yourself explaining the problems you found and how you handled them."
+      ],
+      "record": true
+    },
+    {
+      "title": "Build a small AI assistant for a 'customer'",
+      "goal": "Show you can ship with AI.",
+      "steps": [
+        "Pick a pretend customer problem (for example summarising support tickets).",
+        "Build a small prototype with your AI model of choice, including a simple evaluation.",
+        "Record a demo and a one-minute explanation of the trade-offs, as if to a director."
+      ],
+      "record": true
+    }
+  ],
+  "practice": {
+    "id": "4E0B5C1A-0000-4000-8000-0000000000C3",
+    "format": 1,
+    "version": 1,
+    "title": "Forward Deployed Engineer",
+    "organisation": "Practice",
+    "summary": "Practice interview for a forward deployed engineer: customer discovery, building in the field, data and APIs, explaining trade-offs.",
+    "language": "en-GB",
+    "competencies": [
+      {
+        "id": "c1",
+        "name": "Understanding customer problems",
+        "description": "Finds the real problem.",
+        "weight": 30,
+        "source": "",
+        "anchors": {
+          "1": "Builds what was asked.",
+          "3": "Finds the real need and adjusts.",
+          "5": "Uncovers a different underlying problem and aligns stakeholders."
+        }
+      },
+      {
+        "id": "c2",
+        "name": "Building and shipping",
+        "description": "Ships working solutions under real constraints.",
+        "weight": 35,
+        "source": "",
+        "anchors": {
+          "1": "Prototypes that never ship.",
+          "3": "Ships a solution and solves a real obstacle.",
+          "5": "Ships under real constraints with measured results."
+        }
+      },
+      {
+        "id": "c3",
+        "name": "Data and APIs",
+        "description": "Works confidently with APIs and messy data.",
+        "weight": 15,
+        "source": "",
+        "anchors": {
+          "1": "Describes tools only.",
+          "3": "Describes integrating an API or cleaning data.",
+          "5": "Describes reliable integrations with retries, checks and monitoring."
+        }
+      },
+      {
+        "id": "c4",
+        "name": "Explaining trade-offs",
+        "description": "Explains choices to any audience.",
+        "weight": 20,
+        "source": "",
+        "anchors": {
+          "1": "Only technical explanations.",
+          "3": "Explains a choice so a non-engineer can decide.",
+          "5": "Adapts for audiences and reaches a decision everyone understands."
+        }
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Tell me about a time a customer asked for one thing but needed something else. How did you find out?",
+        "competency": "c1",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q2",
+        "text": "Tell me about something you built and shipped for a customer. What got in the way?",
+        "competency": "c2",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q3",
+        "text": "Imagine a customer's data arrives with duplicates and missing fields every night. How would you handle it?",
+        "competency": "c3",
+        "kind": "situational"
+      },
+      {
+        "id": "q4",
+        "text": "How would you explain to a director the choice between a quick fix and a robust solution?",
+        "competency": "c4",
+        "kind": "situational"
+      },
+      {
+        "id": "q5",
+        "text": "Tell me about a time you had to learn a new technology quickly to help a customer.",
+        "competency": "c2",
+        "kind": "behavioural"
+      }
+    ],
+    "eligibility": [],
+    "company_facts": "This is a practice interview. There is no real employer: questions about pay, hours or the team can't be answered here.",
+    "settings": {
+      "interviewer_name": "Practice Interviewer",
+      "minutes": 30,
+      "max_follow_ups": 2,
+      "ratings_enabled": true,
+      "offer_camera": false,
+      "next_steps": "Your coaching feedback appears as soon as the interview ends."
+    },
+    "approved_at": "2026-10-14T00:00:00Z",
+    "approved_by": "Snazzy Pro",
+    "warnings": [],
+    "created": "2026-10-14T00:00:00Z",
+    "updated": "2026-10-14T00:00:00Z"
+  }
+}

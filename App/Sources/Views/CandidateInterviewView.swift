@@ -226,7 +226,11 @@ struct CandidateInterviewView: View {
                 if s.state == .humanRequested {
                     Text("We've told the hiring team you'd like to speak to a person. This won't count against you.")
                 }
-                if (s.state == .completed || s.state == .humanRequested) && !selfIDDone {
+                if s.candidate.reference == InterviewController.practiceReference {
+                    // Practice: coaching for the user, no self-ID questions.
+                    CoachingView(session: s)
+                    if iv.evaluating.contains(id) { HStack { ProgressView().controlSize(.small); Text("Your AI model is reviewing your answers…") } }
+                } else if (s.state == .completed || s.state == .humanRequested) && !selfIDDone {
                     GroupBox("Optional: help us check our process is fair") {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("These questions are voluntary. Your answers are stored separately from your interview, are never seen by the AI or by the people deciding, and are only reported in groups of 10 or more.")

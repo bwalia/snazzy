@@ -27,11 +27,11 @@ duration=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$in")
 # Still picture (and, with sound, silence too) for 6 s or more: waiting for a model.
 freezes=""
 (( trim )) && freezes=$(ffmpeg -hide_banner -i "$in" -vf "freezedetect=n=0.002:d=6" -map 0:v -f null - 2>&1 \
-  | grep -oE "freeze_(start|end): [0-9.]+" | awk '{print $2}' | paste -sd' ' -)
+  | { grep -oE "freeze_(start|end): [0-9.]+" || true; } | awk '{print $2}' | paste -sd' ' - || true)
 silences=""
 if [[ -n $has_audio ]]; then
   silences=$(ffmpeg -hide_banner -i "$in" -af "silencedetect=noise=-45dB:d=6" -map 0:a -f null - 2>&1 \
-    | grep -oE "silence_(start|end): [0-9.]+" | awk '{print $2}' | paste -sd' ' -)
+    | { grep -oE "silence_(start|end): [0-9.]+" || true; } | awk '{print $2}' | paste -sd' ' - || true)
 fi
 
 # Keep everything except the middle of each wait (2 s of it stays).

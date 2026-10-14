@@ -40,7 +40,7 @@ struct InterviewsView: View {
                     }
                 }
                 ForEach(InterviewGroup.allCases, id: \.self) { group in
-                    let items = iv.interviews.filter { group.contains($0) }
+                    let items = iv.candidateInterviews.filter { group.contains($0) }
                     if !items.isEmpty {
                         Section(group.title) {
                             ForEach(items) { s in
