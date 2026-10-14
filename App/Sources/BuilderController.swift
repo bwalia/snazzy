@@ -84,6 +84,8 @@ final class BuilderController {
     @ObservationIgnored private var liveBuffers: [String: String] = [:]
     @ObservationIgnored private var lastLiveUpdate = Date.distantPast
     @ObservationIgnored private var popOut: NSWindow?
+    /// The Present window, if it's open (tours arrange it on screen).
+    var presentWindow: NSWindow? { popOut?.isVisible == true ? popOut : nil }
     @ObservationIgnored private var popOutWeb: WKWebView?
 
     init(workspace: Workspace = Workspace(root: Workspace.defaultRoot())) {

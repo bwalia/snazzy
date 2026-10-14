@@ -152,6 +152,12 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
+    /// Waits until the interviewer has finished speaking (tours).
+    func untilQuiet() async {
+        try? await Task.sleep(for: .milliseconds(300))
+        while synthesizer.isSpeaking || phase == .speaking && synthesizer.isSpeaking { try? await Task.sleep(for: .milliseconds(200)) }
+    }
+
     /// The candidate would rather type (or asked for text instead of voice).
     func useTyping() {
         options.listen = false

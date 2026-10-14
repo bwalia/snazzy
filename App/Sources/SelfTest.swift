@@ -424,6 +424,11 @@ enum SelfTest {
                     let back = try InterviewFile.decode(Data(contentsOf: file))
                     report("\(persona.label): .snazzy_interview file", back.id == s.id && back.turns.map(\.text) == s.turns.map(\.text) && back.evaluation?.competencies.map(\.id) == s.evaluation?.competencies.map(\.id), file.lastPathComponent)
                     if arguments.contains("--print") {
+                        for f in s.flags {
+                            let text = f.turn.flatMap { s.turn($0)?.text } ?? ""
+                            let hits = BannedTopics.sentences(in: text).map { String(text[$0]).prefix(160) }
+                            print("  FLAG \(f.kind.rawValue) [\(f.turn ?? "-")] \(f.detail) :: keyword sentences: \(hits)")
+                        }
                         for t in s.turns { print("  [\(t.id) \(t.role.rawValue)/\(t.kind.rawValue)] \(t.text.prefix(220))") }
                     }
                 }

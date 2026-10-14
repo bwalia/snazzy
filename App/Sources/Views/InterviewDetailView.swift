@@ -96,7 +96,8 @@ struct InterviewDetailView: View {
                     }
                 }
                 ForEach(s.forwardedQuestions, id: \.self) { q in
-                    Label("Asked: “\(q)”: the interviewer passed this to you.", systemImage: "questionmark.bubble").foregroundStyle(.blue)
+                    Label("Asked: “\(q.count > 240 ? q.prefix(240) + "…" : q)”: passed to you.", systemImage: "questionmark.bubble").foregroundStyle(.blue)
+                        .help(q)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

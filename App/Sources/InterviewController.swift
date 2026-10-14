@@ -25,6 +25,10 @@ final class InterviewController {
     var message: String?
     /// Bumped to bring the Interviews window forward (a results file was opened).
     var windowRequest = 0
+    /// Bumped to open the candidate window (Auto Interview).
+    var candidateWindowRequest = 0
+    /// What the Interviews window should show (set by tours and file opening).
+    var focus: InterviewsView.Item?
 
     // Activation: an Interview subscription unlocks the module.
     private(set) var isActive = false
@@ -239,7 +243,8 @@ final class InterviewController {
         return e
     }
 
-    func session(_ id: UUID) -> InterviewSession? { engines[id]?.session ?? interviews.first { $0.id == id } }
+    /// The latest copy, from the observed list (so views follow a running interview).
+    func session(_ id: UUID) -> InterviewSession? { interviews.first { $0.id == id } ?? engines[id]?.session }
 
     /// The candidate starts (after reading the notice).
     func start(_ id: UUID, noticeHash: String, adjustments: [String]) {
@@ -556,22 +561,7 @@ final class InterviewController {
         let id = session.id
         engines[id] = InterviewEngine(session: session)
         start(id, noticeHash: "simulation", adjustments: persona.adjustments)
-        let writer = app.settings.selection(for: .writing)
-        for _ in 0..<40 {
-            while busy.contains(id) { try await Task.sleep(for: .milliseconds(200)) }
-            guard let e = engines[id], !e.session.isFinished else { break }
-            let transcript = e.session.turns.filter { $0.role != .system }
-                .map { "\($0.role == .candidate ? "You" : "Interviewer"): \($0.text)" }.joined(separator: "\n\n")
-            let reply = try await complete(writer, system: persona.system(kit: kit), user: transcript + "\n\nReply as the candidate, in one message.",
-                                           purpose: nil, maxTokens: 800)
-            if let choices = e.currentChoices {
-                let pick = choices.first { reply.lowercased().contains($0.lowercased()) } ?? choices[0]
-                send(.answer(pick, input: .typed), to: id)
-            } else {
-                send(.answer(reply, input: .typed), to: id)
-            }
-            try await Task.sleep(for: .milliseconds(100))
-        }
+        try await playCandidate(persona, in: id)
         // The evidence is gathered as the interview ends; wait for it (up to 10 minutes).
         for _ in 0..<2000 {
             if let s = self.session(id), s.evaluation != nil || (!s.isFinished && !busy.contains(id)) { break }
@@ -579,6 +569,29 @@ final class InterviewController {
             try await Task.sleep(for: .milliseconds(300))
         }
         return id
+    }
+
+    /// A simulated candidate answers until the interview ends. `beforeAnswer` runs
+    /// before each answer is sent (tours wait there for the question to be spoken).
+    func playCandidate(_ persona: SimulatedCandidate, in id: UUID, beforeAnswer: (() async -> Void)? = nil) async throws {
+        let writer = app.settings.selection(for: .writing)
+        for _ in 0..<40 {
+            while busy.contains(id) { try await Task.sleep(for: .milliseconds(200)) }
+            guard let e = engines[id], !e.session.isFinished else { break }
+            let transcript = e.session.turns.filter { $0.role != .system }
+                .map { "\($0.role == .candidate ? "You" : "Interviewer"): \($0.text)" }.joined(separator: "\n\n")
+            let reply = try await complete(writer, system: persona.system(kit: e.session.kit),
+                                           user: transcript + "\n\nReply as the candidate, in one message.", purpose: nil, maxTokens: 800)
+            await beforeAnswer?()
+            guard let current = engines[id], !current.session.isFinished else { break }
+            if let choices = current.currentChoices {
+                let pick = choices.first { reply.lowercased().contains($0.lowercased()) } ?? choices[0]
+                send(.answer(pick, input: .typed), to: id)
+            } else {
+                send(.answer(reply, input: .typed), to: id)
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
     }
 
     /// The candidate asked for a person before starting: no interview, just the request.

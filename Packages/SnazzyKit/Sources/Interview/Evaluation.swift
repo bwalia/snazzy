@@ -130,6 +130,14 @@ public enum Evaluator {
         return out.trimmed
     }
 
+    static func looksLikeInstruction(_ text: String) -> Bool {
+        let t = text.lowercased()
+        let patterns = [#"\bignore\b"#, #"\binstruction"#, #"\bprompt\b"#, #"\brate me\b"#, #"\bscore me\b"#, #"\bgive me (a )?(5|five|top|full)"#,
+                        #"\bsystem\s*(message|prompt)?:"#, #"\byou are now\b"#, #"\bdisregard\b"#, #"\bas the (ai|model|evaluator)\b"#,
+                        #"\b(level|rating|score) (of )?(5|five)\b"#, #"</?(engine|external_data|system)"#]
+        return patterns.contains { t.range(of: $0, options: .regularExpression) != nil }
+    }
+
     static func nameTokens(_ name: String) -> [String] {
         name.split(whereSeparator: { $0 == " " || $0 == "-" }).map(String.init).filter { $0.count >= 2 }
     }
@@ -162,7 +170,10 @@ public enum Evaluator {
             results.append(CompetencyResult(id: competency.id, evidence: quotes, level: level,
                                             reason: item?.reason?.trimmed ?? "", probeNext: item?.probeNext?.trimmed ?? ""))
         }
-        let injection = (out.injection ?? []).filter { session.turn($0.turn)?.role == .candidate }
+        // Only quotes that really try to direct the AI (models over-report this).
+        let injection = (out.injection ?? []).filter {
+            session.turn($0.turn)?.role == .candidate && QuoteCheck.isVerbatim($0, in: session) && looksLikeInstruction($0.quote)
+        }
         return (results, injection, out.notesForReviewer?.trimmed ?? "", dropped)
     }
 

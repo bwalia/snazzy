@@ -97,6 +97,7 @@ struct InterviewsView: View {
             Button("OK") { iv.message = nil }
         } message: { Text(iv.message ?? "") }
         .onAppear { if !iv.isActive && iv.kits.isEmpty { selection = .activation } }
+        .onChange(of: iv.focus) { _, item in if let item { selection = item } }
     }
 
     private var placeholder: some View {

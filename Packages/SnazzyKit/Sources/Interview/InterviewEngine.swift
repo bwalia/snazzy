@@ -255,6 +255,9 @@ public struct InterviewEngine: Sendable {
         let lastCandidate = session.turns.last(where: { $0.role == .candidate })?.id
         for f in reply?.flags ?? [] {
             let kind = Flag.Kind(rawValue: f.kind) ?? .other
+            // Personal topics come only from the engine's own screen of each answer
+            // (`receive`): models over-report them, and a true one is already flagged.
+            if kind == .protectedInfoVolunteered { continue }
             // The engine records requests for a person itself, from the candidate's own words.
             session.flags.append(Flag(kind, String(f.detail.prefix(200)), turn: lastCandidate, at: t))
         }

@@ -4,6 +4,7 @@ import Broadcast
 import Builder
 import CaptureEngine
 import Foundation
+import Interview
 @preconcurrency import ScreenCaptureKit
 import SnazzyCore
 
@@ -17,9 +18,9 @@ import SnazzyCore
 @MainActor
 enum Tours {
     static let all = ["deck-by-talking", "sample-decks", "present-and-record", "live-classroom", "share", "go-live",
-                      "voice-presenter", "agent-classroom"]
+                      "voice-presenter", "agent-classroom", "interview-recruiter", "auto-interview"]
     /// Tours that film sound (the assistant speaking).
-    static let withSound: Set<String> = ["voice-presenter"]
+    static let withSound: Set<String> = ["voice-presenter", "auto-interview"]
 
     static var folder: URL {
         FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask)[0].appending(path: "Snazzy Pro/Tours", directoryHint: .isDirectory)
@@ -48,12 +49,31 @@ enum Tours {
         NSApp.activate(ignoringOtherApps: true)
         try? await Task.sleep(for: .seconds(1.5))
 
+        // Interview tours film their own windows: the Interviews window, or the
+        // whole screen (deck and candidate window side by side).
+        var filmed = window
+        var wholeScreen = false
+        var interviewSetup: InterviewTour?
+        if name == "interview-recruiter" || name == "auto-interview" {
+            do {
+                let setup = try await InterviewTour.prepare(name, app: app, screen: screen)
+                interviewSetup = setup
+                if let w = setup.window { filmed = w } else { wholeScreen = true }
+            } catch {
+                print("TOUR \(name): setup failed: \(error.localizedDescription)"); NSApp.terminate(nil); return
+            }
+        }
+
         let film = WindowFilm()
         let url = folder.appending(path: "\(name).mp4")
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             try? FileManager.default.removeItem(at: url)
-            try await film.start(window: window, to: url, sound: withSound.contains(name))
+            if wholeScreen {
+                try await film.start(screen: screen, to: url, sound: withSound.contains(name))
+            } else {
+                try await film.start(window: filmed, to: url, sound: withSound.contains(name))
+            }
         } catch {
             print("TOUR \(name): can't film: \(error.localizedDescription)")
         }
@@ -68,6 +88,7 @@ enum Tours {
             case "go-live": cleanUp.append(try await goLive(app))
             case "voice-presenter": cleanUp.append(try await voicePresenter(app))
             case "agent-classroom": cleanUp.append(try await agentClassroom(app))
+            case "interview-recruiter", "auto-interview": if let interviewSetup { cleanUp.append(try await interviewSetup.play(app)) }
             default: print("TOUR: unknown tour \(name). Tours: \(all.joined(separator: ", "))")
             }
         } catch {
@@ -396,6 +417,120 @@ extension Array {
 }
 
 /// Records one window to an MP4 with ScreenCaptureKit (macOS 15 recording output).
+/// The Snazzy Interview tours, on the local model with the sample role.
+/// - interview-recruiter: the Interviews window. The sample role is approved, a
+///   simulated candidate is interviewed live, the evidence appears, and the
+///   recruiter decides; then the fairness report.
+/// - auto-interview: the whole screen, with sound. The role's deck (left) follows
+///   an Auto Interview in the candidate window (right): questions spoken aloud, a
+///   simulated candidate's answers, then the thank-you page.
+@MainActor
+struct InterviewTour {
+    let name: String
+    let window: NSWindow?
+    let kitID: UUID
+    let sessionID: UUID?
+    let restore: () -> Void
+
+    static func prepare(_ name: String, app: AppModel, screen: NSScreen) async throws -> InterviewTour {
+        let iv = app.interviews!
+        iv.unlockForTesting()
+        let restoreModel = Tours.useLocalModel(app)
+        guard let url = Bundle.main.url(forResource: "interview-kit", withExtension: "json") else { throw CaptureError("No sample kit.") }
+        var kit = try InterviewJSON.decoder.decode(RoleKit.self, from: Data(contentsOf: url))
+        kit.id = UUID()
+        kit.approvedAt = nil
+        kit.approvedBy = nil
+        kit.version = 0
+        iv.save(kit)
+        let v = screen.visibleFrame
+        if name == "interview-recruiter" {
+            iv.windowRequest += 1
+            let w = try await waitForWindow("Interviews")
+            let size = NSSize(width: min(1500, v.width - 40), height: min(940, v.height - 40))
+            w.setFrame(NSRect(x: v.midX - size.width / 2, y: v.midY - size.height / 2, width: size.width, height: size.height), display: true)
+            w.makeKeyAndOrderFront(nil)
+            iv.focus = .kit(kit.id)
+            try await Tours.pause(1)
+            return InterviewTour(name: name, window: w, kitID: kit.id, sessionID: nil, restore: restoreModel)
+        }
+        // Auto Interview: approve now, make the interview, deck on the left, candidate window on the right.
+        try iv.approve(iv.kits.first { $0.id == kit.id }!)
+        let approved = iv.kits.first { $0.id == kit.id }!
+        let (session, _) = try await iv.createInterview(kit: approved, candidate: Candidate(name: "Jordan Lee", reference: "Simulation: tour"), channel: .thisMac)
+        await iv.auto.prepare(session.id, options: AutoInterview.Options(speak: true, listen: false, showDeck: true, record: false))
+        iv.candidateWindowRequest += 1
+        let candidate = try await waitForWindow("Interview")
+        try await Tours.pause(1.5)
+        NSApp.windows.first { $0.title == "Snazzy Pro" }?.orderOut(nil)
+        let deckWidth = (v.width * 0.6).rounded()
+        if let present = app.builder.presentWindow {
+            present.setFrame(NSRect(x: v.minX, y: v.minY, width: deckWidth, height: v.height), display: true)
+            present.orderFront(nil)
+        }
+        candidate.setFrame(NSRect(x: v.minX + deckWidth, y: v.minY, width: v.width - deckWidth, height: v.height), display: true)
+        candidate.makeKeyAndOrderFront(nil)
+        try await Tours.pause(1)
+        return InterviewTour(name: name, window: nil, kitID: kit.id, sessionID: session.id, restore: restoreModel)
+    }
+
+    static func waitForWindow(_ title: String) async throws -> NSWindow {
+        for _ in 0..<50 {
+            if let w = NSApp.windows.first(where: { $0.title == title && $0.isVisible }) { return w }
+            try await Tours.pause(0.2)
+        }
+        throw CaptureError("The \(title) window didn't open.")
+    }
+
+    /// Runs the tour; returns its clean-up (removes the tour's kit and interviews).
+    func play(_ app: AppModel) async throws -> () async -> Void {
+        let iv = app.interviews!
+        let cleanUp: () async -> Void = {
+            iv.auto.stop()
+            for s in iv.interviews where s.kit.id == kitID { iv.delete(s) }
+            if let k = iv.kits.first(where: { $0.id == kitID }) { iv.delete(k) }
+            NSApp.windows.first { $0.title == "Snazzy Pro" }?.makeKeyAndOrderFront(nil)
+            restore()
+        }
+        if name == "interview-recruiter" {
+            // The kit editor: competencies, questions, rubric; then approve.
+            try await Tours.pause(4)
+            try iv.approve(iv.kits.first { $0.id == kitID }!)
+            try await Tours.pause(2.5)
+            // A simulated candidate, interviewed live.
+            let kit = iv.kits.first { $0.id == kitID }!
+            let before = Set(iv.interviews.map(\.id))
+            let run = Task { try await iv.simulate(kit: kit, persona: SimulatedCandidate.all[0]) }
+            var id: UUID?
+            for _ in 0..<50 where id == nil {
+                id = iv.interviews.first { !before.contains($0.id) }?.id
+                try await Tours.pause(0.2)
+            }
+            if let id { iv.focus = .interview(id) }
+            _ = try await run.value
+            try await Tours.pause(5)
+            // The recruiter decides (a person, never the AI).
+            if let id, let s = iv.session(id) {
+                let levels = Dictionary(uniqueKeysWithValues: (s.evaluation?.competencies ?? []).compactMap { r in r.level.map { (r.id, $0) } })
+                iv.decide(id, .advance, reason: "Evidence meets the role's needs", note: "Strong coaching example; probe data skills next round.", levels: levels)
+            }
+            try await Tours.pause(4)
+            iv.focus = .fairness
+            try await Tours.pause(3)
+            return cleanUp
+        }
+        guard let id = sessionID else { return cleanUp }
+        // The candidate reads the notice, then starts.
+        try await Tours.pause(5)
+        let notice = InterviewPrompts.notice(for: iv.session(id)!.kit, provider: iv.providerName)
+        iv.start(id, noticeHash: InterviewPrompts.hash(notice), adjustments: [])
+        try await iv.playCandidate(SimulatedCandidate.all[0], in: id) { await iv.auto.untilQuiet() }
+        await iv.auto.untilQuiet()
+        try await Tours.pause(4)
+        return cleanUp
+    }
+}
+
 final class WindowFilm: NSObject, SCRecordingOutputDelegate, SCStreamDelegate, @unchecked Sendable {
     private var stream: SCStream?
     private var finished: CheckedContinuation<Void, Never>?
@@ -415,6 +550,33 @@ final class WindowFilm: NSObject, SCRecordingOutputDelegate, SCStreamDelegate, @
         config.showsCursor = false
         config.scalesToFit = true
         // Sound: the app's own audio (the assistant's voice), not the mic.
+        config.capturesAudio = sound
+        config.excludesCurrentProcessAudio = false
+        let out = SCRecordingOutputConfiguration()
+        out.outputURL = url
+        out.outputFileType = .mp4
+        out.videoCodecType = .h264
+        let stream = SCStream(filter: filter, configuration: config, delegate: self)
+        try stream.addRecordingOutput(SCRecordingOutput(configuration: out, delegate: self))
+        try await stream.startCapture()
+        self.stream = stream
+    }
+
+    /// Films a whole screen (several of the app's windows at once).
+    @MainActor
+    func start(screen: NSScreen, to url: URL, sound: Bool = false) async throws {
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+        guard let display = content.displays.first(where: { $0.displayID == id }) ?? content.displays.first else {
+            throw CaptureError("No screen to film.")
+        }
+        let filter = SCContentFilter(display: display, excludingWindows: [])
+        let config = SCStreamConfiguration()
+        let scale = CGFloat(filter.pointPixelScale)
+        config.width = Int(filter.contentRect.width * scale) & ~1
+        config.height = Int(filter.contentRect.height * scale) & ~1
+        config.minimumFrameInterval = CMTime(value: 1, timescale: 30)
+        config.showsCursor = false
         config.capturesAudio = sound
         config.excludesCurrentProcessAudio = false
         let out = SCRecordingOutputConfiguration()
