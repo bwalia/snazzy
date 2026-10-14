@@ -472,10 +472,11 @@ struct InterviewTour {
         var session = created
         if name == "auto-interview-camera" {
             // The candidate's camera (an iPad over USB, say): set as the inset before they agree.
-            let query = UserDefaults.standard.string(forKey: "SnazzyPro.tourCamera") ?? "iPad"
+            // A real camera (an iPhone through Continuity Camera, say), never a device's screen.
+            let query = UserDefaults.standard.string(forKey: "SnazzyPro.tourCamera") ?? "iPhone Camera"
             let catalog = app.capture.catalog
-            let camera = await catalog.waitForIOSDevice(matching: query, timeout: 20)
-                ?? catalog.cameras.first { $0.name.localizedCaseInsensitiveContains(query) }
+            catalog.refreshAVDevices()
+            let camera = AutoInterview.candidateCameras(catalog.cameras).first { $0.name.localizedCaseInsensitiveContains(query) }
             guard let camera else { throw CaptureError("No camera matching “\(query)”.") }
             app.capture.setInsetDevice(camera)
             session.cameraOffered = true

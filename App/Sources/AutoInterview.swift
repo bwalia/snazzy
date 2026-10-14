@@ -82,8 +82,12 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         let capture = app.capture
         savedInset = capture.insetFeed?.device
         savedSetup = capture.setup
-        let cameras = capture.catalog.cameras
-        let camera = capture.insetFeed?.device ?? cameras.first { $0.transport.lowercased().contains("built") } ?? cameras.first
+        // Real cameras only: an iPad or iPhone over USB is its *screen*, and Desk View
+        // films the desk. The inset camera counts if it's one of these.
+        let cameras = Self.candidateCameras(capture.catalog.cameras)
+        let current = capture.insetFeed?.device
+        let camera = cameras.first { $0.id == current?.id }
+            ?? cameras.first { $0.transport.lowercased().contains("built") } ?? cameras.first
         guard let camera else {
             problem = "No camera found, so the interview isn't recorded."
             return
@@ -97,6 +101,14 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         } catch {
             problem = "Recording didn't start: \(error.localizedDescription). The interview carries on without it."
             restoreCapture()
+        }
+    }
+
+    /// Cameras a candidate may be filmed with: real cameras, not screens or desk views.
+    static func candidateCameras(_ cameras: [CaptureDeviceInfo]) -> [CaptureDeviceInfo] {
+        cameras.filter { c in
+            let name = c.name.lowercased()
+            return c.kind == .camera && !name.contains("desk view") && !name.contains("screen")
         }
     }
 
