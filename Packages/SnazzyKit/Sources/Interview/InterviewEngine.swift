@@ -133,6 +133,13 @@ public struct InterviewEngine: Sendable {
         session.log("notice_acknowledged", by: "candidate", now: t)
     }
 
+    /// The candidate asked for a person instead, before starting: no interview, just the request.
+    public mutating func requestPersonBeforeStart() {
+        guard session.state == .invited else { return }
+        session.flags.append(Flag(.humanRequested, "Asked for a person before starting", at: now()))
+        finish(.humanRequested, reason: "human_requested")
+    }
+
     /// Starts: the opening words and the first question.
     public mutating func start() -> Next {
         guard session.state == .invited else { return session.isFinished ? .finished : .waitForCandidate }
@@ -273,19 +280,29 @@ public struct InterviewEngine: Sendable {
             advance(ack: ack)
             return session.isFinished ? .finished : .waitForCandidate
         case .candidateQuestions:
+            let asked = session.turns.filter { $0.kind == .candidateQuestion && $0.role == .candidate }.count
+            let more = asked < Self.maxCandidateQuestions ? " Do you have any other questions?" : ""
             switch reply?.action {
-            case .answer?:
-                append(.interviewer, Guard.answer(reply!.say) + " Do you have any other questions?", .answer)
-                return .waitForCandidate
-            case .forward?:
+            case .answer? where Guard.isGrounded(reply!.say, in: session.kit.companyFacts):
+                append(.interviewer, Guard.answer(reply!.say) + more, .answer)
+            case .answer?, .forward?:
+                // An answer the company facts don't support is never given: it goes to the team.
+                if reply?.action == .answer {
+                    session.flags.append(Flag(.other, "The interviewer's answer wasn't in the company facts; the question was passed on instead.", at: t))
+                }
                 if let q = session.turns.last(where: { $0.role == .candidate })?.text { session.forwardedQuestions.append(q) }
-                append(.interviewer, "I don't have that information, so I've passed your question to the hiring team. Is there anything else you'd like to ask?", .answer)
-                return .waitForCandidate
+                append(.interviewer, "I don't have that information, so I've passed your question to the hiring team." + (more.isEmpty ? "" : " Is there anything else you'd like to ask?"), .answer)
             default:
                 session.step += 1
                 close()
                 return .finished
             }
+            if more.isEmpty {
+                session.step += 1
+                close()
+                return .finished
+            }
+            return .waitForCandidate
         case .eligibility, .closing:
             return .waitForCandidate
         }
@@ -324,6 +341,8 @@ public struct InterviewEngine: Sendable {
     // MARK: Internals
 
     static let maxAnswerLength = 6000
+    /// Candidate questions answered before closing.
+    static let maxCandidateQuestions = 3
 
     private var kindForAnswer: Turn.Kind {
         if case .candidateQuestions = currentStep { return .candidateQuestion }
@@ -434,6 +453,29 @@ enum Guard {
         let t = text.trimmed
         guard !t.isEmpty else { return "I don't have that information, so I've passed your question to the hiring team." }
         return String(t.prefix(800))
+    }
+
+    /// Whether an answer to a candidate's question comes from the company facts:
+    /// most of its meaningful words must appear there.
+    static func isGrounded(_ answer: String, in facts: String) -> Bool {
+        let factWords = Set(words(facts))
+        let answerWords = words(answer)
+        guard !factWords.isEmpty, !answerWords.isEmpty else { return false }
+        let found = answerWords.filter { factWords.contains($0) }.count
+        return Double(found) / Double(answerWords.count) >= 0.6
+    }
+
+    static let stopWords: Set<String> = [
+        "about", "after", "also", "been", "before", "being", "between", "both", "could", "does", "each", "from", "have", "here",
+        "into", "just", "like", "more", "most", "much", "only", "other", "over", "same", "should", "some", "such", "than",
+        "that", "their", "them", "then", "there", "these", "they", "this", "those", "through", "very", "what", "when", "where",
+        "which", "while", "will", "with", "would", "your", "yours", "role", "team", "great", "question", "thanks", "thank",
+        "happy", "glad", "information", "know", "share", "help", "really", "well", "we're", "you're", "it's", "there's",
+    ]
+
+    static func words(_ text: String) -> [String] {
+        text.lowercased().split { !$0.isLetter && !$0.isNumber && $0 != "'" && $0 != "£" && $0 != "$" && $0 != "%" }
+            .map(String.init).filter { $0.count >= 4 && !stopWords.contains($0) }
     }
 
     static func saysNoMoreQuestions(_ text: String) -> Bool {

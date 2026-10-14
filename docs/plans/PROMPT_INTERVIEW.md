@@ -144,6 +144,46 @@ use in several markets (§3), and the product's structure follows from that.
 
 ## 2. Architecture
 
+### Version 1: in Snazzy Pro, no account (built, October 2026)
+
+A recruiter can run interviews without registering anywhere. Everything runs in
+Snazzy Pro, with the models chosen in Settings (local models keep it offline):
+
+- **Auto Interview at this Mac.** The role's deck (title, how it works, one
+  slide per question, the candidate's questions, thank you) plays on the
+  Present window and follows the interview. Each question is spoken
+  (`AVSpeechSynthesizer`), and answers are heard with on-device speech
+  recognition; candidates can type instead. The slides, camera and mic can be
+  recorded (`~/Movies/Snazzy Pro`); candidates are told first, and recordings
+  are never analysed.
+- **A link on the local network,** served by the Mac (`InterviewLinkServer`,
+  ports 8795–8798, one candidate per link, token stored only as a hash).
+- **Results the moment the interview ends:** the evaluator runs straight
+  away, and the recruiter sees evidence, flags and the AI's suggestions in the
+  Interviews window. Candidates get next steps, never a score: every
+  candidate is treated the same, and a person decides.
+- **`.snazzy_interview` files:** with no OpsAPI linked, each finished
+  interview is saved as a results file (versioned JSON: kit snapshot,
+  transcript, flags, evaluation, decision; never the link token or self-ID) in
+  `~/Movies/Snazzy Pro/Interviews`. Double-clicking one opens it in Snazzy Pro;
+  OpsAPI imports the same file.
+- **Linked to OpsAPI** with an integration token (`snz_…`, from the dashboard):
+  results are sent as soon as they're ready (if sending fails, the file is
+  saved), and approved kits made in the dashboard can be fetched.
+- **Activation:** an auto-renewing App Store subscription
+  (`com.snazzy.pro.interview.monthly`) activates the module; reading,
+  reviewing, exporting and deleting always work.
+
+Code: `Packages/SnazzyKit/Sources/Interview` (pure, tested) and
+`App/Sources/InterviewController.swift`, `AutoInterview.swift`,
+`Views/Interviews*.swift`, `KitEditorView.swift`, `InterviewDetailView.swift`,
+`CandidateInterviewView.swift`. The prompts in Appendix A–C are the first
+drafts; the versions in use are the files in
+`Packages/SnazzyKit/Sources/Interview/Resources/prompts/` (JSON replies, the
+engine asks the main questions itself), which OpsAPI copies verbatim.
+
+### Version 2: hosted, with the ATS in OpsAPI
+
 ```
 Recruiter                          Hosted service (OpsAPI tenant)          Candidate
 Snazzy Pro app ── HTTPS + JWT ──▶ interview API ◀── link token, HTTPS ── browser page

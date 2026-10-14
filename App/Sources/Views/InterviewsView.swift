@@ -7,6 +7,7 @@ struct InterviewsView: View {
     @Environment(AppModel.self) private var model
     @State private var selection: Item?
     @State private var showGenerate = false
+    @State private var showOpsAPI = false
     @State private var error: String?
 
     enum Item: Hashable {
@@ -59,6 +60,12 @@ struct InterviewsView: View {
                     } label: { Label("New Role", systemImage: "plus") }
                     .help("New role kit")
                 }
+                ToolbarItem {
+                    Button { showOpsAPI = true } label: {
+                        Label("OpsAPI", systemImage: iv.isLinked ? "link.circle.fill" : "link.circle")
+                    }
+                    .help(iv.isLinked ? "Linked to OpsAPI (\(iv.opsapiWorkspace ?? ""))" : "Link OpsAPI's interview management")
+                }
             }
         } detail: {
             Group {
@@ -85,6 +92,7 @@ struct InterviewsView: View {
         .sheet(isPresented: $showGenerate) {
             GenerateKitSheet { kit in selection = .kit(kit.id) }
         }
+        .sheet(isPresented: $showOpsAPI) { OpsAPILinkSheet() }
         .alert("Interviews", isPresented: Binding(get: { iv.message != nil }, set: { if !$0 { iv.message = nil } })) {
             Button("OK") { iv.message = nil }
         } message: { Text(iv.message ?? "") }
@@ -291,5 +299,69 @@ struct FairnessView: View {
             }
             .padding(24)
         }
+    }
+}
+
+/// Links OpsAPI's interview management: results go there as soon as they're ready,
+/// and kits made in the dashboard can be used here. Without it, results are saved
+/// as .snazzy_interview files.
+struct OpsAPILinkSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var url = ""
+    @State private var token = ""
+    @State private var busy = false
+    @State private var status: String?
+
+    var body: some View {
+        let iv = model.interviews!
+        VStack(alignment: .leading, spacing: 12) {
+            Text("OpsAPI interview management").font(.title2.bold())
+            if iv.isLinked {
+                Label("Linked to \(iv.opsapiWorkspace ?? "OpsAPI") at \(iv.opsapiURL?.host() ?? "")", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("Finished interviews are sent there as soon as their evidence is ready. If sending fails, a .snazzy_interview file is saved instead.")
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("Get Kits from OpsAPI") {
+                        Task {
+                            busy = true
+                            defer { busy = false }
+                            do { status = "\(try await iv.fetchKitsFromOpsAPI()) approved kit(s) available." } catch { status = error.localizedDescription }
+                        }
+                    }
+                    Button("Unlink", role: .destructive) { iv.unlinkOpsAPI() }
+                }
+            } else {
+                Text("Without OpsAPI, results are saved as .snazzy_interview files in ~/Movies/Snazzy Pro/Interviews, which you can upload to OpsAPI later. To send them straight away, make an integration token in the OpsAPI dashboard (Interviews › Settings) and paste it here.")
+                    .foregroundStyle(.secondary)
+                TextField("OpsAPI address, e.g. https://api.example.com", text: $url)
+                SecureField("Integration token (snz_…)", text: $token)
+                Text("Candidates' answers, kits and decisions are sent to that server. The token is kept in your Keychain.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if let status { Text(status).font(.callout) }
+            HStack {
+                Spacer()
+                Button("Close") { dismiss() }
+                if !iv.isLinked {
+                    Button("Link") {
+                        Task {
+                            busy = true
+                            defer { busy = false }
+                            do {
+                                try await iv.linkOpsAPI(url: url, token: token)
+                                token = ""
+                                status = "Linked."
+                            } catch { status = error.localizedDescription }
+                        }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(busy || url.isEmpty || token.isEmpty)
+                }
+            }
+        }
+        .padding(20)
+        .frame(width: 560)
     }
 }

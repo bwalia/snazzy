@@ -36,6 +36,7 @@ final class AppModel {
     @ObservationIgnored private(set) var purchases: PurchaseController!
     @ObservationIgnored private(set) var voice: VoiceMode!
     @ObservationIgnored private(set) var deckRepos: DeckRepoController!
+    @ObservationIgnored private(set) var interviews: InterviewController!
     /// Set by the headless self-test so it never writes into the user's session logs.
     var sessionLoggingSuspended = false
     /// Hides the conversation list (tours, screen sharing).
@@ -88,6 +89,7 @@ final class AppModel {
         self.purchases = PurchaseController()
         self.voice = VoiceMode(app: self)
         self.deckRepos = DeckRepoController(app: self)
+        self.interviews = InterviewController(app: self)
         refreshStoredKeys()
         startPathMonitor()
         mcp.start()

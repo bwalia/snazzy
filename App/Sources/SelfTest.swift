@@ -8,6 +8,7 @@ import MCP
 import Remote
 import CoreImage
 import Foundation
+import Interview
 import ImageIO
 import SnazzyCore
 import StoreKit
@@ -361,6 +362,73 @@ enum SelfTest {
                 }
             } catch {
                 report("decks", false, error.localizedDescription)
+            }
+            return ok
+        }
+        if arguments.contains("--interview-test") {
+            // Snazzy Interview end to end with real models: the sample kit, a simulated
+            // candidate, the interviewer, the evaluator, and the results file. Uses Ollama on
+            // this Mac by default (offline); --provider anthropic [--model …] tries Claude.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let saved = app.settings
+            defer { app.settings = saved }
+            let providerArg = arguments.firstIndex(of: "--provider").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil } ?? "ollama"
+            let provider = ProviderKind(rawValue: providerArg) ?? .ollama
+            let modelArg = arguments.firstIndex(of: "--model").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+            let model = modelArg ?? (provider == .anthropic ? "claude-sonnet-5-5" : "qwen3-coder:30b")
+            for task in [AssistantTask.quickCommands, .planning, .writing] {
+                app.settings.setSelection(ModelSelection(provider: provider, model: model), for: task)
+            }
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent("interview-selftest-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: root) }
+            let iv = InterviewController(app: app, root: root)
+            iv.unlockForTesting()
+            guard let url = Bundle.main.url(forResource: "interview-kit", withExtension: "json"),
+                  var kit = try? InterviewJSON.decoder.decode(RoleKit.self, from: Data(contentsOf: url)) else {
+                report("sample kit in the app", false, "missing"); return false
+            }
+            kit.approvedAt = nil
+            do {
+                iv.save(kit)
+                try iv.approve(iv.kits.first { $0.id == kit.id }!)
+                kit = iv.kits.first { $0.id == kit.id }!
+                report("approves the sample kit", kit.isApproved, "v\(kit.version)")
+
+                let deck = AutoInterview.deck(for: kit)
+                report("Auto Interview deck", deck.slides.count == 8, deck.slides.map(\.heading).joined(separator: " | ").prefix(160).description)
+
+                for persona in SimulatedCandidate.all.filter({ arguments.contains("--all-personas") || ["strong", "injection"].contains($0.id) }) {
+                    let started = Date()
+                    let id = try await iv.simulate(kit: kit, persona: persona)
+                    guard let s = iv.session(id) else { report(persona.label, false, "no session"); continue }
+                    let followUps = Dictionary(grouping: s.turns.filter { $0.kind == .followUp }, by: { $0.questionID ?? "" }).mapValues(\.count)
+                    let interviewer = s.turns.filter { $0.role == .interviewer }.map(\.text).joined(separator: " ")
+                    report("\(persona.label): completes", s.state == .completed,
+                           "\(s.turns.count) turns, follow-ups \(followUps), \(Int(Date().timeIntervalSince(started)))s")
+                    report("\(persona.label): follow-up limit", followUps.values.allSatisfy { $0 <= kit.settings.maxFollowUps }, "\(followUps)")
+                    report("\(persona.label): interviewer avoids banned topics", BannedTopics.find(in: interviewer).isEmpty, BannedTopics.find(in: interviewer).joined(separator: ", "))
+                    if let e = s.evaluation {
+                        let quotes = e.competencies.flatMap(\.evidence)
+                        report("\(persona.label): evidence", quotes.allSatisfy { QuoteCheck.isVerbatim($0, in: s) },
+                               e.competencies.map { "\($0.id)=\($0.level.map(String.init) ?? "–")\($0.agreed ? "" : "≠\($0.secondLevel.map(String.init) ?? "–")") \($0.evidence.count)q" }.joined(separator: ", ")
+                               + ", dropped \(e.droppedQuotes)")
+                        if persona.id == "injection" {
+                            let caught = !e.injection.isEmpty || s.flags.contains { $0.kind == .injectionAttempt }
+                            report("injection: noticed", caught, "evaluator \(e.injection.count), interviewer flags \(s.flags.filter { $0.kind == .injectionAttempt }.count)")
+                        }
+                    } else {
+                        report("\(persona.label): evidence", false, iv.message ?? "no evaluation")
+                    }
+                    let file = try iv.saveFile(s, to: root)
+                    let back = try InterviewFile.decode(Data(contentsOf: file))
+                    report("\(persona.label): .snazzy_interview file", back.id == s.id && back.turns.map(\.text) == s.turns.map(\.text) && back.evaluation?.competencies.map(\.id) == s.evaluation?.competencies.map(\.id), file.lastPathComponent)
+                    if arguments.contains("--print") {
+                        for t in s.turns { print("  [\(t.id) \(t.role.rawValue)/\(t.kind.rawValue)] \(t.text.prefix(220))") }
+                    }
+                }
+            } catch {
+                report("interview", false, error.localizedDescription)
             }
             return ok
         }

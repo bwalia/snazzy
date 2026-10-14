@@ -152,6 +152,15 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
+    /// The candidate would rather type (or asked for text instead of voice).
+    func useTyping() {
+        options.listen = false
+        listenTask?.cancel()
+        listenTask = nil
+        Task { await speech.cancel() }
+        if phase == .listening { phase = .idle }
+    }
+
     /// The candidate pressed "I've finished answering".
     func finishAnswer() {
         guard phase == .listening else { return }

@@ -23,6 +23,8 @@ final class InterviewController {
     /// The link server's port when it runs.
     private(set) var linkPort: UInt16?
     var message: String?
+    /// Bumped to bring the Interviews window forward (a results file was opened).
+    var windowRequest = 0
 
     // Activation: an Interview subscription unlocks the module.
     private(set) var isActive = false
@@ -82,9 +84,19 @@ final class InterviewController {
 
     // MARK: Activation (payment)
 
+    #if DEBUG
+    /// Self-tests run without a subscription.
+    func unlockForTesting() {
+        testingUnlocked = true
+        isActive = true
+    }
+
+    @ObservationIgnored private var testingUnlocked = false
+    #endif
+
     func refreshActivation() async {
         #if DEBUG
-        if UserDefaults.standard.bool(forKey: "SnazzyPro.interviewUnlocked") { isActive = true; return }
+        if testingUnlocked || UserDefaults.standard.bool(forKey: "SnazzyPro.interviewUnlocked") { isActive = true; return }
         #endif
         var active = false
         for await result in Transaction.currentEntitlements {
@@ -560,8 +572,35 @@ final class InterviewController {
             }
             try await Task.sleep(for: .milliseconds(100))
         }
-        while busy.contains(id) || evaluating.contains(id) { try await Task.sleep(for: .milliseconds(300)) }
+        // The evidence is gathered as the interview ends; wait for it (up to 10 minutes).
+        for _ in 0..<2000 {
+            if let s = self.session(id), s.evaluation != nil || (!s.isFinished && !busy.contains(id)) { break }
+            if self.session(id)?.isFinished == true, !evaluating.contains(id), self.session(id)?.evaluation == nil, message != nil { break }
+            try await Task.sleep(for: .milliseconds(300))
+        }
         return id
+    }
+
+    /// The candidate asked for a person before starting: no interview, just the request.
+    func requestPerson(_ id: UUID) {
+        guard var e = engine(id) else { return }
+        guard e.session.state == .invited else { return send(.askForPerson, to: id) }
+        e.requestPersonBeforeStart()
+        commit(e)
+        Task { await deliver(id) }
+    }
+
+    /// Voluntary self-ID, stored apart from the interview (only answers from the fixed lists).
+    func saveSelfID(_ id: UUID, answers: [String: String]) {
+        guard var s = session(id), s.isFinished, !selfIDDone.contains(id) else { return }
+        selfIDDone.insert(id)
+        let allowed = Dictionary(uniqueKeysWithValues: SelfID.questions.map { ($0.id, Set($0.options)) })
+        let kept = answers.filter { allowed[$0.key]?.contains($0.value) == true }
+        guard !kept.isEmpty else { return }
+        let key = UUID().uuidString
+        try? store.save(SelfID(key: key, answers: kept))
+        s.selfIDKey = key
+        save(session: s)
     }
 
     // MARK: Link server
@@ -596,7 +635,7 @@ final class InterviewController {
     }
 
     private func handleLink(token: String, action: InterviewLinkServer.Action, body: JSONValue) async -> (Int, JSONValue) {
-        guard let id = tokens[InterviewLinkServer.hash(token)], var e = engine(id) else { return (404, ["phase": "invalid"]) }
+        guard let id = tokens[InterviewLinkServer.hash(token)], let e = engine(id) else { return (404, ["phase": "invalid"]) }
         if let expires = e.session.linkExpires, expires < Date(), e.session.state == .invited { return (410, ["phase": "expired"]) }
         switch action {
         case .state:
@@ -621,31 +660,15 @@ final class InterviewController {
             }
             if let event {
                 if case .askForPerson = event, e.session.state == .invited {
-                    // From the notice page: no interview, just the request.
-                    e.session.state = .humanRequested
-                    e.session.flags.append(Flag(.humanRequested, "Asked for a person before starting"))
-                    e.session.endedAt = Date()
-                    e.session.endReason = "human_requested"
-                    commit(e)
+                    requestPerson(id)
                 } else {
                     send(event, to: id)
                 }
             }
         case .selfID:
-            guard let s = session(id), s.isFinished, !selfIDDone.contains(id) else { break }
-            let allowed = Dictionary(uniqueKeysWithValues: SelfID.questions.map { ($0.id, Set($0.options)) })
             var answers: [String: String] = [:]
-            for (k, v) in body["answers"]?.objectValue ?? [:] {
-                if let v = v.stringValue, allowed[k]?.contains(v) == true { answers[k] = v }
-            }
-            if !answers.isEmpty {
-                let key = UUID().uuidString
-                try? store.save(SelfID(key: key, answers: answers))
-                var s = s
-                s.selfIDKey = key
-                save(session: s)
-            }
-            selfIDDone.insert(id)
+            for (k, v) in body["answers"]?.objectValue ?? [:] { if let v = v.stringValue { answers[k] = v } }
+            saveSelfID(id, answers: answers)
         }
         guard let current = engine(id) else { return (404, ["phase": "invalid"]) }
         return (200, CandidateState.json(for: current, busy: busy.contains(id), provider: providerName, selfIDDone: selfIDDone.contains(id)))

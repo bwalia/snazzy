@@ -37,10 +37,39 @@
   "settings" : {
     "_failTransactionsEnabled" : false,
     "_locale" : "en_US",
-    "_storefront" : "USA",
-    "_storeKitErrors" : [ ]
+    "_storeKitErrors" : [],
+    "_storefront" : "USA"
   },
-  "subscriptionGroups" : [ ],
+  "subscriptionGroups" : [
+    {
+      "id" : "21500001",
+      "localizations" : [],
+      "name" : "Snazzy Interview",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "99.0",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6739000003",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Structured first-round interviews: role kits, Auto Interview, evidence and fairness reports.",
+              "displayName" : "Snazzy Interview",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.snazzy.pro.interview.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Snazzy Interview (monthly)",
+          "subscriptionGroupID" : "21500001",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
   "version" : {
     "major" : 3,
     "minor" : 0

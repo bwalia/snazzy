@@ -20,6 +20,18 @@
 				<string>com.snazzy.pro.share</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Snazzy Interview Results</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.snazzy.pro.interview</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -83,6 +95,31 @@
 				<key>public.mime-type</key>
 				<array>
 					<string>application/x-snazzy-share</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+				<string>public.data</string>
+				<string>public.content</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Snazzy Interview Results</string>
+			<key>UTTypeIconFile</key>
+			<string>AppIcon</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.snazzy.pro.interview</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>snazzy_interview</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/x-snazzy-interview+json</string>
 				</array>
 			</dict>
 		</dict>

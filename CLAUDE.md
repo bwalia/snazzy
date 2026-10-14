@@ -40,6 +40,7 @@ $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj
 #       --title-slide-test               (bigger camera on title slides, live, with a sample deck)
 #       --voice-test (Voice Mode: commands, wake word, mic muted while speaking) | --prompter-test
 #       --decks-test [--deck-repo owner/repo/tree/branch/decks]   (search, categories/tags, open at a slide, add from GitHub)
+#       --interview-test [--provider anthropic --model …] [--all-personas] [--print]   (Snazzy Interview with real models and simulated candidates; Ollama by default)
 # Tours (films the app window): -SnazzyPro.tour <name>, e.g. voice-presenter, agent-classroom (Tours.all)
 # App Store screenshots: -SnazzyPro.screenshots YES, then swift Scripts/frame-screenshots.swift (docs/launch/APP_STORE.md §5)
 #   (only the deck library: add -SnazzyPro.screenshotScenes decks [-SnazzyPro.screenshotDeckRepo <repo link>])
@@ -105,6 +106,7 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 | `Live` | `LiveServer` (NWListener HTTP: viewer page, fMP4 segments, SSE), `LiveSegments`, `LiveViewerPage` (inline HTML/JS), `BrainstormBoard` |
 | `Broadcast` | `Broadcaster`: one HaishinKit RTMP pipeline per destination |
 | `Remote` | `RemoteHost`/`RemoteClient`/`RemoteLink`, `RemoteProtocol` (length-prefixed JSON), `RemoteSecurity` (TLS 1.2 PSK), `WatchLink`. No SnazzyCore dependency; it builds for iOS and watchOS |
+| `Interview` | Snazzy Interview (paid module, `docs/plans/PROMPT_INTERVIEW.md`): `RoleKit` (format shared with OpsAPI, fixture `docs/specs/fixtures/interview-kit.json`), `KitValidator`/`BannedTopics`, `InterviewEngine` (fixed question order; the model only words follow-ups, as JSON; `Guard` checks its words and that answers to candidates come from the company facts), `Evaluator` (redaction, two runs, `QuoteCheck`), `InterviewPrompts` (prompt files in `Resources/prompts`, also copied by OpsAPI), `Fairness`, `InterviewStore`, `InterviewLinkServer` + `CandidatePage`, `InterviewFile` (`.snazzy_interview`) and `OpsAPILink`. The app side is `InterviewController`, `AutoInterview` and the Interviews window. **A person makes every decision: never add a path that declines a candidate automatically, and never analyse faces, voices or emotions.** |
 | `Entitlements` | Pro features and purchases (the app side is `App/Sources/PurchaseController.swift`, StoreKit 2, and `Views/ProView.swift`; both stay inactive while `PurchaseController.policy` is `.freeBeta`, and `-SnazzyPro.enforcePro YES` tries them in a debug build): `ProCatalogue` (Pro features with release dates and the App Store product ids, as data in `pro-features.json`), `Entitlements.isUnlocked`/`limit` (policy `freeBeta` unlocks everything and is the default), `Licence.verify` (offline check of OpsAPI licence files, format v1 in OpsAPI's `docs/LICENCE_FORMAT.md`, tested against OpsAPI's published vectors; callers save `highWater` between checks), `MachineFingerprint` |
 
 ## Architecture essentials

@@ -547,3 +547,36 @@ func engine(_ kit: RoleKit, clock: TestClock, name: String = "Sam Taylor") -> In
         #expect(!name.contains("/"))
     }
 }
+
+@Suite struct GroundingTests {
+    @Test func answersMustComeFromTheFacts() throws {
+        let facts = try sampleKit().companyFacts
+        #expect(Guard.isGrounded("Monday to Friday, 9:00 to 17:30, hybrid with 2 days a week in the Leeds office.", in: facts))
+        #expect(Guard.isGrounded("The pay is £34,000 to £38,000 a year.", in: facts))
+        #expect(!Guard.isGrounded("Success in the first 90 days is measured by customer satisfaction scores and reduced escalation rates.", in: facts))
+        #expect(!Guard.isGrounded("The team uses a CRM and ticketing system, with monthly feedback sessions.", in: facts))
+        #expect(!Guard.isGrounded("Anything", in: ""))
+    }
+
+    @Test func ungroundedAnswersAreForwardedAndQuestionsCapped() throws {
+        let clock = TestClock()
+        var kit = try sampleKit()
+        kit.eligibility = []
+        var e = engine(kit, clock: clock)
+        _ = e.start()
+        for _ in 0..<3 {
+            _ = e.receive(.answer("An answer.", input: .typed))
+            _ = e.apply(InterviewerReply(action: .moveOn, say: "Thanks."))
+        }
+        _ = e.receive(.answer("How is success measured?", input: .typed))
+        _ = e.apply(InterviewerReply(action: .answer, say: "Success is measured by customer satisfaction scores and escalation rates."))
+        #expect(e.session.forwardedQuestions == ["How is success measured?"])
+        #expect(e.session.turns.last?.text.hasPrefix("I don't have that information") == true)
+        _ = e.receive(.answer("What are the hours?", input: .typed))
+        _ = e.apply(InterviewerReply(action: .answer, say: "Monday to Friday, 9:00 to 17:30, hybrid."))
+        #expect(e.session.turns.last?.text.hasPrefix("Monday to Friday") == true)
+        _ = e.receive(.answer("And the pension?", input: .typed))
+        #expect(e.apply(InterviewerReply(action: .answer, say: "Pension matched up to 5%.")) == .finished)
+        #expect(e.session.state == .completed)
+    }
+}
