@@ -621,3 +621,49 @@ func engine(_ kit: RoleKit, clock: TestClock, name: String = "Sam Taylor") -> In
         #expect(e.session.flags.filter { $0.kind == .protectedInfoVolunteered }.count == 1)
     }
 }
+
+@Suite struct CameraTests {
+    @Test func cameraIsOptInAndWithdrawable() throws {
+        let clock = TestClock()
+        var kit = try sampleKit()
+        kit.settings.offerCamera = true
+        var e = engine(kit, clock: clock)
+        #expect(e.session.cameraOffered)
+        #expect(!e.session.cameraAgreed)
+        e.setCamera(true)
+        #expect(e.session.cameraAgreed)
+        #expect(e.session.camera?.noticeHash == InterviewPrompts.hash(InterviewPrompts.cameraNotice(for: kit)))
+        e.withdrawCamera()
+        #expect(!e.session.cameraAgreed)
+        #expect(e.session.audit.map(\.action) == ["camera_on", "camera_withdrawn"])
+    }
+
+    @Test func notOfferedMeansNoCamera() throws {
+        var e = engine(try sampleKit(), clock: TestClock())
+        e.setCamera(true)
+        #expect(e.session.camera == nil)
+        #expect(!e.session.cameraAgreed)
+    }
+
+    @Test func cameraNoticeSaysNotAnalysedAndOptional() throws {
+        let n = InterviewPrompts.cameraNotice(for: try sampleKit())
+        #expect(n.contains("never analysed by AI"))
+        #expect(n.contains("won't count against you"))
+        #expect(n.contains("turn it off at any time"))
+    }
+
+    @Test func deletingAnInterviewDeletesItsRecording() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("interview-rec-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let movie = dir.appendingPathComponent("interview.mov")
+        try Data("x".utf8).write(to: movie)
+        let store = InterviewStore(root: dir.appendingPathComponent("store"))
+        var s = InterviewSession(kit: try sampleKit(), candidate: Candidate(name: "A"), channel: .thisMac)
+        s.recordingFiles = [movie.path]
+        #expect(s.recordingMovie == movie)
+        try store.save(s)
+        try store.deleteInterview(s)
+        #expect(!FileManager.default.fileExists(atPath: movie.path))
+    }
+}

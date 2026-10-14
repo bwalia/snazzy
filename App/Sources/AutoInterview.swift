@@ -16,7 +16,6 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         var speak = true
         var listen = true
         var showDeck = true
-        var record = false
     }
 
     enum Phase: Equatable {
@@ -38,7 +37,7 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
     @ObservationIgnored private var speakQueue: [String] = []
     @ObservationIgnored private var listenTask: Task<Void, Never>?
     @ObservationIgnored private var deckProject: String?
-    @ObservationIgnored private var recording = false
+    private var recording = false
     @ObservationIgnored private var finishedSpeaking: CheckedContinuation<Void, Never>?
 
     init(app: AppModel) {
@@ -77,18 +76,65 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    /// Called once the candidate has started: begins recording if chosen.
+    /// Called once the candidate has started: records with their camera if they agreed.
     func candidateStarted() async {
-        guard options.record, !recording else { return }
-        app.capture.selectSlidesSource()
+        guard let id = sessionID, let s = app.interviews.session(id), s.cameraAgreed, !recording else { return }
+        let capture = app.capture
+        savedInset = capture.insetFeed?.device
+        savedSetup = capture.setup
+        let cameras = capture.catalog.cameras
+        let camera = capture.insetFeed?.device ?? cameras.first { $0.transport.lowercased().contains("built") } ?? cameras.first
+        guard let camera else {
+            problem = "No camera found, so the interview isn't recorded."
+            return
+        }
+        capture.setInsetDevice(camera)
+        capture.selectSlidesSource()
         do {
-            try await app.capture.startRecording(countdown: 0)
+            try await capture.startRecording(countdown: 0)
             recording = true
-            app.interviews.note(sessionID, "recording_started")
+            app.interviews.note(id, "recording_started", detail: camera.name)
         } catch {
             problem = "Recording didn't start: \(error.localizedDescription). The interview carries on without it."
+            restoreCapture()
         }
     }
+
+    /// The candidate turned the camera off: stop, and delete what was recorded.
+    func cameraWithdrawn() async {
+        guard recording else { return }
+        recording = false
+        if let result = await app.capture.stopRecording() {
+            for url in [result.composite, Chapters.url(forMovie: result.composite), result.rawFolder] {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        restoreCapture()
+        app.interviews.note(sessionID, "recording_deleted", detail: "camera turned off by the candidate")
+    }
+
+    /// Stops recording and links the files to the interview.
+    private func finishRecording() async {
+        guard recording else { return }
+        recording = false
+        if let result = await app.capture.stopRecording(), let id = sessionID {
+            app.interviews.attachRecording(id, files: [result.composite, Chapters.url(forMovie: result.composite), result.rawFolder])
+        }
+        restoreCapture()
+    }
+
+    @ObservationIgnored private var savedInset: CaptureDeviceInfo?
+    @ObservationIgnored private var savedSetup: CaptureSetup?
+
+    private func restoreCapture() {
+        if let savedSetup { app.capture.apply(savedSetup) }
+        app.capture.setInsetDevice(savedInset)
+        savedSetup = nil
+        savedInset = nil
+    }
+
+    /// Whether the candidate's camera is recording now (for the self-view).
+    var isRecording: Bool { recording }
 
     func stop() {
         listenTask?.cancel()
@@ -97,10 +143,7 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         synthesizer.stopSpeaking(at: .immediate)
         speakQueue.removeAll()
         resumeSpeaking()
-        if recording {
-            recording = false
-            Task { _ = await app.capture.stopRecording() }
-        }
+        if recording { Task { await finishRecording() } }
         phase = sessionID == nil ? .idle : .done
     }
 
@@ -121,11 +164,7 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
             }
             Task {
                 await waitForSpeech()
-                if recording {
-                    recording = false
-                    _ = await app.capture.stopRecording()
-                    app.interviews.note(sessionID, "recording_saved")
-                }
+                await finishRecording()
                 phase = .done
             }
             return

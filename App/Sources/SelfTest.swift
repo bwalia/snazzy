@@ -365,6 +365,63 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--interview-camera-test") {
+            // The candidate's camera: recorded only after they agree, linked to the
+            // interview and deleted with it; turned off mid-way, the recording is deleted.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent("interview-camtest-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: root) }
+            let iv = app.interviews!
+            iv.unlockForTesting()
+            guard let url = Bundle.main.url(forResource: "interview-kit", withExtension: "json"),
+                  var kit = try? InterviewJSON.decoder.decode(RoleKit.self, from: Data(contentsOf: url)) else { return false }
+            kit.id = UUID()
+            kit.settings.offerCamera = true
+            iv.save(kit)
+            defer { if let k = iv.kits.first(where: { $0.id == kit.id }) { iv.delete(k) } }
+            app.capture.catalog.refreshAVDevices()
+            report("a camera is available", !app.capture.catalog.cameras.isEmpty, app.capture.catalog.cameras.map(\.name).joined(separator: ", "))
+            do {
+                try iv.approve(iv.kits.first { $0.id == kit.id }!)
+                let approved = iv.kits.first { $0.id == kit.id }!
+                for withdraw in [false, true] {
+                    let (session, _) = try await iv.createInterview(kit: approved, candidate: Candidate(name: "Camera Test"), channel: .thisMac)
+                    let id = session.id
+                    await iv.auto.prepare(id, options: AutoInterview.Options(speak: false, listen: false, showDeck: true))
+                    iv.setCamera(id, agreed: true)
+                    iv.start(id, noticeHash: "test", adjustments: [])
+                    for _ in 0..<40 where !iv.auto.isRecording { try await Task.sleep(for: .milliseconds(250)) }
+                    report(withdraw ? "records again for the next candidate" : "records after consent", iv.auto.isRecording, iv.auto.problem ?? "")
+                    try await Task.sleep(for: .seconds(3))
+                    if withdraw {
+                        iv.cameraOff(id)
+                        for _ in 0..<40 where iv.auto.isRecording { try await Task.sleep(for: .milliseconds(250)) }
+                        try await Task.sleep(for: .seconds(1))
+                        let s = iv.session(id)!
+                        report("turning the camera off stops and deletes it", !iv.auto.isRecording && s.recordingFiles.isEmpty && !s.cameraAgreed
+                               && s.audit.contains { $0.action == "recording_deleted" }, s.audit.map(\.action).joined(separator: ", "))
+                        iv.send(.withdraw, to: id)
+                    } else {
+                        iv.send(.withdraw, to: id)
+                        for _ in 0..<60 where iv.session(id)?.recordingFiles.isEmpty != false { try await Task.sleep(for: .milliseconds(250)) }
+                        let s = iv.session(id)!
+                        let movie = s.recordingMovie
+                        report("recording linked to the interview", movie.map { FileManager.default.fileExists(atPath: $0.path) } == true, movie?.lastPathComponent ?? "none")
+                        let data = try InterviewFile.encode(s, app: "test")
+                        report("results file leaves local paths out", !String(decoding: data, as: UTF8.self).contains("/Users/"), "")
+                        iv.delete(s)
+                        report("deleting the interview deletes the recording", movie.map { !FileManager.default.fileExists(atPath: $0.path) } == true, "")
+                    }
+                    iv.auto.stop()
+                    if let s = iv.session(id) { iv.delete(s) }
+                }
+            } catch {
+                report("camera", false, error.localizedDescription)
+            }
+            app.builder.closePopOutIfOpen()
+            return ok
+        }
         if arguments.contains("--interview-test") {
             // Snazzy Interview end to end with real models: the sample kit, a simulated
             // candidate, the interviewer, the evaluator, and the results file. Uses Ollama on

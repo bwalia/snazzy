@@ -13,6 +13,7 @@ struct CandidateInterviewView: View {
     @State private var selfID: [String: String] = [:]
     @State private var selfIDDone = false
     @State private var bigText = false
+    @State private var cameraOn = false
 
     var body: some View {
         let iv = model.interviews!
@@ -37,7 +38,7 @@ struct CandidateInterviewView: View {
 
     private func notice(_ s: InterviewSession, id: UUID) -> some View {
         let iv = model.interviews!
-        let text = InterviewPrompts.notice(for: s.kit, provider: iv.providerName) + recordingNotice(s)
+        let text = InterviewPrompts.notice(for: s.kit, provider: iv.providerName)
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(s.kit.title).font(.largeTitle.bold())
@@ -53,9 +54,19 @@ struct CandidateInterviewView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                if s.cameraOffered {
+                    GroupBox("Your camera (optional)") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(InterviewPrompts.cameraNotice(for: s.kit)).font(.callout)
+                            Toggle("Turn my camera on and record this interview", isOn: $cameraOn)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
                 if let p = iv.auto.problem { Label(p, systemImage: "exclamationmark.triangle").foregroundStyle(.orange) }
                 HStack {
                     Button("I understand. Start the interview") {
+                        if s.cameraOffered { iv.setCamera(id, agreed: cameraOn) }
                         var list = Array(adjustments).sorted()
                         if !other.trimmingCharacters(in: .whitespaces).isEmpty { list.append(other) }
                         if list.contains("text instead of voice") { iv.auto.useTyping() }
@@ -70,10 +81,27 @@ struct CandidateInterviewView: View {
         }
     }
 
-    private func recordingNotice(_ s: InterviewSession) -> String {
-        s.audit.contains { $0.action == "will_record" }
-            ? "\n\nRecording: this interview is recorded (the slides, camera and microphone) so the hiring team can watch it. The recording is not analysed by AI."
-            : ""
+    /// The candidate's own picture while their camera is on, with a way to turn it off.
+    @ViewBuilder
+    private func selfView(_ s: InterviewSession, id: UUID) -> some View {
+        let iv = model.interviews!
+        if s.cameraAgreed, let feed = model.capture.insetFeed {
+            VStack(alignment: .trailing, spacing: 4) {
+                FramePreview(receiver: feed.receiver, profile: model.capture.profile(for: feed.device.id, kind: feed.device.kind), interactive: false)
+                    .frame(width: 200, height: 112)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(alignment: .topLeading) {
+                        if iv.auto.isRecording {
+                            Label("Recording", systemImage: "record.circle").font(.caption2.bold()).foregroundStyle(.white)
+                                .padding(4).background(.red, in: Capsule()).padding(6)
+                        }
+                    }
+                    .accessibilityLabel("Your camera")
+                Button("Turn My Camera Off") { iv.cameraOff(id) }
+                    .font(.caption)
+                    .help("Stops and deletes the recording. This won't count against you.")
+            }
+        }
     }
 
     // MARK: The interview
@@ -84,13 +112,14 @@ struct CandidateInterviewView: View {
         let engine = iv.engine(id)
         let question = s.turns.last { $0.role == .interviewer }?.text ?? ""
         return VStack(spacing: 0) {
-            HStack {
+            HStack(alignment: .top) {
                 Text(s.kit.title).font(.headline)
                 Spacer()
                 if let e = engine {
                     ProgressView(value: e.progress).frame(width: 140)
                     Text("\(Int(e.secondsLeft / 60)) min left").monospacedDigit().foregroundStyle(.secondary)
                 }
+                selfView(s, id: id)
             }
             .padding()
             Divider()

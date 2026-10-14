@@ -144,6 +144,7 @@ struct KitEditorView: View {
                 Stepper("Length: \(kit.settings.minutes) minutes", value: $kit.settings.minutes, in: 10...60, step: 5)
                 Stepper("Follow-ups per question: \(kit.settings.maxFollowUps)", value: $kit.settings.maxFollowUps, in: 0...3)
                 Toggle("Candidates can pause", isOn: $kit.settings.allowPause)
+                Toggle("Offer candidates their camera (recorded for the team, never analysed; always optional)", isOn: $kit.settings.offerCamera)
                 Toggle("Suggest levels (off: evidence only, e.g. for NYC Local Law 144)", isOn: $kit.settings.ratingsEnabled)
                 Toggle("This role assesses written communication", isOn: $kit.settings.writtenCommunication)
                 Stepper("Keep interviews \(kit.settings.retentionDays) days after the decision", value: $kit.settings.retentionDays, in: 30...730, step: 30)
@@ -249,6 +250,7 @@ struct StartInterviewSheet: View {
     @State private var reference = ""
     @State private var channel: InterviewSession.Channel = .thisMac
     @State private var options = AutoInterview.Options()
+    @State private var offerCamera = false
     @State private var link: URL?
     @State private var createdID: UUID?
     @State private var busy = false
@@ -287,9 +289,9 @@ struct StartInterviewSheet: View {
                         Toggle("Show the role's deck on the Present window", isOn: $options.showDeck)
                         Toggle("Speak the questions aloud", isOn: $options.speak)
                         Toggle("Listen to spoken answers (recognised on this Mac)", isOn: $options.listen)
-                        Toggle("Record the interview (slides, camera and mic) for the hiring team", isOn: $options.record)
-                        if options.record {
-                            Text("Candidates are told before they start. Recordings are saved to ~/Movies/Snazzy Pro and are never analysed.")
+                        Toggle("Offer the candidate their camera", isOn: $offerCamera)
+                        if offerCamera {
+                            Text("The candidate chooses: the camera stays off unless they turn it on. If they do, the interview (camera, mic and slides) is recorded to ~/Movies/Snazzy Pro for the hiring team. It's never analysed, and they can turn it off at any time, which deletes it.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
@@ -309,6 +311,7 @@ struct StartInterviewSheet: View {
         }
         .padding(20)
         .frame(width: 560)
+        .onAppear { offerCamera = kit.settings.offerCamera }
     }
 
     private func create() async {
@@ -322,7 +325,11 @@ struct StartInterviewSheet: View {
                 link = url
             } else {
                 await iv.auto.prepare(session.id, options: options)
-                if options.record { var s = session; s.log("will_record", by: iv.reviewer); iv.save(session: s) }
+                if session.cameraOffered != offerCamera {
+                    var s = session
+                    s.cameraOffered = offerCamera
+                    iv.save(session: s)
+                }
                 onCreated(session.id)
                 dismiss()
                 openWindow(id: "candidate-interview")

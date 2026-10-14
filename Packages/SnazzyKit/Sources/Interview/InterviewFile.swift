@@ -21,6 +21,8 @@ public enum InterviewFile {
         var copy = session
         copy.linkTokenHash = nil
         copy.selfIDKey = nil
+        // Local file paths stay on this Mac (the recording isn't in the file).
+        copy.recordingFiles = []
         return try InterviewJSON.encoder.encode(Wrapper(format: format, version: version, exportedAt: now, app: app, interview: copy))
     }
 

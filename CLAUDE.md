@@ -41,6 +41,8 @@ $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj
 #       --voice-test (Voice Mode: commands, wake word, mic muted while speaking) | --prompter-test
 #       --decks-test [--deck-repo owner/repo/tree/branch/decks]   (search, categories/tags, open at a slide, add from GitHub)
 #       --interview-test [--provider anthropic --model …] [--all-personas] [--print]   (Snazzy Interview with real models and simulated candidates; Ollama by default)
+#       --interview-camera-test   (the candidate's camera: recorded only with consent, deleted when turned off or with the interview)
+# Interview tours: -SnazzyPro.tour interview-recruiter | auto-interview
 # Tours (films the app window): -SnazzyPro.tour <name>, e.g. voice-presenter, agent-classroom (Tours.all)
 # App Store screenshots: -SnazzyPro.screenshots YES, then swift Scripts/frame-screenshots.swift (docs/launch/APP_STORE.md §5)
 #   (only the deck library: add -SnazzyPro.screenshotScenes decks [-SnazzyPro.screenshotDeckRepo <repo link>])

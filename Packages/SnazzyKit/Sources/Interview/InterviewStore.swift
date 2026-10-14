@@ -45,8 +45,9 @@ public final class InterviewStore: @unchecked Sendable {
         try write(session, to: interviewsDir.appendingPathComponent("\(session.id.uuidString).json"))
     }
 
-    /// Deletes an interview and its self-ID answers.
+    /// Deletes an interview, its recording and its self-ID answers.
     public func deleteInterview(_ session: InterviewSession) throws {
+        deleteRecording(session)
         try remove(interviewsDir.appendingPathComponent("\(session.id.uuidString).json"))
         if let key = session.selfIDKey { try remove(selfIDDir.appendingPathComponent("\(key).json")) }
     }
@@ -59,6 +60,13 @@ public final class InterviewStore: @unchecked Sendable {
             if (try? deleteInterview(s)) != nil { n += 1 }
         }
         return n
+    }
+
+    /// Deletes an interview's recording files (movie, raw folder, chapters).
+    public func deleteRecording(_ session: InterviewSession) {
+        for path in session.recordingFiles where FileManager.default.fileExists(atPath: path) {
+            try? FileManager.default.removeItem(atPath: path)
+        }
     }
 
     // MARK: Self-ID

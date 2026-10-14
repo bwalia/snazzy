@@ -594,6 +594,31 @@ final class InterviewController {
         }
     }
 
+    // MARK: Camera (only with the candidate's consent)
+
+    /// The candidate's camera choice on the notice page.
+    func setCamera(_ id: UUID, agreed: Bool) {
+        guard var e = engine(id) else { return }
+        e.setCamera(agreed)
+        commit(e)
+    }
+
+    /// The candidate turned the camera off: consent withdrawn, recording deleted.
+    func cameraOff(_ id: UUID) {
+        guard var e = engine(id), e.session.cameraAgreed else { return }
+        e.withdrawCamera()
+        commit(e)
+        Task { await auto.cameraWithdrawn() }
+    }
+
+    /// Links a finished recording to its interview (deleted with it).
+    func attachRecording(_ id: UUID, files: [URL]) {
+        guard var s = session(id) else { return }
+        s.recordingFiles = files.map(\.path).filter { FileManager.default.fileExists(atPath: $0) }
+        s.log("recording_saved", by: "app", detail: files.first?.lastPathComponent ?? "")
+        save(session: s)
+    }
+
     /// The candidate asked for a person before starting: no interview, just the request.
     func requestPerson(_ id: UUID) {
         guard var e = engine(id) else { return }

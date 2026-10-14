@@ -257,13 +257,16 @@ extension RoleKit {
         public var writtenCommunication: Bool
         /// Days to keep an interview after the decision.
         public var retentionDays: Int
+        /// Candidates may choose to turn their camera on, and the interview is then
+        /// recorded for the hiring team to watch. Never required, never analysed.
+        public var offerCamera: Bool
 
         public init(
             interviewerName: String = "Snazzy Interviewer", minutes: Int = 25, maxFollowUps: Int = 2,
             secondsPerAnswer: Int = 0, allowVoice: Bool = true, allowPause: Bool = true,
             allowedAdjustments: [String] = Self.defaultAdjustments,
             nextSteps: String = "The hiring team reviews every interview and will contact you within 5 working days.",
-            ratingsEnabled: Bool = true, writtenCommunication: Bool = false, retentionDays: Int = 180
+            ratingsEnabled: Bool = true, writtenCommunication: Bool = false, retentionDays: Int = 180, offerCamera: Bool = false
         ) {
             self.interviewerName = interviewerName
             self.minutes = minutes
@@ -276,6 +279,7 @@ extension RoleKit {
             self.ratingsEnabled = ratingsEnabled
             self.writtenCommunication = writtenCommunication
             self.retentionDays = retentionDays
+            self.offerCamera = offerCamera
         }
 
         public static let defaultAdjustments = [
@@ -285,7 +289,7 @@ extension RoleKit {
 
         enum CodingKeys: String, CodingKey {
             case interviewerName, minutes, maxFollowUps, secondsPerAnswer, allowVoice, allowPause, allowedAdjustments,
-                 nextSteps, ratingsEnabled, writtenCommunication, retentionDays
+                 nextSteps, ratingsEnabled, writtenCommunication, retentionDays, offerCamera
         }
 
         public init(from decoder: Decoder) throws {
@@ -302,6 +306,7 @@ extension RoleKit {
             ratingsEnabled = try c.decodeIfPresent(Bool.self, forKey: .ratingsEnabled) ?? d.ratingsEnabled
             writtenCommunication = try c.decodeIfPresent(Bool.self, forKey: .writtenCommunication) ?? d.writtenCommunication
             retentionDays = try c.decodeIfPresent(Int.self, forKey: .retentionDays) ?? d.retentionDays
+            offerCamera = try c.decodeIfPresent(Bool.self, forKey: .offerCamera) ?? d.offerCamera
         }
     }
 }

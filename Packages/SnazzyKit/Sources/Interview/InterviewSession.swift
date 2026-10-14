@@ -48,6 +48,12 @@ public struct InterviewSession: Codable, Hashable, Sendable, Identifiable {
     public var models: [String: String]
     public var evaluation: Evaluation?
     public var review: Review?
+    /// Whether this candidate is offered the camera (from the kit, set per interview).
+    public var cameraOffered: Bool
+    /// The candidate's own choice about the camera, when they made it.
+    public var camera: CameraConsent?
+    /// The recording's files (composite movie, raw folder, chapters), deleted with the interview.
+    public var recordingFiles: [String]
     /// Opaque id linking voluntary self-ID answers, which are stored apart and never shown with the interview.
     public var selfIDKey: String?
     public var audit: [AuditEntry]
@@ -71,6 +77,8 @@ public struct InterviewSession: Codable, Hashable, Sendable, Identifiable {
         self.forwardedQuestions = []
         self.models = [:]
         self.audit = []
+        self.cameraOffered = kit.settings.offerCamera
+        self.recordingFiles = []
         self.created = now
         self.deleteAfter = Calendar.current.date(byAdding: .day, value: max(kit.settings.retentionDays, 1), to: now)
     }
@@ -78,7 +86,8 @@ public struct InterviewSession: Codable, Hashable, Sendable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, kit, candidate, channel, state, linkTokenHash, linkExpires, turns, flags, eligibilityAnswers, adjustments,
              noticeHash, noticeAcceptedAt, startedAt, endedAt, endReason, pausedSeconds, pausedAt, step, followUps,
-             forwardedQuestions, models, evaluation, review, selfIDKey = "selfIdKey", audit, created, deleteAfter
+             forwardedQuestions, models, evaluation, review, selfIDKey = "selfIdKey", audit, created, deleteAfter,
+             cameraOffered, camera, recordingFiles
     }
 
     public init(from decoder: Decoder) throws {
@@ -111,6 +120,17 @@ public struct InterviewSession: Codable, Hashable, Sendable, Identifiable {
         audit = try c.decodeIfPresent([AuditEntry].self, forKey: .audit) ?? []
         created = try c.decodeIfPresent(Date.self, forKey: .created) ?? Date()
         deleteAfter = try c.decodeIfPresent(Date.self, forKey: .deleteAfter)
+        cameraOffered = try c.decodeIfPresent(Bool.self, forKey: .cameraOffered) ?? false
+        camera = try c.decodeIfPresent(CameraConsent.self, forKey: .camera)
+        recordingFiles = try c.decodeIfPresent([String].self, forKey: .recordingFiles) ?? []
+    }
+
+    /// The camera is on and recording only while the candidate agrees.
+    public var cameraAgreed: Bool { cameraOffered && camera?.agreed == true && camera?.withdrawnAt == nil }
+
+    /// The recorded movie, if there is one.
+    public var recordingMovie: URL? {
+        recordingFiles.map { URL(fileURLWithPath: $0) }.first { ["mov", "mp4"].contains($0.pathExtension.lowercased()) }
     }
 
     public var candidateTurns: [Turn] { turns.filter { $0.role == .candidate } }
@@ -134,6 +154,23 @@ public struct InterviewSession: Codable, Hashable, Sendable, Identifiable {
 
     public mutating func log(_ action: String, by who: String, detail: String = "", now: Date = Date()) {
         audit.append(AuditEntry(at: now, who: who, action: action, detail: detail))
+    }
+}
+
+/// A candidate's choice about their camera: asked separately, off unless they
+/// turn it on, and withdrawable at any time (the recording is then deleted).
+public struct CameraConsent: Codable, Hashable, Sendable {
+    public var agreed: Bool
+    public var at: Date
+    /// The camera wording they saw (hash).
+    public var noticeHash: String
+    public var withdrawnAt: Date?
+
+    public init(agreed: Bool, at: Date, noticeHash: String, withdrawnAt: Date? = nil) {
+        self.agreed = agreed
+        self.at = at
+        self.noticeHash = noticeHash
+        self.withdrawnAt = withdrawnAt
     }
 }
 

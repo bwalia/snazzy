@@ -76,6 +76,17 @@ struct InterviewDetailView: View {
                     }
                 }
             }
+            if let movie = s.recordingMovie, FileManager.default.fileExists(atPath: movie.path) {
+                HStack {
+                    Button { NSWorkspace.shared.open(movie) } label: { Label("Watch Recording", systemImage: "play.rectangle") }
+                    Text("Recorded with the candidate's consent. It isn't analysed by AI; watch it yourself.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            } else if let c = s.camera {
+                Text(c.withdrawnAt != nil ? "The candidate turned their camera off; the recording was deleted."
+                     : c.agreed ? "Camera on (consent \(c.at.formatted(date: .abbreviated, time: .shortened)))." : "The candidate chose to keep their camera off.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let info { Text(info).font(.callout).foregroundStyle(.secondary) }
         }
     }

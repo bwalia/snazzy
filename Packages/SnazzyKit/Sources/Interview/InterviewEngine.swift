@@ -133,6 +133,23 @@ public struct InterviewEngine: Sendable {
         session.log("notice_acknowledged", by: "candidate", now: t)
     }
 
+    /// The candidate's camera choice (only when the camera is offered).
+    public mutating func setCamera(_ agreed: Bool) {
+        guard session.cameraOffered else { return }
+        let t = now()
+        let wording = InterviewPrompts.cameraNotice(for: session.kit)
+        session.camera = CameraConsent(agreed: agreed, at: t, noticeHash: InterviewPrompts.hash(wording))
+        session.log(agreed ? "camera_on" : "camera_declined", by: "candidate", now: t)
+    }
+
+    /// The candidate turned the camera off: consent is withdrawn (the caller deletes the recording).
+    public mutating func withdrawCamera() {
+        guard session.cameraAgreed else { return }
+        let t = now()
+        session.camera?.withdrawnAt = t
+        session.log("camera_withdrawn", by: "candidate", now: t)
+    }
+
     /// The candidate asked for a person instead, before starting: no interview, just the request.
     public mutating func requestPersonBeforeStart() {
         guard session.state == .invited else { return }

@@ -156,6 +156,16 @@ Snazzy Pro, with the models chosen in Settings (local models keep it offline):
   recognition; candidates can type instead. The slides, camera and mic can be
   recorded (`~/Movies/Snazzy Pro`); candidates are told first, and recordings
   are never analysed.
+- **The candidate's camera, only if they choose it.** A role can offer the
+  camera (`offerCamera`, off by default); it's never required. The candidate
+  sees a separate notice and a checkbox, unticked, to turn it on. If they do,
+  the slides, camera and mic are recorded for the hiring team, with a
+  self-view and a "Recording" badge, and "Turn my camera off" stops and
+  **deletes** the recording. The consent (time and wording hash) is stored
+  with the interview, the recording is deleted with it (and at its retention
+  date), and it never goes into `.snazzy_interview` files or to any AI. Over
+  the local link the camera isn't offered: browsers allow cameras only on
+  https pages (OpsAPI's hosted page can).
 - **A link on the local network,** served by the Mac (`InterviewLinkServer`,
   ports 8795–8798, one candidate per link, token stored only as a hash).
 - **Results the moment the interview ends:** the evaluator runs straight

@@ -130,6 +130,19 @@ public enum InterviewPrompts {
         """
     }
 
+    /// The camera choice, shown apart from the notice when the camera is offered.
+    public static func cameraNotice(for kit: RoleKit) -> String {
+        let org = kit.organisation.isEmpty ? "the hiring team" : kit.organisation
+        return """
+        You can choose to turn your camera on. If you do, this interview is recorded (your camera, your microphone and \
+        the slides) so people on the hiring team at \(org) can watch it. The recording is never analysed by AI: not your \
+        face, your voice, your expressions or your surroundings. It is kept with your interview for up to \
+        \(kit.settings.retentionDays) days after a decision, then deleted, and you can ask for it to be deleted sooner. \
+        Leaving the camera off is completely fine and won't count against you. You can turn it off at any time, and \
+        the recording is then deleted.
+        """
+    }
+
     /// A short, stable hash of the notice text, stored with the acknowledgement.
     public static func hash(_ text: String) -> String {
         // FNV-1a, 64-bit: enough to show which wording was shown.

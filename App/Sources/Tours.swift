@@ -458,7 +458,7 @@ struct InterviewTour {
         try iv.approve(iv.kits.first { $0.id == kit.id }!)
         let approved = iv.kits.first { $0.id == kit.id }!
         let (session, _) = try await iv.createInterview(kit: approved, candidate: Candidate(name: "Jordan Lee", reference: "Simulation: tour"), channel: .thisMac)
-        await iv.auto.prepare(session.id, options: AutoInterview.Options(speak: true, listen: false, showDeck: true, record: false))
+        await iv.auto.prepare(session.id, options: AutoInterview.Options(speak: true, listen: false, showDeck: true))
         iv.candidateWindowRequest += 1
         let candidate = try await waitForWindow("Interview")
         try await Tours.pause(1.5)
