@@ -50,7 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in
                 await capture.stopRecording()
                 // A stop already in progress: wait for the movie to be saved.
-                while capture.recorder.isActive { try? await Task.sleep(for: .milliseconds(100)) }
+                // (at most 10 s, so quitting can't hang on a recording that won't finish)
+                for _ in 0..<100 where capture.recorder.isActive { try? await Task.sleep(for: .milliseconds(100)) }
                 sender.reply(toApplicationShouldTerminate: true)
             }
             return .terminateLater

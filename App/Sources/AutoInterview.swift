@@ -86,8 +86,12 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         // films the desk. The inset camera counts if it's one of these.
         let cameras = Self.candidateCameras(capture.catalog.cameras)
         let current = capture.insetFeed?.device
-        let camera = cameras.first { $0.id == current?.id }
+        var camera = cameras.first { $0.id == current?.id }
             ?? cameras.first { $0.transport.lowercased().contains("built") } ?? cameras.first
+        #if DEBUG
+        // Tours may film with an iPad showing its Camera app (its screen, chosen on purpose).
+        if let tourCamera { camera = tourCamera }
+        #endif
         guard let camera else {
             problem = "No camera found, so the interview isn't recorded."
             return
@@ -135,6 +139,10 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         restoreCapture()
     }
 
+    #if DEBUG
+    /// Tours only: a device to film with even if it isn't a real camera.
+    @ObservationIgnored var tourCamera: CaptureDeviceInfo?
+    #endif
     @ObservationIgnored private var savedInset: CaptureDeviceInfo?
     @ObservationIgnored private var savedSetup: CaptureSetup?
 
@@ -148,11 +156,20 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
     /// Whether the candidate's camera is recording now (for the self-view).
     var isRecording: Bool { recording }
 
+    /// Stops everything and waits for a recording to be saved (tours, quitting).
+    func stopAndWait() async {
+        let wasRecording = recording
+        stop()
+        guard wasRecording else { return }
+        for _ in 0..<100 where app.capture.recorder.isActive { try? await Task.sleep(for: .milliseconds(100)) }
+    }
+
     func stop() {
         listenTask?.cancel()
         listenTask = nil
         Task { await speech.cancel() }
         synthesizer.stopSpeaking(at: .immediate)
+        queued = 0
         speakQueue.removeAll()
         resumeSpeaking()
         if recording { Task { await finishRecording() } }
@@ -206,7 +223,7 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
     /// Waits until the interviewer has finished speaking (tours).
     func untilQuiet() async {
         try? await Task.sleep(for: .milliseconds(300))
-        while synthesizer.isSpeaking || phase == .speaking && synthesizer.isSpeaking { try? await Task.sleep(for: .milliseconds(200)) }
+        for _ in 0..<300 where queued > 0 || synthesizer.isSpeaking { try? await Task.sleep(for: .milliseconds(200)) }
     }
 
     /// The candidate would rather type (or asked for text instead of voice).
@@ -277,14 +294,26 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
         u.voice = VoiceMode.voice(identifier: app.settings.voiceIdentifier)
         u.rate = Float(app.settings.speechRate)
         phase = .speaking
+        queued += 1
         synthesizer.speak(u)
     }
 
+    /// Sentences given to the synthesizer and not yet finished (its own isSpeaking
+    /// can still be true when the last one's "finished" arrives).
+    @ObservationIgnored private var queued = 0
+
     private func waitForSpeech() async {
-        guard synthesizer.isSpeaking else { return }
-        await withCheckedContinuation { c in
-            if synthesizer.isSpeaking { finishedSpeaking = c } else { c.resume() }
+        guard queued > 0 else { return }
+        // At most a minute, so a lost "finished" can't stall the interview.
+        let guardTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(60))
+            self?.queued = 0
+            self?.resumeSpeaking()
         }
+        await withCheckedContinuation { c in
+            if queued > 0 { finishedSpeaking = c } else { c.resume() }
+        }
+        guardTask.cancel()
         // Let the room's echo die down before listening.
         try? await Task.sleep(for: .milliseconds(400))
     }
@@ -295,11 +324,16 @@ final class AutoInterview: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in if !self.synthesizer.isSpeaking { self.resumeSpeaking() } }
+        Task { @MainActor in self.utteranceEnded() }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor in self.resumeSpeaking() }
+        Task { @MainActor in self.utteranceEnded() }
+    }
+
+    private func utteranceEnded() {
+        queued = max(0, queued - 1)
+        if queued == 0 { resumeSpeaking() }
     }
 
     // MARK: The deck

@@ -2,6 +2,7 @@ import AppKit
 import Assistant
 import Foundation
 import Interview
+import LocalAuthentication
 import Observation
 import SnazzyCore
 import StoreKit
@@ -630,6 +631,79 @@ final class InterviewController {
             }
             try await Task.sleep(for: .milliseconds(100))
         }
+    }
+
+    // MARK: Interview mode (this Mac belongs to the candidate)
+
+    /// While an Auto Interview runs at this Mac, the candidate can't reach the
+    /// assistant, Voice Mode, the Camera Prompter or the recruiter's windows: they
+    /// answer from their own knowledge. Only the Mac's owner can leave it.
+    private(set) var interviewMode = false
+    @ObservationIgnored private var savedPresentation: NSApplication.PresentationOptions = []
+
+    /// Turns interview mode on: assistant and prompter off, recruiter windows hidden,
+    /// and (with `lockMac`) full screen with no Dock, menu bar or app switching.
+    func enterInterviewMode(lockMac: Bool = true) {
+        guard !interviewMode else { return }
+        interviewMode = true
+        app.voice.stop()
+        app.prompter.hide()
+        app.chat.stop()
+        for w in NSApp.windows where ["Snazzy Pro", "Interviews", "For Developers", "Diagnostics", "iPhone & iPad Remote"].contains(w.title) {
+            w.orderOut(nil)
+        }
+        guard lockMac else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        savedPresentation = NSApp.presentationOptions
+        NSApp.presentationOptions = [.hideDock, .hideMenuBar, .disableProcessSwitching, .disableHideApplication,
+                                     .disableAppleMenu, .disableSessionTermination]
+        arrangeForCandidate()
+    }
+
+    /// The deck on the left, the candidate's window on the right, filling the screen.
+    func arrangeForCandidate() {
+        guard let candidate = NSApp.windows.first(where: { $0.title == "Interview" }) else { return }
+        let screen = candidate.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        let f = screen.frame
+        candidate.styleMask.remove([.closable, .miniaturizable])
+        if let deck = app.builder.presentWindow {
+            let deckWidth = (f.width * 0.6).rounded()
+            deck.setFrame(NSRect(x: f.minX, y: f.minY, width: deckWidth, height: f.height), display: true)
+            deck.orderFront(nil)
+            candidate.setFrame(NSRect(x: f.minX + deckWidth, y: f.minY, width: f.width - deckWidth, height: f.height), display: true)
+        } else {
+            candidate.setFrame(f, display: true)
+        }
+        candidate.makeKeyAndOrderFront(nil)
+    }
+
+    #if DEBUG
+    /// Self-tests leave interview mode without asking for the owner.
+    func leaveInterviewModeForTesting() {
+        NSApp.presentationOptions = savedPresentation
+        interviewMode = false
+    }
+    #endif
+
+    /// Leaves interview mode after the Mac's owner confirms (Touch ID or password).
+    func leaveInterviewMode() async {
+        guard interviewMode else { return }
+        let context = LAContext()
+        var error: NSError?
+        if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
+            let ok = (try? await context.evaluatePolicy(.deviceOwnerAuthentication,
+                                                        localizedReason: "end interview mode and unlock Snazzy Pro")) ?? false
+            guard ok else { return }
+        }
+        NSApp.presentationOptions = savedPresentation
+        if let candidate = NSApp.windows.first(where: { $0.title == "Interview" }) {
+            candidate.styleMask.insert([.closable, .miniaturizable])
+        }
+        interviewMode = false
+        auto.stop()
+        app.builder.closePopOutIfOpen()
+        NSApp.windows.first { $0.title == "Snazzy Pro" }?.makeKeyAndOrderFront(nil)
+        windowRequest += 1
     }
 
     // MARK: Camera (only with the candidate's consent)

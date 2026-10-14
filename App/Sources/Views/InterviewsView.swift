@@ -15,8 +15,16 @@ struct InterviewsView: View {
     }
 
     var body: some View {
+        if model.interviews.interviewMode {
+            InterviewModeLock()
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         let iv = model.interviews!
-        NavigationSplitView {
+        return NavigationSplitView {
             List(selection: $selection) {
                 if !iv.isActive {
                     Label("Activate Snazzy Interview", systemImage: "lock.open").tag(Item.activation)
@@ -376,6 +384,24 @@ struct DraftingView: View {
             Spacer()
         }
         .padding(28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
+    }
+}
+
+/// Shown in place of the recruiter's windows while a candidate uses this Mac.
+struct InterviewModeLock: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "lock.fill").font(.system(size: 40)).foregroundStyle(.secondary)
+            Text("An interview is in progress").font(.title2.bold())
+            Text("The assistant, the prompter and the recruiter's windows are off until the interview is unlocked.")
+                .foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Button("Unlock (Mac owner)") { Task { await model.interviews.leaveInterviewMode() } }
+        }
+        .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
     }

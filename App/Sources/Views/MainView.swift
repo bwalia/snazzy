@@ -36,6 +36,7 @@ struct MainView: View {
             .overlay(alignment: .bottom) { RecordingSavedBanner() }
         }
         .modifier(SharingSheets())
+        .overlay { if model.interviews.interviewMode { InterviewModeLock() } }
         .overlay {
             if splash {
                 SplashView()

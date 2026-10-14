@@ -473,10 +473,16 @@ struct InterviewTour {
         if name == "auto-interview-camera" {
             // The candidate's camera (an iPad over USB, say): set as the inset before they agree.
             // A real camera (an iPhone through Continuity Camera, say), never a device's screen.
+            // A real camera by default; an iPad only when asked for by name (its screen, showing
+            // its Camera app: check the film before publishing it).
             let query = UserDefaults.standard.string(forKey: "SnazzyPro.tourCamera") ?? "iPhone Camera"
             let catalog = app.capture.catalog
             catalog.refreshAVDevices()
-            let camera = AutoInterview.candidateCameras(catalog.cameras).first { $0.name.localizedCaseInsensitiveContains(query) }
+            var camera = AutoInterview.candidateCameras(catalog.cameras).first { $0.name.localizedCaseInsensitiveContains(query) }
+            if camera == nil, let device = await catalog.waitForIOSDevice(matching: query, timeout: 20) {
+                camera = device
+                iv.auto.tourCamera = device
+            }
             guard let camera else { throw CaptureError("No camera matching “\(query)”.") }
             app.capture.setInsetDevice(camera)
             session.cameraOffered = true
@@ -522,7 +528,7 @@ struct InterviewTour {
     func play(_ app: AppModel) async throws -> () async -> Void {
         let iv = app.interviews!
         let cleanUp: () async -> Void = {
-            iv.auto.stop()
+            await iv.auto.stopAndWait()
             for s in iv.interviews where s.kit.id == kitID { iv.delete(s) }
             if let k = iv.kits.first(where: { $0.id == kitID }) { iv.delete(k) }
             NSApp.windows.first { $0.title == "Snazzy Pro" }?.makeKeyAndOrderFront(nil)

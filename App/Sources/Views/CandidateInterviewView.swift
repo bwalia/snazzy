@@ -31,6 +31,18 @@ struct CandidateInterviewView: View {
         }
         .font(bigText ? .title3 : .body)
         .frame(minWidth: 640, minHeight: 520)
+        .overlay(alignment: .bottomLeading) {
+            if iv.interviewMode {
+                Button { Task { await iv.leaveInterviewMode() } } label: {
+                    Label("Recruiter: unlock", systemImage: "lock")
+                }
+                .buttonStyle(.borderless)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(6)
+                .help("Ends interview mode. Needs the Mac's owner (Touch ID or password).")
+            }
+        }
     }
 
     // MARK: Before starting

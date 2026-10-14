@@ -365,6 +365,23 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--interview-mode-test") {
+            // Interview mode: the candidate can't reach the assistant, Voice Mode or the prompter.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let iv = app.interviews!
+            iv.enterInterviewMode(lockMac: false)
+            report("interview mode on", iv.interviewMode, "")
+            report("the chat refuses to send", !app.chat.send("What's a good answer to this interview question?"), "")
+            app.prompter.show()
+            report("the prompter stays closed", !app.prompter.isShown, "")
+            app.voice.start()
+            report("Voice Mode stays off", !app.voice.isOn, "")
+            iv.leaveInterviewModeForTesting()
+            report("leaving restores them", !iv.interviewMode, "")
+            app.prompter.hide()
+            return ok
+        }
         if arguments.contains("--interview-camera-test") {
             // The candidate's camera: recorded only after they agree, linked to the
             // interview and deleted with it; turned off mid-way, the recording is deleted.

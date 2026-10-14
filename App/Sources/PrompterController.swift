@@ -74,6 +74,8 @@ final class PrompterController {
     // MARK: Window
 
     func show() {
+        // No prompter during an interview: candidates answer from their own knowledge.
+        if app.interviews?.interviewMode == true { return }
         if panel == nil { panel = makePanel() }
         panel?.orderFrontRegardless()
         isShown = true
@@ -164,6 +166,7 @@ final class PrompterController {
     }
 
     func start() {
+        if app.interviews?.interviewMode == true { return }
         guard !text.isEmpty || settings.source == .notes else { return }
         if offset >= contentHeight - 1 { offset = 0 }
         isScrolling = true

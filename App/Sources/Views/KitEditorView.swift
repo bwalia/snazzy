@@ -333,6 +333,9 @@ struct StartInterviewSheet: View {
                 onCreated(session.id)
                 dismiss()
                 openWindow(id: "candidate-interview")
+                // The Mac is the candidate's now: no assistant, prompter or recruiter windows.
+                try? await Task.sleep(for: .milliseconds(600))
+                iv.enterInterviewMode()
             }
         } catch {
             self.error = error.localizedDescription

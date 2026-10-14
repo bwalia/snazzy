@@ -69,6 +69,8 @@ final class VoiceMode: NSObject, AVSpeechSynthesizerDelegate {
 
     func start() {
         guard !running else { return }
+        // The assistant is off during an interview.
+        if app.interviews?.interviewMode == true { return }
         running = true
         if app.chat.speech.isListening { Task { await app.chat.speech.cancel() } }
         heard = ""
