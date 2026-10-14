@@ -1,0 +1,229 @@
+{
+  "format": "snazzy-prep-kit",
+  "version": 1,
+  "slug": "cdn-engineer",
+  "role": "CDN Engineer (Akamai)",
+  "summary": "Prepare for CDN and edge engineering roles: HTTP caching, edge configuration on Akamai, troubleshooting live traffic, edge security and automating changes.",
+  "updated": "2026-10-14",
+  "topics": [
+    {
+      "title": "HTTP caching",
+      "why": "Most CDN questions come back to what may be cached, for how long, and by whom.",
+      "points": [
+        "Cache-Control, Expires, ETag and Last-Modified",
+        "Cache keys: what makes two requests the same object",
+        "Freshness versus hit rate; stale-while-revalidate",
+        "Purging and invalidation strategies"
+      ],
+      "links": [
+        {
+          "title": "MDN: HTTP caching",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching"
+        }
+      ]
+    },
+    {
+      "title": "Akamai delivery configuration",
+      "why": "You'll be asked how you would set up and change properties safely.",
+      "points": [
+        "Properties, rules, behaviors and match criteria",
+        "Origins, cache keys and TTLs at the edge",
+        "Staging versus production activation",
+        "Edge logic (EdgeWorkers) and when to use it"
+      ],
+      "links": [
+        {
+          "title": "Akamai TechDocs",
+          "url": "https://techdocs.akamai.com/"
+        }
+      ]
+    },
+    {
+      "title": "Troubleshooting delivery",
+      "why": "Interviewers want a clear method, not guesses.",
+      "points": [
+        "Edge or origin? Reading response headers and debug headers",
+        "5xx at the edge, origin timeouts, TLS errors",
+        "Hit ratio drops and cache key mistakes",
+        "Logs and real-user monitoring"
+      ],
+      "links": [
+        {
+          "title": "MDN: HTTP response status codes",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status"
+        }
+      ]
+    },
+    {
+      "title": "Edge security and TLS",
+      "why": "Most CDN roles include protecting sites at the edge.",
+      "points": [
+        "TLS certificates and protocol versions",
+        "Web application firewall basics",
+        "Bot management and rate limiting",
+        "Protecting the origin"
+      ],
+      "links": [
+        {
+          "title": "OWASP Top Ten",
+          "url": "https://owasp.org/www-project-top-ten/"
+        }
+      ]
+    },
+    {
+      "title": "Configuration as code",
+      "why": "Safe, repeatable changes are a common interview theme.",
+      "points": [
+        "Managing CDN configuration with Terraform",
+        "Review, staging tests and gradual rollout",
+        "Rolling back a bad change"
+      ],
+      "links": [
+        {
+          "title": "Terraform documentation",
+          "url": "https://developer.hashicorp.com/terraform/docs"
+        }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "title": "Explain a cache key",
+      "goal": "Show that you can reason about what makes requests cacheable.",
+      "steps": [
+        "Pick a public website and open the browser's developer tools.",
+        "Find three responses and note their caching headers.",
+        "Decide what you would cache, for how long, and with which cache key.",
+        "Record a 3-minute walkthrough with Snazzy Pro: your screen and camera, explaining your choices."
+      ],
+      "record": true
+    },
+    {
+      "title": "Debug an origin error",
+      "goal": "Practise a calm, step-by-step troubleshooting story.",
+      "steps": [
+        "Run a small web server locally that sometimes returns 503.",
+        "Use curl with verbose output to show the headers and timings.",
+        "Write down how you'd tell an edge problem from an origin problem.",
+        "Record a short walkthrough of your method."
+      ],
+      "record": true
+    },
+    {
+      "title": "CDN change as code",
+      "goal": "Build something you can talk about in the automation question.",
+      "steps": [
+        "In your code editor, write a Terraform file for a simple CDN or HTTP config (any provider's sandbox or a mock).",
+        "Add a review step and a plan output to your notes.",
+        "Record yourself explaining how you'd roll it out and roll it back."
+      ],
+      "record": true
+    }
+  ],
+  "practice": {
+    "id": "4E0B5C1A-0000-4000-8000-0000000000C1",
+    "format": 1,
+    "version": 1,
+    "title": "CDN Engineer (Akamai)",
+    "organisation": "Practice",
+    "summary": "Practice interview for a CDN engineer working with Akamai: caching and edge configuration, troubleshooting, security and automation.",
+    "language": "en-GB",
+    "competencies": [
+      {
+        "id": "c1",
+        "name": "Caching and edge configuration",
+        "description": "Designs caching and edge rules that keep sites fast and correct.",
+        "weight": 30,
+        "source": "",
+        "anchors": {
+          "1": "Changes settings without explaining the effect.",
+          "3": "Explains a rule they set, why, and how they checked it.",
+          "5": "Explains several decisions with trade-offs, testing and measured results."
+        }
+      },
+      {
+        "id": "c2",
+        "name": "Troubleshooting",
+        "description": "Finds and fixes delivery problems methodically.",
+        "weight": 30,
+        "source": "",
+        "anchors": {
+          "1": "Mentions an incident without their steps.",
+          "3": "Walks through isolating and fixing a problem.",
+          "5": "Walks through a complex incident: isolation, root cause, fix and prevention."
+        }
+      },
+      {
+        "id": "c3",
+        "name": "Edge security",
+        "description": "Protects sites and origins at the edge.",
+        "weight": 20,
+        "source": "",
+        "anchors": {
+          "1": "Mentions security tools only by name.",
+          "3": "Describes a protection they set up and why.",
+          "5": "Describes balancing protection against false positives, with results."
+        }
+      },
+      {
+        "id": "c4",
+        "name": "Automation",
+        "description": "Makes changes safe and repeatable with code.",
+        "weight": 20,
+        "source": "",
+        "anchors": {
+          "1": "Changes things by hand only.",
+          "3": "Describes configuration as code with review.",
+          "5": "Describes a full pipeline with staging, rollout and rollback."
+        }
+      }
+    ],
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Tell me about a caching rule you designed. What did you decide, and how did you know it worked?",
+        "competency": "c1",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q2",
+        "text": "Tell me about a time a website was slow or failing through a CDN. How did you find the cause?",
+        "competency": "c2",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q3",
+        "text": "Imagine the cache hit ratio for a site drops from 90% to 40% overnight. What would you check, in what order?",
+        "competency": "c2",
+        "kind": "situational"
+      },
+      {
+        "id": "q4",
+        "text": "Tell me about a time you protected a site or API from abuse. What did you set up, and what happened?",
+        "competency": "c3",
+        "kind": "behavioural"
+      },
+      {
+        "id": "q5",
+        "text": "How would you make CDN configuration changes safe for a team that currently makes them by hand?",
+        "competency": "c4",
+        "kind": "situational"
+      }
+    ],
+    "eligibility": [],
+    "company_facts": "This is a practice interview. There is no real employer: questions about pay, hours or the team can't be answered here.",
+    "settings": {
+      "interviewer_name": "Practice Interviewer",
+      "minutes": 30,
+      "max_follow_ups": 2,
+      "ratings_enabled": true,
+      "offer_camera": false,
+      "next_steps": "Your coaching feedback appears as soon as the interview ends."
+    },
+    "approved_at": "2026-10-14T00:00:00Z",
+    "approved_by": "Snazzy Pro",
+    "warnings": [],
+    "created": "2026-10-14T00:00:00Z",
+    "updated": "2026-10-14T00:00:00Z"
+  }
+}
