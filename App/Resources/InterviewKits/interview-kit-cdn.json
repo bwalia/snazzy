@@ -1,0 +1,98 @@
+{
+  "id": "1D6C0E4A-1C2B-4D8E-9A41-0C0D0E0F1A01",
+  "format": 1,
+  "version": 0,
+  "title": "CDN Engineer (Akamai)",
+  "organisation": "Example Ltd",
+  "summary": "An engineer who configures and runs our Akamai delivery: caching and edge rules, troubleshooting live traffic, and automating changes so they are safe and repeatable.",
+  "language": "en-GB",
+  "job_description": "CDN Engineer (Akamai) at Example Ltd, London, hybrid. You will configure Akamai properties (caching rules, cache keys, TTLs, edge logic) for our high-traffic sites, investigate and resolve delivery incidents such as origin errors, cache misses and latency spikes, and automate CDN changes with Terraform and CI/CD pipelines so releases are safe and repeatable. Experience with Akamai Property Manager or a similar CDN, HTTP caching and TLS is required. You will join a weekday on-call rota (one week in six). Salary £70,000 to £85,000.",
+  "competencies": [
+    {
+      "id": "c1",
+      "name": "Edge configuration and caching",
+      "description": "Designs caching and edge rules that keep sites fast and correct.",
+      "weight": 35,
+      "source": "Configure Akamai properties (caching rules, cache keys, TTLs, edge logic).",
+      "anchors": {
+        "1": "Describes changing cache settings without explaining the effect on hit rate or freshness.",
+        "3": "Explains a caching or edge rule they set, why, and how they checked it worked.",
+        "5": "Explains several caching decisions with trade-offs (freshness, hit rate, personalised content), how they tested them and the measured result."
+      }
+    },
+    {
+      "id": "c2",
+      "name": "Troubleshooting live traffic",
+      "description": "Finds and fixes delivery problems under pressure.",
+      "weight": 35,
+      "source": "Investigate and resolve delivery incidents such as origin errors, cache misses and latency spikes.",
+      "anchors": {
+        "1": "Mentions an incident but not the steps taken or the cause.",
+        "3": "Walks through an incident: the signals, the steps to isolate the cause, and the fix.",
+        "5": "Walks through a complex incident with clear isolation steps (edge versus origin, logs, headers), the root cause, the fix, and what they changed to prevent it."
+      }
+    },
+    {
+      "id": "c3",
+      "name": "Automating CDN changes",
+      "description": "Makes CDN changes safe and repeatable with code.",
+      "weight": 30,
+      "source": "Automate CDN changes with Terraform and CI/CD pipelines.",
+      "anchors": {
+        "1": "Makes changes by hand and doesn't describe any review or testing.",
+        "3": "Describes managing CDN configuration as code with some review or testing before release.",
+        "5": "Describes a full pipeline (configuration as code, review, staging tests, gradual rollout, rollback) and its effect on safety or speed."
+      }
+    }
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Tell me about a caching or edge rule you designed for a website or API. What did you decide, and how did you know it worked?",
+      "competency": "c1",
+      "kind": "behavioural"
+    },
+    {
+      "id": "q2",
+      "text": "Tell me about a time traffic through a CDN went wrong in production. How did you find the cause, and what did you do?",
+      "competency": "c2",
+      "kind": "behavioural"
+    },
+    {
+      "id": "q3",
+      "text": "Imagine your team changes CDN settings by hand and a change recently broke the site. How would you make changes safer?",
+      "competency": "c3",
+      "kind": "situational"
+    }
+  ],
+  "eligibility": [
+    {
+      "id": "e1",
+      "text": "Do you have the right to work in the UK for this role?",
+      "kind": "yes_no",
+      "options": [],
+      "accepted": [
+        "Yes"
+      ]
+    },
+    {
+      "id": "e2",
+      "text": "The role includes a weekday on-call rota, one week in six. Does that work for you?",
+      "kind": "yes_no",
+      "options": [],
+      "accepted": [
+        "Yes"
+      ]
+    }
+  ],
+  "company_facts": "Location: London, hybrid (2 days a week in the office).\nSalary: £70,000 to £85,000.\nOn-call: weekday rota, one week in six, paid separately.\nTeam: 6 engineers in the Edge Platform team.\nProcess: this interview, a 60-minute technical conversation with two engineers, then a meeting with the head of platform. Most people hear back within 5 working days.",
+  "settings": {
+    "interviewer_name": "Snazzy Interviewer",
+    "minutes": 25,
+    "max_follow_ups": 1,
+    "offer_camera": true
+  },
+  "warnings": [],
+  "created": "2026-10-14T12:00:00Z",
+  "updated": "2026-10-14T12:00:00Z"
+}

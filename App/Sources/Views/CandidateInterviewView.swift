@@ -13,7 +13,6 @@ struct CandidateInterviewView: View {
     @State private var selfID: [String: String] = [:]
     @State private var selfIDDone = false
     @State private var bigText = false
-    @State private var cameraOn = false
 
     var body: some View {
         let iv = model.interviews!
@@ -58,7 +57,9 @@ struct CandidateInterviewView: View {
                     GroupBox("Your camera (optional)") {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(InterviewPrompts.cameraNotice(for: s.kit)).font(.callout)
-                            Toggle("Turn my camera on and record this interview", isOn: $cameraOn)
+                            Toggle("Turn my camera on and record this interview", isOn: Binding(
+                                get: { s.camera?.agreed == true },
+                                set: { iv.setCamera(id, agreed: $0) }))
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -66,7 +67,7 @@ struct CandidateInterviewView: View {
                 if let p = iv.auto.problem { Label(p, systemImage: "exclamationmark.triangle").foregroundStyle(.orange) }
                 HStack {
                     Button("I understand. Start the interview") {
-                        if s.cameraOffered { iv.setCamera(id, agreed: cameraOn) }
+                        if s.cameraOffered, s.camera == nil { iv.setCamera(id, agreed: false) }
                         var list = Array(adjustments).sorted()
                         if !other.trimmingCharacters(in: .whitespaces).isEmpty { list.append(other) }
                         if list.contains("text instead of voice") { iv.auto.useTyping() }
@@ -88,7 +89,7 @@ struct CandidateInterviewView: View {
         if s.cameraAgreed, let feed = model.capture.insetFeed {
             VStack(alignment: .trailing, spacing: 4) {
                 FramePreview(receiver: feed.receiver, profile: model.capture.profile(for: feed.device.id, kind: feed.device.kind), interactive: false)
-                    .frame(width: 200, height: 112)
+                    .frame(width: 288, height: 162)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .overlay(alignment: .topLeading) {
                         if iv.auto.isRecording {
@@ -117,7 +118,11 @@ struct CandidateInterviewView: View {
                 Spacer()
                 if let e = engine {
                     ProgressView(value: e.progress).frame(width: 140)
-                    Text("\(Int(e.secondsLeft / 60)) min left").monospacedDigit().foregroundStyle(.secondary)
+                    // Counts down while the interview runs.
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        let left = Int(iv.engine(id)?.secondsLeft ?? e.secondsLeft)
+                        Text("\(left / 60):\(String(format: "%02d", left % 60)) left").monospacedDigit().foregroundStyle(.secondary)
+                    }
                 }
                 selfView(s, id: id)
             }

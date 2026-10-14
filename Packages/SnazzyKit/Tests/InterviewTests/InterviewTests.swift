@@ -667,3 +667,36 @@ func engine(_ kit: RoleKit, clock: TestClock, name: String = "Sam Taylor") -> In
         #expect(!FileManager.default.fileExists(atPath: movie.path))
     }
 }
+
+@Suite struct ShippedKitTests {
+    @Test func everyShippedRoleKitIsValid() throws {
+        let dir = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("App/Resources/InterviewKits")
+        let files = try FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil).filter { $0.pathExtension == "json" }
+        #expect(files.count >= 4)
+        for file in files {
+            let kit = try InterviewJSON.decoder.decode(RoleKit.self, from: Data(contentsOf: file))
+            let errors = KitValidator.check(kit).filter { $0.severity == .error }
+            #expect(errors.isEmpty, "\(file.lastPathComponent): \(errors.map(\.message))")
+            #expect(kit.settings.offerCamera, "\(file.lastPathComponent)")
+            #expect(kit.organisation == "Example Ltd", "\(file.lastPathComponent)")
+        }
+    }
+}
+
+@Suite struct GeneratorToleranceTests {
+    @Test func weightsAsTextAndEmptyWarnings() throws {
+        let json = """
+        {"title":"CDN Engineer","competencies":[
+          {"id":"c1","name":"A","weight":"25","anchors":{"1":"a","3":"b","5":"c"}},
+          {"id":"c2","name":"B","weight":"25%","anchors":{"1":"a","3":"b","5":"c"}}],
+         "questions":[{"id":"q1","text":"Tell me about A?","competency":"c1"},{"id":"q2","text":"Tell me about B?","competency":"c2"}],
+         "warnings":["The job description does not contain any obvious discriminatory elements.","'Rockstar' may put people off; say 'experienced'."]}
+        """
+        let kit = try #require(InterviewPrompts.parseGeneratedKit(json, jobDescription: "JD"))
+        #expect(kit.competencies.map(\.weight) == [50, 50])
+        #expect(kit.warnings == ["'Rockstar' may put people off; say 'experienced'."])
+    }
+}

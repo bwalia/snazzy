@@ -56,7 +56,11 @@ struct InterviewsView: View {
                     Menu {
                         Button("From a Job Description…") { showGenerate = true }.disabled(!iv.isActive)
                         Button("Blank Role") { selection = .kit(iv.newKit().id) }
-                        Button("Sample Role (Customer Support Team Lead)") { addSample() }
+                        Menu("Sample Roles") {
+                            ForEach(InterviewController.sampleRoleNames.sorted { $0.value < $1.value }, id: \.key) { resource, title in
+                                Button(title) { if let k = iv.addSample(resource) { selection = .kit(k.id) } }
+                            }
+                        }
                     } label: { Label("New Role", systemImage: "plus") }
                     .help("New role kit")
                 }
@@ -88,6 +92,11 @@ struct InterviewsView: View {
                 }
             }
             .frame(minWidth: 560, minHeight: 480)
+            .overlay {
+                if let jd = iv.draftingFrom {
+                    DraftingView(jobDescription: jd)
+                }
+            }
         }
         .sheet(isPresented: $showGenerate) {
             GenerateKitSheet { kit in selection = .kit(kit.id) }
@@ -106,25 +115,6 @@ struct InterviewsView: View {
         } description: {
             Text("Create a role from a job description, approve its questions and rubric, then interview candidates at this Mac or by a link. The AI gathers evidence; you decide.")
         }
-    }
-
-    private func addSample() {
-        let iv = model.interviews!
-        guard let url = Bundle.main.url(forResource: "interview-kit", withExtension: "json"),
-              let data = try? Data(contentsOf: url), var kit = try? InterviewJSON.decoder.decode(RoleKit.self, from: data) else {
-            var kit = iv.newKit(title: "Customer Support Team Lead")
-            kit.organisation = "Example Ltd"
-            iv.save(kit)
-            selection = .kit(kit.id)
-            return
-        }
-        kit.id = UUID()
-        kit.approvedAt = nil
-        kit.approvedBy = nil
-        kit.version = 0
-        kit.created = Date()
-        iv.save(kit)
-        selection = .kit(kit.id)
     }
 }
 
@@ -364,5 +354,29 @@ struct OpsAPILinkSheet: View {
         }
         .padding(20)
         .frame(width: 560)
+    }
+}
+
+/// While the model turns a job description into a kit.
+struct DraftingView: View {
+    let jobDescription: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text("Drafting competencies, questions and rubric from the job description…").font(.title3.bold())
+            }
+            Text(jobDescription)
+                .font(.body)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+            Text("You'll check and edit everything, and nothing is used until you approve it.").foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
     }
 }

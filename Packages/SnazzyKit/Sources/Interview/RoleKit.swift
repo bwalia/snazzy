@@ -154,7 +154,7 @@ public struct Competency: Codable, Hashable, Sendable, Identifiable {
         id = try c.decode(String.self, forKey: .id)
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? id
         description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
-        weight = try c.decodeIfPresent(Int.self, forKey: .weight) ?? 0
+        weight = c.flexibleInt(.weight) ?? 0
         source = try c.decodeIfPresent(String.self, forKey: .source) ?? ""
         anchors = try c.decodeIfPresent(Anchors.self, forKey: .anchors) ?? Anchors()
     }
@@ -326,5 +326,17 @@ public enum InterviewJSON {
         d.keyDecodingStrategy = .convertFromSnakeCase
         d.dateDecodingStrategy = .iso8601
         return d
+    }
+}
+
+extension KeyedDecodingContainer {
+    /// An integer a model may have written as a number, a decimal or text ("25", "25%").
+    func flexibleInt(_ key: Key) -> Int? {
+        if let n = try? decodeIfPresent(Int.self, forKey: key) { return n }
+        if let d = try? decodeIfPresent(Double.self, forKey: key) { return Int(d.rounded()) }
+        if let s = try? decodeIfPresent(String.self, forKey: key) {
+            return Int(s.trimmingCharacters(in: CharacterSet.decimalDigits.inverted))
+        }
+        return nil
     }
 }

@@ -1,3 +1,4 @@
+import AVKit
 import Interview
 import SwiftUI
 import UniformTypeIdentifiers
@@ -17,6 +18,7 @@ struct InterviewDetailView: View {
     @State private var highlight: String?
     @State private var loaded = false
     @State private var info: String?
+    @State private var player: AVPlayer?
 
     static let reasons = [
         "Evidence meets the role's needs", "Evidence partly meets the role's needs", "Not enough evidence yet",
@@ -77,10 +79,28 @@ struct InterviewDetailView: View {
                 }
             }
             if let movie = s.recordingMovie, FileManager.default.fileExists(atPath: movie.path) {
-                HStack {
-                    Button { NSWorkspace.shared.open(movie) } label: { Label("Watch Recording", systemImage: "play.rectangle") }
-                    Text("Recorded with the candidate's consent. It isn't analysed by AI; watch it yourself.")
-                        .font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    if let player {
+                        VideoPlayer(player: player)
+                            .frame(maxWidth: 640)
+                            .aspectRatio(16 / 9, contentMode: .fit)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    HStack {
+                        Button {
+                            if player == nil { player = AVPlayer(url: movie) }
+                            player?.play()
+                        } label: { Label("Watch Recording", systemImage: "play.rectangle") }
+                        Button("Open in QuickTime") { NSWorkspace.shared.open(movie) }.buttonStyle(.link)
+                        Text("Recorded with the candidate's consent. It isn't analysed by AI; watch it yourself.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .onChange(of: model.interviews.playRecording) { _, play in
+                    guard play == id else { return }
+                    if player == nil { player = AVPlayer(url: movie) }
+                    player?.play()
+                    model.interviews.playRecording = nil
                 }
             } else if let c = s.camera {
                 Text(c.withdrawnAt != nil ? "The candidate turned their camera off; the recording was deleted."

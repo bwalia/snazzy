@@ -1,0 +1,98 @@
+{
+  "id": "1D6C0E4A-1C2B-4D8E-9A41-0C0D0E0F1A02",
+  "format": 1,
+  "version": 0,
+  "title": "DevOps Engineer",
+  "organisation": "Example Ltd",
+  "summary": "An engineer who builds and runs our delivery pipelines and cloud infrastructure, and keeps services reliable.",
+  "language": "en-GB",
+  "job_description": "DevOps Engineer at Example Ltd, Manchester, hybrid. You will build and improve CI/CD pipelines, manage cloud infrastructure as code (Terraform) and Kubernetes clusters, and keep services reliable through monitoring, incident response and post-incident reviews. Experience with one major cloud provider, containers and infrastructure as code is required. Weekday on-call rota (one week in five). Salary £60,000 to £75,000.",
+  "competencies": [
+    {
+      "id": "c1",
+      "name": "Delivery pipelines",
+      "description": "Builds pipelines that ship changes quickly and safely.",
+      "weight": 35,
+      "source": "Build and improve CI/CD pipelines.",
+      "anchors": {
+        "1": "Uses pipelines others built and can't describe changing one.",
+        "3": "Describes a pipeline they built or improved, what it does and one measurable effect.",
+        "5": "Describes designing or reshaping a pipeline (tests, security checks, deployment strategy, rollback) with clear trade-offs and measured results."
+      }
+    },
+    {
+      "id": "c2",
+      "name": "Infrastructure as code",
+      "description": "Manages infrastructure and clusters with code and review.",
+      "weight": 30,
+      "source": "Manage cloud infrastructure as code (Terraform) and Kubernetes clusters.",
+      "anchors": {
+        "1": "Describes making infrastructure changes by hand in a console.",
+        "3": "Describes managing infrastructure with code, reviews and a way to apply changes safely.",
+        "5": "Describes structuring infrastructure code for several teams or environments, handling state, drift and upgrades, and the result."
+      }
+    },
+    {
+      "id": "c3",
+      "name": "Reliability and incidents",
+      "description": "Keeps services healthy and learns from incidents.",
+      "weight": 35,
+      "source": "Keep services reliable through monitoring, incident response and post-incident reviews.",
+      "anchors": {
+        "1": "Mentions incidents without describing their own actions.",
+        "3": "Walks through an incident they handled: detection, steps taken and the fix.",
+        "5": "Walks through an incident end to end, including communication, the root cause, and the changes they drove afterwards to prevent it."
+      }
+    }
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Tell me about a delivery pipeline you built or improved. What did you change, and what difference did it make?",
+      "competency": "c1",
+      "kind": "behavioural"
+    },
+    {
+      "id": "q2",
+      "text": "Tell me about a time you managed infrastructure with code. How did you make changes safe for the team?",
+      "competency": "c2",
+      "kind": "behavioural"
+    },
+    {
+      "id": "q3",
+      "text": "Tell me about an incident you were part of. What happened, what did you do, and what changed afterwards?",
+      "competency": "c3",
+      "kind": "behavioural"
+    }
+  ],
+  "eligibility": [
+    {
+      "id": "e1",
+      "text": "Do you have the right to work in the UK for this role?",
+      "kind": "yes_no",
+      "options": [],
+      "accepted": [
+        "Yes"
+      ]
+    },
+    {
+      "id": "e2",
+      "text": "The role includes a weekday on-call rota, one week in five. Does that work for you?",
+      "kind": "yes_no",
+      "options": [],
+      "accepted": [
+        "Yes"
+      ]
+    }
+  ],
+  "company_facts": "Location: Manchester, hybrid (2 days a week in the office).\nSalary: £60,000 to £75,000.\nOn-call: weekday rota, one week in five, paid separately.\nTeam: 5 engineers in the Platform team.\nProcess: this interview, a 60-minute technical conversation, then a meeting with the engineering manager. Most people hear back within 5 working days.",
+  "settings": {
+    "interviewer_name": "Snazzy Interviewer",
+    "minutes": 25,
+    "max_follow_ups": 1,
+    "offer_camera": true
+  },
+  "warnings": [],
+  "created": "2026-10-14T12:00:00Z",
+  "updated": "2026-10-14T12:00:00Z"
+}

@@ -1,0 +1,89 @@
+{
+  "id": "1D6C0E4A-1C2B-4D8E-9A41-0C0D0E0F1A04",
+  "format": 1,
+  "version": 0,
+  "title": "AI MLOps Engineer",
+  "organisation": "Example Ltd",
+  "summary": "An engineer who takes machine learning models and AI services from experiment to reliable production: training and deployment pipelines, serving, and monitoring model quality and cost.",
+  "language": "en-GB",
+  "job_description": "AI MLOps Engineer at Example Ltd, London, hybrid. You will build pipelines that train, evaluate and deploy machine learning models and LLM-based services, run model serving on Kubernetes and GPUs, and monitor models in production for quality, drift, latency and cost. You will work with data scientists to make experiments reproducible and releases safe. Experience with Python, containers, one major cloud provider and putting models into production is required. Salary £75,000 to £90,000.",
+  "competencies": [
+    {
+      "id": "c1",
+      "name": "Model delivery pipelines",
+      "description": "Takes models from experiment to production reproducibly and safely.",
+      "weight": 35,
+      "source": "Build pipelines that train, evaluate and deploy machine learning models and LLM-based services.",
+      "anchors": {
+        "1": "Describes deploying models by hand with no repeatable process.",
+        "3": "Describes a pipeline that trains or evaluates and deploys a model, with versioning of data or models.",
+        "5": "Describes an end-to-end pipeline with reproducible training, evaluation gates before release, staged rollout and rollback, and its measured effect."
+      }
+    },
+    {
+      "id": "c2",
+      "name": "Serving and infrastructure",
+      "description": "Runs model serving efficiently on shared infrastructure.",
+      "weight": 30,
+      "source": "Run model serving on Kubernetes and GPUs.",
+      "anchors": {
+        "1": "Mentions serving tools without describing their own work.",
+        "3": "Describes setting up or improving model serving, with one concrete decision about scaling, latency or cost.",
+        "5": "Describes serving several models under real constraints (GPU capacity, latency targets, cost), the trade-offs chosen and the measured result."
+      }
+    },
+    {
+      "id": "c3",
+      "name": "Monitoring models in production",
+      "description": "Notices and fixes problems with model quality, drift, latency and cost.",
+      "weight": 35,
+      "source": "Monitor models in production for quality, drift, latency and cost.",
+      "anchors": {
+        "1": "Monitors only whether the service is up.",
+        "3": "Describes monitoring a model's quality or drift and acting on what they saw.",
+        "5": "Describes a monitoring approach covering quality, drift, latency and cost, a problem it caught, and the change they made as a result."
+      }
+    }
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Tell me about a time you took a model from a data scientist's experiment into production. What did you build, and what made it safe to release?",
+      "competency": "c1",
+      "kind": "behavioural"
+    },
+    {
+      "id": "q2",
+      "text": "Tell me about a model or AI service you ran in production. What decisions did you make about serving it, and why?",
+      "competency": "c2",
+      "kind": "behavioural"
+    },
+    {
+      "id": "q3",
+      "text": "Imagine a model's answers in production slowly get worse over a month and nobody notices. What would you put in place?",
+      "competency": "c3",
+      "kind": "situational"
+    }
+  ],
+  "eligibility": [
+    {
+      "id": "e1",
+      "text": "Do you have the right to work in the UK for this role?",
+      "kind": "yes_no",
+      "options": [],
+      "accepted": [
+        "Yes"
+      ]
+    }
+  ],
+  "company_facts": "Location: London, hybrid (2 days a week in the office).\nSalary: £75,000 to £90,000.\nTeam: 4 engineers in the ML Platform team, working with 12 data scientists.\nProcess: this interview, a 60-minute technical conversation with two engineers, then a meeting with the head of AI. Most people hear back within 5 working days.",
+  "settings": {
+    "interviewer_name": "Snazzy Interviewer",
+    "minutes": 25,
+    "max_follow_ups": 1,
+    "offer_camera": true
+  },
+  "warnings": [],
+  "created": "2026-10-14T12:00:00Z",
+  "updated": "2026-10-14T12:00:00Z"
+}

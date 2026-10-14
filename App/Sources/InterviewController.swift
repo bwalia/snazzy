@@ -29,6 +29,35 @@ final class InterviewController {
     var candidateWindowRequest = 0
     /// What the Interviews window should show (set by tours and file opening).
     var focus: InterviewsView.Item?
+    /// The job description being turned into a kit, while the model drafts it.
+    private(set) var draftingFrom: String?
+    /// Asks the review screen to play this interview's recording (tours).
+    var playRecording: UUID?
+
+    /// Sample roles shipped with the app (App/Resources/InterviewKits), as unapproved copies.
+    static let sampleRoleNames = ["interview-kit": "Customer Support Team Lead", "interview-kit-cdn": "CDN Engineer (Akamai)",
+                                  "interview-kit-devops": "DevOps Engineer", "interview-kit-fde": "Forward Deployed Engineer",
+                                  "interview-kit-mlops": "AI MLOps Engineer"]
+
+    func sampleKit(_ resource: String) -> RoleKit? {
+        guard let url = Bundle.main.url(forResource: resource, withExtension: "json"),
+              var kit = try? InterviewJSON.decoder.decode(RoleKit.self, from: Data(contentsOf: url)) else { return nil }
+        kit.id = UUID()
+        kit.approvedAt = nil
+        kit.approvedBy = nil
+        kit.version = 0
+        kit.created = Date()
+        kit.updated = Date()
+        return kit
+    }
+
+    /// Adds a sample role (unapproved, for the recruiter to check and approve).
+    @discardableResult
+    func addSample(_ resource: String) -> RoleKit? {
+        guard let kit = sampleKit(resource) else { return nil }
+        save(kit)
+        return kits.first { $0.id == kit.id }
+    }
 
     // Activation: an Interview subscription unlocks the module.
     private(set) var isActive = false
@@ -195,11 +224,18 @@ final class InterviewController {
         let jd = jobDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         guard jd.count >= 40 else { throw InterviewError("Paste the full job description first.") }
         generatingKit = true
-        defer { generatingKit = false }
+        draftingFrom = jd
+        defer {
+            generatingKit = false
+            draftingFrom = nil
+        }
         let selection = app.settings.selection(for: .planning)
         let prompt = InterviewPrompts.kitGeneratorPrompt(jobDescription: String(jd.prefix(20_000)))
-        let text = try await complete(selection, system: nil, user: prompt, purpose: "the job description", maxTokens: 8000)
+        let text = try await complete(selection, system: nil, user: prompt, purpose: "the job description", maxTokens: 8000, timeout: .seconds(300))
         guard var kit = InterviewPrompts.parseGeneratedKit(text, jobDescription: jd) else {
+            #if DEBUG
+            print("KIT DRAFT UNREADABLE (\(text.count) chars):\n\(text)\nKIT DRAFT END")
+            #endif
             throw InterviewError("The model's draft couldn't be read. Try again, or use a larger model for Planning.")
         }
         kit.settings = RoleKit.Settings()
@@ -276,7 +312,7 @@ final class InterviewController {
         Task {
             var text = ""
             do {
-                text = try await complete(selection, system: system, user: user, purpose: nil, maxTokens: 1200, effort: "low")
+                text = try await complete(selection, system: system, user: user, purpose: nil, maxTokens: 1200, effort: "low", timeout: .seconds(90))
             } catch {
                 Log.app.error("Interviewer: \(error.localizedDescription, privacy: .public)")
             }
@@ -344,8 +380,8 @@ final class InterviewController {
         let selection = app.settings.selection(for: .planning)
         let prompt = InterviewPrompts.evaluatorPrompt(for: s)
         do {
-            async let a = complete(selection, system: nil, user: prompt, purpose: nil, maxTokens: 6000)
-            async let b = complete(selection, system: nil, user: prompt, purpose: nil, maxTokens: 6000)
+            async let a = complete(selection, system: nil, user: prompt, purpose: nil, maxTokens: 6000, timeout: .seconds(600))
+            async let b = complete(selection, system: nil, user: prompt, purpose: nil, maxTokens: 6000, timeout: .seconds(600))
             let (first, second) = try await (a, b)
             guard let evaluation = Evaluator.combine(first, second, session: s, model: describe(selection)) else {
                 message = "The evaluation couldn't be read. Try Evaluate again."
@@ -580,8 +616,10 @@ final class InterviewController {
             guard let e = engines[id], !e.session.isFinished else { break }
             let transcript = e.session.turns.filter { $0.role != .system }
                 .map { "\($0.role == .candidate ? "You" : "Interviewer"): \($0.text)" }.joined(separator: "\n\n")
-            let reply = try await complete(writer, system: persona.system(kit: e.session.kit),
-                                           user: transcript + "\n\nReply as the candidate, in one message.", purpose: nil, maxTokens: 800)
+            let ask = { try await self.complete(writer, system: persona.system(kit: e.session.kit),
+                                                user: transcript + "\n\nReply as the candidate, in one message.", purpose: nil, maxTokens: 800) }
+            let reply: String
+            do { reply = try await ask() } catch { reply = try await ask() }  // one retry if the model stalls
             await beforeAnswer?()
             guard let current = engines[id], !current.session.isFinished else { break }
             if let choices = current.currentChoices {
@@ -748,8 +786,10 @@ final class InterviewController {
     }
 
     /// One model call; returns the reply's text.
+    /// Gives up after `timeout`, so a model that hangs can't freeze an interview
+    /// (the engine then moves on and flags a technical problem).
     private func complete(_ selection: ModelSelection, system: String?, user: String, purpose: String?, maxTokens: Int,
-                          effort: String? = nil) async throws -> String {
+                          effort: String? = nil, timeout: Duration = .seconds(120)) async throws -> String {
         if let reason = app.unavailableReason(selection.provider) { throw InterviewError(reason) }
         if purpose != nil, !app.settings.runsOnThisMac(selection.provider) {
             guard ChatSession.hasCloudConsent(selection.provider, app: app) else { throw InterviewError("Cancelled.") }
@@ -757,11 +797,23 @@ final class InterviewController {
         let provider = try app.makeProvider(selection.provider)
         let request = ModelRequest(model: selection.model, system: system, messages: [.user(user)],
                                    maxTokens: maxTokens, effort: effort)
-        var text = ""
-        for try await event in provider.stream(request) {
-            if case .completed(let message, _, _, _) = event { text = message.text }
+        let stream = provider.stream(request)
+        let seconds = Int(timeout.components.seconds)
+        return try await withThrowingTaskGroup(of: String.self) { group in
+            group.addTask {
+                var text = ""
+                for try await event in stream {
+                    if case .completed(let message, _, _, _) = event { text = message.text }
+                }
+                return text
+            }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw InterviewError("The model didn't answer within \(seconds) seconds.")
+            }
+            defer { group.cancelAll() }
+            return try await group.next() ?? ""
         }
-        return text
     }
 }
 

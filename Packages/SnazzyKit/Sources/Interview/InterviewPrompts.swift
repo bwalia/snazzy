@@ -96,6 +96,17 @@ public enum InterviewPrompts {
         kit.created = now
         kit.updated = now
         kit.format = RoleKit.formatVersion
+        // Models sometimes "warn" that there's nothing to warn about.
+        let nothing = ["does not contain", "doesn't contain", "no obvious", "there is no", "there are no", "no discriminatory",
+                       "no specific", "none found", "no issues", "no problems", "not found any"]
+        kit.warnings = kit.warnings.filter { w in !nothing.contains { w.lowercased().contains($0) } }
+        // Weights that don't add up are scaled to 100 (the recruiter can change them).
+        let total = kit.competencies.reduce(0) { $0 + $1.weight }
+        if total > 0, total != 100 {
+            for i in kit.competencies.indices { kit.competencies[i].weight = Int((Double(kit.competencies[i].weight) * 100 / Double(total)).rounded()) }
+            let drift = 100 - kit.competencies.reduce(0) { $0 + $1.weight }
+            if drift != 0, !kit.competencies.isEmpty { kit.competencies[0].weight += drift }
+        }
         return kit
     }
 
