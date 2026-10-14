@@ -27,13 +27,12 @@ use in several markets (§3), and the product's structure follows from that.
   (`ConversationRunner`, `ToolRegistry`, `SchemaValidator`), `Entitlements`,
   `Live/` (an example of a candidate-style browser page served by the app), and
   OpsAPI's `CLAUDE.md` (hosting, tenants, auth).
-- **This is Pro, closed source.** The module, its prompts (Appendix A–C) and
-  the hosted service live in the **private** package and repo
-  (`docs/business/PRO.md`). The open-source app gets only a locked "Interview"
-  entry point that shows the Pro screen.
+- **It lives in this repo** (decided October 2026: the code could be reverse
+  engineered anyway, and the repo may go private later). It's a paid module:
+  the console and the service work only for an organisation whose payment
+  has activated it (§5).
 - **Dependencies need approval.** Propose them with name, version, licence and
-  reason, and wait for a yes. Record each one in `THIRD_PARTY_NOTICES.md`
-  (or the private repo's notices).
+  reason, and wait for a yes. Record each one in `THIRD_PARTY_NOTICES.md`.
 - **A person decides.** No code path may reject, rank out, or close a candidate
   without a named reviewer's action. AI output is labelled as AI output wherever
   it appears.
@@ -306,11 +305,13 @@ interview has running costs (model, speech, storage). Propose:
   one role and 5 interviews. Set the prices after measuring the cost per
   interview in phase 2 (target a gross margin of at least 70%), then write
   them into `PRO.md`.
-- **Sold through OpsAPI** (organisations, seats, invoices). The app unlocks
-  the Interview tab from the signed-in organisation's entitlement, which the
-  server checks on every call. The local `Entitlements` catalogue gets a
-  feature `interview` marked as server-entitled, and the free beta does
-  **not** unlock it.
+- **Sold through OpsAPI** (organisations, seats, invoices). **Payment
+  activates the module:** a completed Stripe checkout (or paid invoice) turns
+  on the `interview` entitlement for the organisation, and a lapsed or
+  cancelled subscription turns it off (existing data stays readable and
+  exportable for the retention period, but no new invitations). The app shows
+  the Interview window from the signed-in organisation's entitlement, which
+  the server checks on every call. The free beta does **not** unlock it.
 - **App Store:** a recruiter signing in to a business service bought elsewhere
   may fall under guideline 3.1.3 (multiplatform or enterprise services). Check
   with App Review before release; if needed, offer the seat subscription as
