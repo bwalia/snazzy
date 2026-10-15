@@ -1,5 +1,6 @@
 import AppKit
 import Builder
+import Interview
 import SnazzyCore
 import SwiftUI
 
@@ -49,7 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in
                 await capture.stopRecording()
                 // A stop already in progress: wait for the movie to be saved.
-                while capture.recorder.isActive { try? await Task.sleep(for: .milliseconds(100)) }
+                // (at most 10 s, so quitting can't hang on a recording that won't finish)
+                for _ in 0..<100 where capture.recorder.isActive { try? await Task.sleep(for: .milliseconds(100)) }
                 sender.reply(toApplicationShouldTerminate: true)
             }
             return .terminateLater
@@ -72,6 +74,14 @@ struct SnazzyProApp: App {
                     AppDelegate.capture = model.capture
                     AppDelegate.openHandler = { urls in
                         for url in urls where url.pathExtension.lowercased() == SnazzyShare.fileExtension { sharing.open(url) }
+                        for url in urls where url.pathExtension.lowercased() == InterviewFile.fileExtension {
+                            do {
+                                try model.interviews.importFile(url)
+                            } catch {
+                                model.interviews.message = error.localizedDescription
+                            }
+                            model.interviews.windowRequest += 1
+                        }
                     }
                     #if DEBUG
                     if UserDefaults.standard.bool(forKey: "SnazzyPro.debugShareSheet") { sharing.beginExport() }
@@ -108,6 +118,24 @@ struct SnazzyProApp: App {
                 .environment(model)
         }
         .defaultSize(width: 620, height: 560)
+
+        Window("Interviews", id: "interviews") {
+            InterviewsView()
+                .environment(model)
+        }
+        .defaultSize(width: 1180, height: 780)
+
+        Window("Interview Prep", id: "interview-prep") {
+            PrepView()
+                .environment(model)
+        }
+        .defaultSize(width: 1000, height: 720)
+
+        Window("Interview", id: "candidate-interview") {
+            CandidateInterviewView()
+                .environment(model)
+        }
+        .defaultSize(width: 820, height: 680)
 
         Window("Diagnostics", id: "diagnostics") {
             DiagnosticsView()
@@ -231,6 +259,13 @@ struct AppCommands: Commands {
             Button("Reset Zoom") { model.capture.animateZoom(to: nil) }
                 .keyboardShortcut("0", modifiers: [.command, .option])
                 .disabled(model.capture.screenZoom == nil)
+        }
+        CommandMenu("Interviews") {
+            Button("Interviews…") { openWindow(id: "interviews") }
+                .keyboardShortcut("i", modifiers: [.command, .shift])
+            Button("Interview Prep (Free)…") { openWindow(id: "interview-prep") }
+            Button("Candidate Window") { openWindow(id: "candidate-interview") }
+                .disabled(model.interviews.auto.sessionID == nil)
         }
         CommandMenu("Assistant") {
             Button("Explain Front Window") { model.chat.send("Explain what's in my front window.") }

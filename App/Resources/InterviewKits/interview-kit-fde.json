@@ -1,0 +1,98 @@
+{
+  "id": "1D6C0E4A-1C2B-4D8E-9A41-0C0D0E0F1A03",
+  "format": 1,
+  "version": 0,
+  "title": "Forward Deployed Engineer",
+  "organisation": "Example Ltd",
+  "summary": "An engineer who works directly with customers to understand their problems and builds and ships working solutions in their environments.",
+  "language": "en-GB",
+  "job_description": "Forward Deployed Engineer at Example Ltd, London. You will work directly with customer teams to understand their problems, build and ship integrations and solutions on our platform in their environments (APIs, data pipelines, scripts), and explain technical trade-offs to engineers and non-technical stakeholders. Strong programming skills (Python or TypeScript) and experience with APIs and data are required. Travel to customer sites in the UK up to 30% of the time. Salary £75,000 to £95,000.",
+  "competencies": [
+    {
+      "id": "c1",
+      "name": "Understanding customer problems",
+      "description": "Finds the real problem behind a customer's request.",
+      "weight": 35,
+      "source": "Work directly with customer teams to understand their problems.",
+      "anchors": {
+        "1": "Builds what was asked without describing understanding the need.",
+        "3": "Describes asking questions or observing to find what the customer really needed, and how that changed the plan.",
+        "5": "Describes uncovering a different underlying problem, aligning several stakeholders on it, and the better outcome that followed."
+      }
+    },
+    {
+      "id": "c2",
+      "name": "Building and shipping in the field",
+      "description": "Ships working solutions in real customer environments.",
+      "weight": 40,
+      "source": "Build and ship integrations and solutions in their environments (APIs, data pipelines, scripts).",
+      "anchors": {
+        "1": "Describes prototypes that never reached production use.",
+        "3": "Describes building and shipping a solution in a customer's environment, including one real obstacle they solved.",
+        "5": "Describes shipping under real constraints (security rules, messy data, legacy systems), the choices made, and the measured result for the customer."
+      }
+    },
+    {
+      "id": "c3",
+      "name": "Explaining trade-offs",
+      "description": "Explains technical choices clearly to any audience.",
+      "weight": 25,
+      "source": "Explain technical trade-offs to engineers and non-technical stakeholders.",
+      "anchors": {
+        "1": "Gives explanations only in technical terms.",
+        "3": "Describes explaining a technical choice to a non-technical person so they could decide.",
+        "5": "Describes adapting an explanation for different audiences, handling disagreement, and reaching a decision everyone understood."
+      }
+    }
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "text": "Tell me about a time a customer asked for one thing but needed something else. How did you find out, and what happened?",
+      "competency": "c1",
+      "kind": "behavioural"
+    },
+    {
+      "id": "q2",
+      "text": "Tell me about something you built and shipped in a customer's environment. What got in the way, and how did you deal with it?",
+      "competency": "c2",
+      "kind": "behavioural"
+    },
+    {
+      "id": "q3",
+      "text": "Imagine a customer's director must choose between a quick fix and a longer, more robust solution. How would you explain the choice?",
+      "competency": "c3",
+      "kind": "situational"
+    }
+  ],
+  "eligibility": [
+    {
+      "id": "e1",
+      "text": "Do you have the right to work in the UK for this role?",
+      "kind": "yes_no",
+      "options": [],
+      "accepted": [
+        "Yes"
+      ]
+    },
+    {
+      "id": "e2",
+      "text": "The role includes travel to customer sites in the UK up to 30% of the time. Does that work for you?",
+      "kind": "yes_no",
+      "options": [],
+      "accepted": [
+        "Yes"
+      ]
+    }
+  ],
+  "company_facts": "Location: London, with travel to customer sites in the UK up to 30% of the time.\nSalary: £75,000 to £95,000.\nTeam: 8 forward deployed engineers in the Customer Engineering team.\nProcess: this interview, a 90-minute working session on a realistic customer problem, then a meeting with the head of customer engineering. Most people hear back within 5 working days.",
+  "settings": {
+    "interviewer_name": "Snazzy Interviewer",
+    "minutes": 25,
+    "max_follow_ups": 1,
+    "offer_camera": true
+  },
+  "warnings": [],
+  "created": "2026-10-14T12:00:00Z",
+  "updated": "2026-10-14T12:00:00Z"
+}

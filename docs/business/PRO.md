@@ -88,6 +88,16 @@ separate discounted product or offer codes.
 Principle: everything needed to make a good recording is free; Pro saves time
 and adds polish.
 
+## Snazzy Interview (separate subscription)
+
+Snazzy Interview (`docs/plans/PROMPT_INTERVIEW.md`) is sold apart from the
+$49/$99 tiers, because recruiters use it as a business service and the hosted
+version has running costs. In the app it's an auto-renewing App Store
+subscription, `com.snazzy.pro.interview.monthly` (the local StoreKit file uses
+a placeholder $99 a month; set the real price after measuring costs). The free
+beta does **not** unlock it. OpsAPI sells the hosted version per workspace,
+activated on payment.
+
 ## Implementation plan
 
 1. **Done:** the `Entitlements` module in SnazzyKit.

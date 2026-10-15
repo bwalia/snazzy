@@ -30,6 +30,13 @@ targets:
         buildPhase: resources
       - path: site/privacy.html
         buildPhase: resources
+      # The sample role kit (shared with OpsAPI's tests).
+      - path: docs/specs/fixtures/interview-kit.json
+        buildPhase: resources
+      # Free interview prep kits (also downloadable from the repo).
+      - path: prep-kits
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: SnazzyKit
         product: SnazzyCore
@@ -51,6 +58,8 @@ targets:
         product: Remote
       - package: SnazzyKit
         product: Entitlements
+      - package: SnazzyKit
+        product: Interview
     info:
       path: App/Info.plist
       properties:
@@ -77,11 +86,23 @@ targets:
             UTTypeTagSpecification:
               public.filename-extension: [snazzy]
               public.mime-type: [application/x-snazzy-share]
+          # .snazzy_interview files: one interview's results (Snazzy Interview), for OpsAPI or another Mac.
+          - UTTypeIdentifier: com.snazzy.pro.interview
+            UTTypeDescription: Snazzy Interview Results
+            UTTypeConformsTo: [public.json, public.data, public.content]
+            UTTypeIconFile: AppIcon
+            UTTypeTagSpecification:
+              public.filename-extension: [snazzy_interview]
+              public.mime-type: [application/x-snazzy-interview+json]
         CFBundleDocumentTypes:
           - CFBundleTypeName: Snazzy Pro Share
             CFBundleTypeRole: Viewer
             LSHandlerRank: Owner
             LSItemContentTypes: [com.snazzy.pro.share]
+          - CFBundleTypeName: Snazzy Interview Results
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Owner
+            LSItemContentTypes: [com.snazzy.pro.interview]
         # Bonjour: the iPhone/iPad remote finds this Mac.
         NSBonjourServices: [_snazzyremote._tcp]
         NSCameraUsageDescription: Snazzy Pro records your camera (including an iPad or iPhone connected by USB) as an inset in your presentation videos.

@@ -298,6 +298,8 @@ final class ChatSession {
     @discardableResult
     private func send(_ message: ChatMessage, attachmentNames: [String], viaVoice: Bool, replacing: UUID? = nil) -> Bool {
         guard !isRunning else { return false }
+        // During an interview the candidate answers from their own knowledge.
+        if app.interviews?.interviewMode == true { return false }
         let selection = app.activeSelection
         if let reason = app.unavailableReason(selection.provider) {
             notice(reason + " Everything else works without AI: make decks in the slide editor (Builder › New Deck), start from Slides › Sample Decks, present, record, run a live room and go live.", isError: true)

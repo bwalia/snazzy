@@ -4,6 +4,7 @@ import SwiftUI
 
 struct MainView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var splash = !MainView.skipIntro
     @State private var welcome = !Legal.hasAccepted() && !MainView.skipIntro
@@ -35,6 +36,7 @@ struct MainView: View {
             .overlay(alignment: .bottom) { RecordingSavedBanner() }
         }
         .modifier(SharingSheets())
+        .overlay { if model.interviews.interviewMode { InterviewModeLock() } }
         .overlay {
             if splash {
                 SplashView()
@@ -55,6 +57,8 @@ struct MainView: View {
             .interactiveDismissDisabled()
         }
         .onChange(of: model.hideConversations) { _, hide in columns = hide ? .detailOnly : .all }
+        .onChange(of: model.interviews.windowRequest) { _, _ in openWindow(id: "interviews") }
+        .onChange(of: model.interviews.candidateWindowRequest) { _, _ in openWindow(id: "candidate-interview") }
     }
 }
 

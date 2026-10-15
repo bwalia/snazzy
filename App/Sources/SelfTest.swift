@@ -8,6 +8,7 @@ import MCP
 import Remote
 import CoreImage
 import Foundation
+import Interview
 import ImageIO
 import SnazzyCore
 import StoreKit
@@ -361,6 +362,184 @@ enum SelfTest {
                 }
             } catch {
                 report("decks", false, error.localizedDescription)
+            }
+            return ok
+        }
+        if arguments.contains("--prep-test") {
+            // Interview Prep, free: the bundled kits, a practice interview with no
+            // subscription (a simulated candidate on the local model), then coaching.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let saved = app.settings
+            defer { app.settings = saved }
+            let restore = Tours.useLocalModel(app)
+            defer { restore() }
+            let iv = app.interviews!
+            let kits = InterviewController.prepKits
+            report("prep kits bundled", kits.count >= 4, kits.map(\.role).joined(separator: ", "))
+            report("practice needs no subscription", true, "active: \(iv.isActive)")
+            guard let kit = kits.first(where: { $0.slug == "devops-engineer" }) else { return false }
+            do {
+                let id = try await iv.startPractice(kit, speak: false, listen: false)
+                iv.start(id, noticeHash: "practice", adjustments: [])  // the person clicks Start after the notice
+                try await iv.playCandidate(SimulatedCandidate.all[0], in: id)
+                for _ in 0..<1200 where iv.session(id)?.evaluation == nil { try await Task.sleep(for: .milliseconds(500)) }
+                guard let s = iv.session(id) else { report("practice", false, "gone"); return false }
+                let items = Coaching.items(for: s)
+                report("practice completes", s.state == .completed, "\(s.turns.count) turns")
+                report("coaching for every skill", items.count == kit.practice.competencies.count && s.evaluation != nil,
+                       items.map { "\($0.competency)=\($0.level.map(String.init) ?? "–")" }.joined(separator: ", "))
+                report("practice stays out of the recruiter's list", !iv.candidateInterviews.contains { $0.id == id }, "")
+                iv.auto.stop()
+                iv.delete(s)
+            } catch {
+                report("practice", false, error.localizedDescription)
+            }
+            return ok
+        }
+        if arguments.contains("--interview-mode-test") {
+            // Interview mode: the candidate can't reach the assistant, Voice Mode or the prompter.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let iv = app.interviews!
+            iv.enterInterviewMode(lockMac: false)
+            report("interview mode on", iv.interviewMode, "")
+            report("the chat refuses to send", !app.chat.send("What's a good answer to this interview question?"), "")
+            app.prompter.show()
+            report("the prompter stays closed", !app.prompter.isShown, "")
+            app.voice.start()
+            report("Voice Mode stays off", !app.voice.isOn, "")
+            iv.leaveInterviewModeForTesting()
+            report("leaving restores them", !iv.interviewMode, "")
+            app.prompter.hide()
+            return ok
+        }
+        if arguments.contains("--interview-camera-test") {
+            // The candidate's camera: recorded only after they agree, linked to the
+            // interview and deleted with it; turned off mid-way, the recording is deleted.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent("interview-camtest-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: root) }
+            let iv = app.interviews!
+            iv.unlockForTesting()
+            guard let url = Bundle.main.url(forResource: "interview-kit", withExtension: "json"),
+                  var kit = try? InterviewJSON.decoder.decode(RoleKit.self, from: Data(contentsOf: url)) else { return false }
+            kit.id = UUID()
+            kit.settings.offerCamera = true
+            iv.save(kit)
+            defer { if let k = iv.kits.first(where: { $0.id == kit.id }) { iv.delete(k) } }
+            app.capture.catalog.refreshAVDevices()
+            report("a camera is available", !app.capture.catalog.cameras.isEmpty, app.capture.catalog.cameras.map(\.name).joined(separator: ", "))
+            do {
+                try iv.approve(iv.kits.first { $0.id == kit.id }!)
+                let approved = iv.kits.first { $0.id == kit.id }!
+                for withdraw in [false, true] {
+                    let (session, _) = try await iv.createInterview(kit: approved, candidate: Candidate(name: "Camera Test"), channel: .thisMac)
+                    let id = session.id
+                    await iv.auto.prepare(id, options: AutoInterview.Options(speak: false, listen: false, showDeck: true))
+                    iv.setCamera(id, agreed: true)
+                    iv.start(id, noticeHash: "test", adjustments: [])
+                    for _ in 0..<40 where !iv.auto.isRecording { try await Task.sleep(for: .milliseconds(250)) }
+                    report(withdraw ? "records again for the next candidate" : "records after consent", iv.auto.isRecording, iv.auto.problem ?? "")
+                    try await Task.sleep(for: .seconds(3))
+                    if withdraw {
+                        iv.cameraOff(id)
+                        for _ in 0..<40 where iv.auto.isRecording { try await Task.sleep(for: .milliseconds(250)) }
+                        try await Task.sleep(for: .seconds(1))
+                        let s = iv.session(id)!
+                        report("turning the camera off stops and deletes it", !iv.auto.isRecording && s.recordingFiles.isEmpty && !s.cameraAgreed
+                               && s.audit.contains { $0.action == "recording_deleted" }, s.audit.map(\.action).joined(separator: ", "))
+                        iv.send(.withdraw, to: id)
+                    } else {
+                        iv.send(.withdraw, to: id)
+                        for _ in 0..<60 where iv.session(id)?.recordingFiles.isEmpty != false { try await Task.sleep(for: .milliseconds(250)) }
+                        let s = iv.session(id)!
+                        let movie = s.recordingMovie
+                        report("recording linked to the interview", movie.map { FileManager.default.fileExists(atPath: $0.path) } == true, movie?.lastPathComponent ?? "none")
+                        let data = try InterviewFile.encode(s, app: "test")
+                        report("results file leaves local paths out", !String(decoding: data, as: UTF8.self).contains("/Users/"), "")
+                        iv.delete(s)
+                        report("deleting the interview deletes the recording", movie.map { !FileManager.default.fileExists(atPath: $0.path) } == true, "")
+                    }
+                    iv.auto.stop()
+                    if let s = iv.session(id) { iv.delete(s) }
+                }
+            } catch {
+                report("camera", false, error.localizedDescription)
+            }
+            app.builder.closePopOutIfOpen()
+            return ok
+        }
+        if arguments.contains("--interview-test") {
+            // Snazzy Interview end to end with real models: the sample kit, a simulated
+            // candidate, the interviewer, the evaluator, and the results file. Uses Ollama on
+            // this Mac by default (offline); --provider anthropic [--model …] tries Claude.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let saved = app.settings
+            defer { app.settings = saved }
+            let providerArg = arguments.firstIndex(of: "--provider").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil } ?? "ollama"
+            let provider = ProviderKind(rawValue: providerArg) ?? .ollama
+            let modelArg = arguments.firstIndex(of: "--model").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+            let model = modelArg ?? (provider == .anthropic ? "claude-sonnet-5-5" : "qwen3-coder:30b")
+            for task in [AssistantTask.quickCommands, .planning, .writing] {
+                app.settings.setSelection(ModelSelection(provider: provider, model: model), for: task)
+            }
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent("interview-selftest-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: root) }
+            let iv = InterviewController(app: app, root: root)
+            iv.unlockForTesting()
+            guard let url = Bundle.main.url(forResource: "interview-kit", withExtension: "json"),
+                  var kit = try? InterviewJSON.decoder.decode(RoleKit.self, from: Data(contentsOf: url)) else {
+                report("sample kit in the app", false, "missing"); return false
+            }
+            kit.approvedAt = nil
+            do {
+                iv.save(kit)
+                try iv.approve(iv.kits.first { $0.id == kit.id }!)
+                kit = iv.kits.first { $0.id == kit.id }!
+                report("approves the sample kit", kit.isApproved, "v\(kit.version)")
+
+                let deck = AutoInterview.deck(for: kit)
+                report("Auto Interview deck", deck.slides.count == 8, deck.slides.map(\.heading).joined(separator: " | ").prefix(160).description)
+
+                for persona in SimulatedCandidate.all.filter({ arguments.contains("--all-personas") || ["strong", "injection"].contains($0.id) }) {
+                    let started = Date()
+                    let id = try await iv.simulate(kit: kit, persona: persona)
+                    guard let s = iv.session(id) else { report(persona.label, false, "no session"); continue }
+                    let followUps = Dictionary(grouping: s.turns.filter { $0.kind == .followUp }, by: { $0.questionID ?? "" }).mapValues(\.count)
+                    let interviewer = s.turns.filter { $0.role == .interviewer }.map(\.text).joined(separator: " ")
+                    report("\(persona.label): completes", s.state == .completed,
+                           "\(s.turns.count) turns, follow-ups \(followUps), \(Int(Date().timeIntervalSince(started)))s")
+                    report("\(persona.label): follow-up limit", followUps.values.allSatisfy { $0 <= kit.settings.maxFollowUps }, "\(followUps)")
+                    report("\(persona.label): interviewer avoids banned topics", BannedTopics.find(in: interviewer).isEmpty, BannedTopics.find(in: interviewer).joined(separator: ", "))
+                    if let e = s.evaluation {
+                        let quotes = e.competencies.flatMap(\.evidence)
+                        report("\(persona.label): evidence", quotes.allSatisfy { QuoteCheck.isVerbatim($0, in: s) },
+                               e.competencies.map { "\($0.id)=\($0.level.map(String.init) ?? "–")\($0.agreed ? "" : "≠\($0.secondLevel.map(String.init) ?? "–")") \($0.evidence.count)q" }.joined(separator: ", ")
+                               + ", dropped \(e.droppedQuotes)")
+                        if persona.id == "injection" {
+                            let caught = !e.injection.isEmpty || s.flags.contains { $0.kind == .injectionAttempt }
+                            report("injection: noticed", caught, "evaluator \(e.injection.count), interviewer flags \(s.flags.filter { $0.kind == .injectionAttempt }.count)")
+                        }
+                    } else {
+                        report("\(persona.label): evidence", false, iv.message ?? "no evaluation")
+                    }
+                    let file = try iv.saveFile(s, to: root)
+                    let back = try InterviewFile.decode(Data(contentsOf: file))
+                    report("\(persona.label): .snazzy_interview file", back.id == s.id && back.turns.map(\.text) == s.turns.map(\.text) && back.evaluation?.competencies.map(\.id) == s.evaluation?.competencies.map(\.id), file.lastPathComponent)
+                    if arguments.contains("--print") {
+                        for f in s.flags {
+                            let text = f.turn.flatMap { s.turn($0)?.text } ?? ""
+                            let hits = BannedTopics.sentences(in: text).map { String(text[$0]).prefix(160) }
+                            print("  FLAG \(f.kind.rawValue) [\(f.turn ?? "-")] \(f.detail) :: keyword sentences: \(hits)")
+                        }
+                        for t in s.turns { print("  [\(t.id) \(t.role.rawValue)/\(t.kind.rawValue)] \(t.text.prefix(220))") }
+                    }
+                }
+            } catch {
+                report("interview", false, error.localizedDescription)
             }
             return ok
         }
