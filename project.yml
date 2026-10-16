@@ -94,6 +94,14 @@ targets:
             UTTypeTagSpecification:
               public.filename-extension: [snazzy_interview]
               public.mime-type: [application/x-snazzy-interview+json]
+          # .snazzyprep files: free interview prep packs (a plain zip of prep kits, no passcode).
+          - UTTypeIdentifier: com.snazzy.pro.prep
+            UTTypeDescription: Snazzy Interview Prep Pack
+            UTTypeConformsTo: [public.zip-archive, public.data, public.content]
+            UTTypeIconFile: AppIcon
+            UTTypeTagSpecification:
+              public.filename-extension: [snazzyprep]
+              public.mime-type: [application/x-snazzy-prep+zip]
         CFBundleDocumentTypes:
           - CFBundleTypeName: Snazzy Pro Share
             CFBundleTypeRole: Viewer
@@ -103,6 +111,10 @@ targets:
             CFBundleTypeRole: Viewer
             LSHandlerRank: Owner
             LSItemContentTypes: [com.snazzy.pro.interview]
+          - CFBundleTypeName: Snazzy Interview Prep Pack
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Owner
+            LSItemContentTypes: [com.snazzy.pro.prep]
         # Bonjour: the iPhone/iPad remote finds this Mac.
         NSBonjourServices: [_snazzyremote._tcp]
         NSCameraUsageDescription: Snazzy Pro records your camera (including an iPad or iPhone connected by USB) as an inset in your presentation videos.

@@ -1,4 +1,5 @@
 import Foundation
+import SnazzyCore
 
 /// A free interview prep kit for candidates (`prep-kits/<slug>/prep-kit.json`):
 /// topics to study (with official links), hands-on exercises to do in your own
@@ -77,5 +78,53 @@ public enum Coaching {
                         strongAnswer: c.anchors.level5,
                         nextTime: r?.probeNext.isEmpty == false ? r!.probeNext : "Give a specific example: what you did, why, and the result.")
         }
+    }
+}
+
+/// A shareable prep pack: an ordinary zip (`.snazzyprep`) holding one or more
+/// prep kits as `<slug>/prep-kit.json`. Free and open: no passcode, no
+/// encryption, so it can go by AirDrop, email, chat or a web link.
+public enum PrepPack {
+    public static let fileExtension = "snazzyprep"
+    /// Big enough for many kits; prep packs are text.
+    static let maxBytes = 20 << 20
+
+    /// A zip of the kits, with a short README for people who unzip it by hand.
+    public static func archive(_ kits: [PrepKit]) throws -> Data {
+        var entries = try kits.map { kit in
+            Zip.Entry(path: "\(kit.slug)/prep-kit.json", data: try InterviewJSON.encoder.encode(kit))
+        }
+        entries.append(Zip.Entry(path: "README.txt", data: Data("""
+        Snazzy Pro interview prep pack: \(kits.map(\.role).joined(separator: ", ")).
+
+        Open this file with Snazzy Pro (https://snazzy.pro) to study the topics, do the
+        hands-on exercises and practise the interview with your own AI model. Free.
+        """.utf8)))
+        return try Zip.archive(entries)
+    }
+
+    /// The prep kits in a `.snazzyprep` or `.zip` (every `prep-kit.json` or other
+    /// `.json` prep kit inside, e.g. the repo's `prep-kits` folder), or a single
+    /// prep kit JSON file. Kits whose practice interview breaks the interview
+    /// rules (e.g. a question on a banned topic) are refused.
+    public static func read(_ data: Data) throws -> [PrepKit] {
+        guard data.count <= maxBytes else { throw InterviewFileError("This prep pack is too big (20 MB at most).") }
+        let files: [Data]
+        if Zip.isZip(data) {
+            files = try Zip.entries(data, limit: maxBytes).filter { $0.path.lowercased().hasSuffix(".json") }.map(\.data)
+        } else {
+            files = [data]
+        }
+        var kits: [PrepKit] = []
+        for file in files {
+            guard let kit = try? PrepKit.decode(file) else { continue }
+            guard KitValidator.canApprove(kit.practice) else {
+                throw InterviewFileError("The prep kit “\(kit.role)” has a practice interview that breaks the interview rules, so it wasn't added.")
+            }
+            guard Zip.isSafePath(kit.slug), !kit.slug.contains("/") else { throw InterviewFileError("The prep kit “\(kit.role)” has an unusable name.") }
+            if !kits.contains(where: { $0.slug == kit.slug }) { kits.append(kit) }
+        }
+        guard !kits.isEmpty else { throw InterviewFileError("There's no Snazzy prep kit in this file.") }
+        return kits
     }
 }

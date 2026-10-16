@@ -115,6 +115,7 @@ final class InterviewController {
     func reload() {
         kits = store.kits()
         interviews = store.interviews()
+        loadAddedPrepKits()
     }
 
     // MARK: Activation (payment)
@@ -639,8 +640,75 @@ final class InterviewController {
     /// Practice interviews are the user's own; they never appear with candidates.
     static let practiceReference = "Practice"
 
+    /// Opens the Interview Prep window (e.g. after a prep pack is opened from Finder).
+    var prepWindowRequest = 0
+    /// Slugs of the prep kits added from prep packs (they can be removed).
+    private(set) var addedPrepSlugs: Set<String> = []
+    private(set) var addedPrepKits: [PrepKit] = []
+
+    /// The prep kits: those that come with the app, then those added from packs
+    /// (an added kit with the same slug replaces the built-in one).
+    var prepKits: [PrepKit] {
+        Self.bundledPrepKits.filter { !addedPrepSlugs.contains($0.slug) } + addedPrepKits
+    }
+
+    static var prepRoot: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Snazzy Pro/Prep Kits", isDirectory: true)
+    }
+
+    func loadAddedPrepKits() {
+        let files = (try? FileManager.default.contentsOfDirectory(at: Self.prepRoot, includingPropertiesForKeys: nil)) ?? []
+        addedPrepKits = files.filter { $0.pathExtension == "json" }.compactMap { (try? Data(contentsOf: $0)).flatMap { try? PrepKit.decode($0) } }
+            .sorted { $0.role.localizedCaseInsensitiveCompare($1.role) == .orderedAscending }
+        addedPrepSlugs = Set(addedPrepKits.map(\.slug))
+    }
+
+    /// Adds the prep kits in a `.snazzyprep`/`.zip`/`.json` file. Returns the kits added.
+    @discardableResult
+    func addPrepPack(_ url: URL) throws -> [PrepKit] {
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        return try addPrepPack(data: Data(contentsOf: url))
+    }
+
+    @discardableResult
+    func addPrepPack(data: Data) throws -> [PrepKit] {
+        let kits = try PrepPack.read(data)
+        try FileManager.default.createDirectory(at: Self.prepRoot, withIntermediateDirectories: true)
+        for kit in kits {
+            try InterviewJSON.encoder.encode(kit).write(to: Self.prepRoot.appendingPathComponent("\(kit.slug).json"), options: .atomic)
+        }
+        loadAddedPrepKits()
+        return kits
+    }
+
+    /// Downloads a prep pack from a web link (https only) and adds it.
+    @discardableResult
+    func addPrepPack(from link: URL) async throws -> [PrepKit] {
+        guard link.scheme == "https" else { throw InterviewError("Use an https link to a prep pack.") }
+        let (data, response) = try await URLSession.shared.data(from: link)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw InterviewError("That link didn't return a prep pack.") }
+        return try addPrepPack(data: data)
+    }
+
+    func removePrepKit(_ slug: String) {
+        try? FileManager.default.removeItem(at: Self.prepRoot.appendingPathComponent("\(slug).json"))
+        loadAddedPrepKits()
+    }
+
+    /// A `.snazzyprep` file of the kits, to share (written to a temporary folder).
+    func exportPrepPack(_ kits: [PrepKit]) throws -> URL {
+        let name = kits.count == 1 ? kits[0].role : "Interview Prep"
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("prep-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent(name.replacingOccurrences(of: "/", with: "-") + "." + PrepPack.fileExtension)
+        try PrepPack.archive(kits).write(to: url)
+        return url
+    }
+
     /// The prep kits that come with the app (prep-kits/ in the repo).
-    static let prepKits: [PrepKit] = {
+    static let bundledPrepKits: [PrepKit] = {
         guard let dir = Bundle.main.url(forResource: "prep-kits", withExtension: nil),
               let slugs = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return [] }
         return slugs.sorted().compactMap { slug in

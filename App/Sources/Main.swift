@@ -82,6 +82,14 @@ struct SnazzyProApp: App {
                             }
                             model.interviews.windowRequest += 1
                         }
+                        for url in urls where ["snazzyprep", "zip"].contains(url.pathExtension.lowercased()) {
+                            do {
+                                try model.interviews.addPrepPack(url)
+                            } catch {
+                                model.interviews.message = error.localizedDescription
+                            }
+                            model.interviews.prepWindowRequest += 1
+                        }
                     }
                     #if DEBUG
                     if UserDefaults.standard.bool(forKey: "SnazzyPro.debugShareSheet") { sharing.beginExport() }

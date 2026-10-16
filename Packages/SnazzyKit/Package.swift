@@ -46,7 +46,7 @@ let package = Package(
         .testTarget(name: "BroadcastTests", dependencies: ["Broadcast", "SnazzyCore"]),
         .testTarget(name: "RemoteTests", dependencies: ["Remote"]),
         .testTarget(name: "EntitlementsTests", dependencies: ["Entitlements"], resources: [.copy("Fixtures")]),
-        .testTarget(name: "InterviewTests", dependencies: ["Interview"]),
+        .testTarget(name: "InterviewTests", dependencies: ["Interview", "SnazzyCore"]),
         .testTarget(name: "CaptureEngineTests", dependencies: ["CaptureEngine", "SnazzyCore"]),
     ]
 )
