@@ -1,5 +1,7 @@
+import AppKit
 import Interview
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// What the user has done in each prep kit (topics studied, exercises done),
 /// kept on this Mac.
@@ -30,8 +32,13 @@ struct PrepView: View {
     @State private var speak = true
     @State private var listen = false
     @State private var error: String?
+    @State private var notice: String?
+    @State private var importing = false
+    @State private var linkSheet = false
+    @State private var link = ""
+    @State private var dropping = false
 
-    private var kits: [PrepKit] { InterviewController.prepKits }
+    private var kits: [PrepKit] { model.interviews.prepKits }
 
     var body: some View {
         NavigationSplitView {
@@ -47,10 +54,28 @@ struct PrepView: View {
                             if isReady(kit) { Image(systemName: "rosette").foregroundStyle(.yellow).help("Interview ready") }
                         }
                         .tag(kit.slug)
+                        .contextMenu {
+                            Button("Share Prep Pack…") { share([kit]) }
+                            if model.interviews.addedPrepSlugs.contains(kit.slug) {
+                                Button("Remove", role: .destructive) { model.interviews.removePrepKit(kit.slug) }
+                            }
+                        }
                     }
                 }
             }
             .navigationSplitViewColumnWidth(min: 220, ideal: 250)
+            .safeAreaInset(edge: .bottom) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Menu {
+                        Button("Open a Prep Pack File…") { importing = true }
+                        Button("Add from a Link…") { link = ""; linkSheet = true }
+                    } label: { Label("Add Prep Pack", systemImage: "plus") }
+                    .menuStyle(.borderlessButton)
+                    Text("Or drop a .snazzyprep or .zip file here.").font(.caption2).foregroundStyle(.secondary)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         } detail: {
             if let kit = kits.first(where: { $0.slug == selected }) {
                 detail(kit).id(kit.slug)
@@ -64,6 +89,55 @@ struct PrepView: View {
         }
         .onAppear { if selected == nil { selected = kits.first?.slug } }
         .onChange(of: progress) { _, p in PrepProgress.save(p) }
+        .toolbar {
+            ToolbarItem {
+                Button { share(kits.filter { $0.slug == selected }) } label: { Label("Share Prep Pack", systemImage: "square.and.arrow.up") }
+                    .disabled(selected == nil)
+                    .help("Send this prep kit as a .snazzyprep file (a plain zip, no passcode): AirDrop, Mail, Messages…")
+            }
+            ToolbarItem {
+                Button { share(kits) } label: { Label("Share All", systemImage: "square.and.arrow.up.on.square") }
+                    .help("All prep kits in one .snazzyprep file")
+            }
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.snazzyPrep, .zip, .json], allowsMultipleSelection: true) { result in
+            if case .success(let urls) = result { for url in urls { add { try model.interviews.addPrepPack(url) } } }
+        }
+        .onDrop(of: [.fileURL], isTargeted: $dropping) { providers in
+            for p in providers {
+                _ = p.loadObject(ofClass: URL.self) { url, _ in
+                    guard let url else { return }
+                    Task { @MainActor in add { try model.interviews.addPrepPack(url) } }
+                }
+            }
+            return true
+        }
+        .overlay { if dropping { RoundedRectangle(cornerRadius: 12).stroke(Color.accentColor, lineWidth: 3).padding(4) } }
+        .overlay(alignment: .bottom) {
+            if let notice {
+                Label(notice, systemImage: "checkmark.circle.fill").padding(10).background(.regularMaterial, in: Capsule()).padding()
+                    .task { try? await Task.sleep(for: .seconds(4)); self.notice = nil }
+            }
+        }
+        .sheet(isPresented: $linkSheet) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Add a Prep Pack from a Link").font(.headline)
+                TextField("https://…/cdn-engineer.snazzyprep", text: $link).textFieldStyle(.roundedBorder).frame(width: 420)
+                HStack {
+                    Spacer()
+                    Button("Cancel") { linkSheet = false }
+                    Button("Add") {
+                        linkSheet = false
+                        guard let url = URL(string: link.trimmingCharacters(in: .whitespaces)) else { return }
+                        Task {
+                            do { added(try await model.interviews.addPrepPack(from: url)) } catch { self.error = error.localizedDescription }
+                        }
+                    }
+                    .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding(20)
+        }
     }
 
     // MARK: Detail
@@ -211,6 +285,21 @@ struct PrepView: View {
         NSApp.windows.first { $0.title == "Snazzy Pro" }?.makeKeyAndOrderFront(nil)
     }
 
+    private func add(_ action: () throws -> [PrepKit]) {
+        do { added(try action()) } catch { self.error = error.localizedDescription }
+    }
+
+    private func added(_ kits: [PrepKit]) {
+        error = nil
+        selected = kits.first?.slug ?? selected
+        notice = "Added " + kits.map(\.role).joined(separator: ", ")
+    }
+
+    private func share(_ kits: [PrepKit]) {
+        guard !kits.isEmpty else { return }
+        do { FileSharing.share(try model.interviews.exportPrepPack(kits)) } catch { self.error = error.localizedDescription }
+    }
+
     private func open(_ action: () throws -> Void) {
         do { try action() } catch { self.error = error.localizedDescription }
     }
@@ -248,5 +337,23 @@ struct CoachingView: View {
                 .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
             }
         }
+    }
+}
+
+extension UTType {
+    /// `.snazzyprep`: a prep pack (a plain zip of prep kits).
+    static let snazzyPrep = UTType(exportedAs: "com.snazzy.pro.prep", conformingTo: .zip)
+}
+
+/// The system share menu (AirDrop, Mail, Messages…) for a file, from the key window.
+@MainActor
+enum FileSharing {
+    static func share(_ url: URL) {
+        guard let view = NSApp.keyWindow?.contentView else {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+            return
+        }
+        let picker = NSSharingServicePicker(items: [url])
+        picker.show(relativeTo: NSRect(x: view.bounds.maxX - 120, y: view.bounds.maxY - 8, width: 1, height: 1), of: view, preferredEdge: .minY)
     }
 }

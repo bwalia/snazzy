@@ -375,7 +375,7 @@ enum SelfTest {
             let restore = Tours.useLocalModel(app)
             defer { restore() }
             let iv = app.interviews!
-            let kits = InterviewController.prepKits
+            let kits = InterviewController.bundledPrepKits
             report("prep kits bundled", kits.count >= 4, kits.map(\.role).joined(separator: ", "))
             report("practice needs no subscription", true, "active: \(iv.isActive)")
             guard let kit = kits.first(where: { $0.slug == "devops-engineer" }) else { return false }
@@ -394,6 +394,32 @@ enum SelfTest {
                 iv.delete(s)
             } catch {
                 report("practice", false, error.localizedDescription)
+            }
+            return ok
+        }
+        if arguments.contains("--prep-pack-test") {
+            // Prep packs: shared as a plain zip (no passcode), opened on another Mac, removed.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let iv = app.interviews!
+            guard var kit = InterviewController.bundledPrepKits.first else { return false }
+            kit.slug = "self-test-\(UUID().uuidString.prefix(8).lowercased())"
+            kit.role = "Self-Test Engineer"
+            do {
+                let file = try iv.exportPrepPack([kit])
+                let data = try Data(contentsOf: file)
+                report("a .snazzyprep file is a plain zip", file.pathExtension == "snazzyprep" && Zip.isZip(data), "\(data.count) bytes")
+                report("anyone can unzip it", (try? Zip.entries(data).map(\.path).contains("\(kit.slug)/prep-kit.json")) == true, "")
+                let added = try iv.addPrepPack(file)
+                report("opening it adds the kit", added.map(\.slug) == [kit.slug] && iv.prepKits.contains { $0.slug == kit.slug }, "\(iv.prepKits.count) kits")
+                report("it's kept for next time", FileManager.default.fileExists(atPath: InterviewController.prepRoot.appendingPathComponent("\(kit.slug).json").path), "")
+                let all = try iv.exportPrepPack(iv.prepKits)
+                report("all kits in one pack", (try? PrepPack.read(Data(contentsOf: all)).count) == iv.prepKits.count, all.lastPathComponent)
+                iv.removePrepKit(kit.slug)
+                report("removing it", !iv.prepKits.contains { $0.slug == kit.slug }, "")
+            } catch {
+                report("prep pack", false, error.localizedDescription)
+                iv.removePrepKit(kit.slug)
             }
             return ok
         }

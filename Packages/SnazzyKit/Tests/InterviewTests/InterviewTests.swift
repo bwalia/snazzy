@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import SnazzyCore
 @testable import Interview
 
 /// The shared sample kit (docs/specs/fixtures/interview-kit.json), also used by OpsAPI.
@@ -727,6 +728,46 @@ func engine(_ kit: RoleKit, clock: TestClock, name: String = "Sam Taylor") -> In
             #expect(e.start() == .waitForCandidate)
             #expect(e.currentQuestionID == kit.practice.questions.first?.id)
         }
+    }
+
+    static func allKits() throws -> [PrepKit] {
+        try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { !$0.hasPrefix(".") && !$0.contains(".") }.sorted()
+            .map { try PrepKit.decode(Data(contentsOf: dir.appendingPathComponent("\($0)/prep-kit.json"))) }
+    }
+
+    @Test func prepPacksRoundTripAsPlainZips() throws {
+        let kits = try Self.allKits()
+        let pack = try PrepPack.archive(kits)
+        #expect(Zip.isZip(pack))
+        #expect(try Zip.entries(pack).contains { $0.path == "README.txt" })
+        #expect(try PrepPack.read(pack).map(\.slug) == kits.map(\.slug))
+        // One prep kit JSON file works too, and so does a zip of the repo's folder.
+        let one = try Data(contentsOf: Self.dir.appendingPathComponent("cdn-engineer/prep-kit.json"))
+        #expect(try PrepPack.read(one).map(\.slug) == ["cdn-engineer"])
+        let folder = try Zip.archive([Zip.Entry(path: "snazzy-main/prep-kits/cdn-engineer/prep-kit.json", data: one),
+                                      Zip.Entry(path: "snazzy-main/README.md", data: Data("x".utf8))])
+        #expect(try PrepPack.read(folder).map(\.slug) == ["cdn-engineer"])
+    }
+
+    /// site/prep-kits/*.snazzyprep (Scripts/prep-packs.py) open in the app and match prep-kits/.
+    @Test func websitePrepPacksAreUpToDate() throws {
+        let site = Self.dir.deletingLastPathComponent().appendingPathComponent("site/prep-kits")
+        let kits = try Self.allKits()
+        #expect(try PrepPack.read(Data(contentsOf: site.appendingPathComponent("all-roles.snazzyprep"))) == kits,
+                "Run python3 Scripts/prep-packs.py")
+        for kit in kits {
+            #expect(try PrepPack.read(Data(contentsOf: site.appendingPathComponent("\(kit.slug).snazzyprep"))) == [kit], "\(kit.slug)")
+        }
+    }
+
+    @Test func prepPacksRefuseKitsThatBreakTheRules() throws {
+        var kit = try PrepKit.decode(Data(contentsOf: Self.dir.appendingPathComponent("cdn-engineer/prep-kit.json")))
+        kit.practice.questions[0].text = "How old are you, and are you married?"
+        #expect(throws: (any Error).self) { try PrepPack.read(try PrepPack.archive([kit])) }
+        #expect(throws: (any Error).self) { try PrepPack.read(Data("{}".utf8)) }
+        kit = try PrepKit.decode(Data(contentsOf: Self.dir.appendingPathComponent("cdn-engineer/prep-kit.json")))
+        kit.slug = "../escape"
+        #expect(throws: (any Error).self) { try PrepPack.read(try InterviewJSON.encoder.encode(kit)) }
     }
 
     @Test func coachingShowsWhatAStrongAnswerCovers() throws {

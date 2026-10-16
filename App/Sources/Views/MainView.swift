@@ -59,6 +59,7 @@ struct MainView: View {
         .onChange(of: model.hideConversations) { _, hide in columns = hide ? .detailOnly : .all }
         .onChange(of: model.interviews.windowRequest) { _, _ in openWindow(id: "interviews") }
         .onChange(of: model.interviews.candidateWindowRequest) { _, _ in openWindow(id: "candidate-interview") }
+        .onChange(of: model.interviews.prepWindowRequest) { _, _ in openWindow(id: "interview-prep") }
     }
 }
 

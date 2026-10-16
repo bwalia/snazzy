@@ -183,12 +183,14 @@ struct KitEditorView: View {
                 Button { showInvite = true } label: { Label("Interview a Candidate", systemImage: "person.badge.plus") }
                     .disabled(saved?.isApproved != true || dirty || !iv.isActive)
                 Menu {
-                    if let prep = InterviewController.prepKits.first(where: { $0.role == kit.title || $0.practice.title == kit.title }) {
+                    if let prep = iv.prepKits.first(where: { $0.role == kit.title || $0.practice.title == kit.title }) {
                         Button("Copy Free Prep Kit Link for Candidates") {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString("https://www.snazzy.pro/prep.html#\(prep.slug)", forType: .string)
                         }
                         .help("Every candidate gets the same free preparation: topics, exercises and a practice interview.")
+                        Button("Share Free Prep Pack…") { sharePrepPack(prep) }
+                            .help("A .snazzyprep file (a plain zip, no passcode) to send by email, AirDrop or chat.")
                         Divider()
                     }
                     Button("Delete Role…", role: .destructive) {
@@ -233,6 +235,10 @@ struct KitEditorView: View {
     private func list(_ binding: Binding<[String]>) -> Binding<String> {
         Binding(get: { binding.wrappedValue.joined(separator: ", ") },
                 set: { binding.wrappedValue = $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } })
+    }
+
+    private func sharePrepPack(_ prep: PrepKit) {
+        do { FileSharing.share(try model.interviews.exportPrepPack([prep])) } catch { self.error = error.localizedDescription }
     }
 
     private func confirmDelete() -> Bool {
