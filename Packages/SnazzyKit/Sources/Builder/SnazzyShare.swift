@@ -234,6 +234,26 @@ extension Workspace {
         return .init(name: project.name, kind: project.kind, files: files)
     }
 
+    /// Moves a folder of deck files in as a shared project (served without internet
+    /// until allowed), under a free name. For large decks: nothing is read into memory.
+    @discardableResult
+    public func importFolder(_ folder: URL, name: String, kind: ProjectKind = .presentation) throws -> BuilderProject {
+        let base = Workspace.slug(name).isEmpty ? "shared" : Workspace.slug(name)
+        let existing = Set(listProjects().map(\.name))
+        var free = base
+        var n = 2
+        while existing.contains(free) || FileManager.default.fileExists(atPath: projectURL(free).path) {
+            free = "\(base)-\(n)"
+            n += 1
+        }
+        let dir = projectURL(free)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.moveItem(at: folder, to: dir)
+        let project = BuilderProject(name: free, kind: kind, created: Date(), shared: true)
+        try JSONEncoder.iso.encode(project).write(to: dir.appending(path: ".snazzy-project.json"))
+        return project
+    }
+
     /// Imports a shared project under a free name ("deck", "deck-2", …). Returns the new project.
     @discardableResult
     public func importProject(_ shared: SnazzyShare.Project) throws -> BuilderProject {

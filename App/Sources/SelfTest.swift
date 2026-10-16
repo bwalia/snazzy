@@ -397,6 +397,85 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--join-interview-test") {
+            // Interviews by invite link, end to end against an OpsAPI (e.g. a local Docker one):
+            //   --join-interview-test --opsapi http://127.0.0.1:4021 --token snz_…
+            // The recruiter packs (encrypted here), uploads to S3 and invites in bulk; a
+            // candidate opens the app link, the pack is fetched and decrypted, and the
+            // interview runs on OpsAPI to the end.
+            func value(_ flag: String) -> String? { arguments.firstIndex(of: flag).flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil } }
+            guard let api = value("--opsapi").flatMap(URL.init(string:)), let token = value("--token") else {
+                report("arguments", false, "--opsapi <url> --token snz_…")
+                return false
+            }
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let iv = app.interviews!
+            iv.unlockForTesting()
+            guard var kit = iv.sampleKit("interview-kit-cdn") else { report("sample kit", false, ""); return false }
+            kit.id = UUID()
+            kit.approve(by: "Self-test")
+            let link = OpsAPILink(baseURL: api, token: token)
+            // An introduction deck, to check it travels in the pack.
+            try? app.builder.createDeck(DeckOutline(title: "Self-test intro \(UUID().uuidString.prefix(6))",
+                                                    slides: [SampleDeck.Slide(.title, "Welcome", ["About the team"], notes: "Intro")]))
+            let intro = app.builder.current
+            var made: [String] = intro.map { [$0.name] } ?? []
+            defer { for name in made { try? FileManager.default.removeItem(at: app.builder.workspace.projectURL(name)) }; app.builder.refreshProjects() }
+            do {
+                let started = Date()
+                let results = try await iv.inviteInBulk(kit: kit, intro: intro, invitees: [
+                    .init(name: "Self Test One", email: "one@example.com"), .init(name: "Self Test Two", email: "two@example.com"),
+                    .init(name: "Self Test Three", email: "three@example.com"),
+                ], days: 2, using: link)
+                report("pack encrypted, uploaded, 3 invited", results.invited == 3 && results.failed == 0,
+                       String(format: "%.1f s", Date().timeIntervalSince(started)))
+                report("every invite has its own link", Set(results.results.compactMap(\.url)).count == 3, "")
+                guard let appURL = results.results.first?.appUrl else { report("app link", false, ""); return false }
+                report("app link", appURL.hasPrefix("snazzypro://interview?link="), String(appURL.prefix(60)) + "…")
+
+                let join = iv.join!
+                await join.join(appURL)
+                report("candidate opens the link", join.stage == .ready && join.view?.state == "invited", "\(join.stage)")
+                report("pack decrypted: the kit arrived", join.kit?.questions.map(\.id) == kit.questions.map(\.id), join.kit?.title ?? "none")
+                report("intro deck arrived (no internet)", join.hasIntro && app.builder.projects.contains { $0.name.hasPrefix("intro-") && $0.shared == true },
+                       app.builder.projects.filter { $0.shared == true }.map(\.name).joined(separator: ", "))
+                made += app.builder.projects.filter { $0.name.hasPrefix("intro-") || $0.name.hasPrefix("interview-") }.map(\.name)
+                join.speak = false
+                join.listen = false
+                await join.start(adjustments: [])
+                report("interview mode on", iv.interviewMode, "")
+                let answers = [
+                    "I designed cache keys that ignore tracking parameters, which raised our offload from 70% to 93%, and I checked it with the edge logs.",
+                    "A 503 spike: I compared edge and origin logs, found the origin rate-limiting edge IPs, and fixed the allow list with the network team.",
+                    "I'd move changes into code with review, test on staging, and keep a one-click rollback to the last version.",
+                    "We measured it for two weeks with real-user monitoring.",
+                ]
+                var n = 0
+                while let v = join.view, v.state == "in_progress", n < 20 {
+                    n += 1
+                    if let choices = v.choices, let first = choices.first {
+                        await join.answer(choices.contains("Yes") ? "Yes" : first)
+                    } else if v.turns.last?.text.contains("questions for me") == true || v.turns.last?.text.contains("anything else") == true {
+                        await join.answer("No more questions, thank you.")
+                    } else {
+                        await join.answer(answers[min(n - 1, answers.count - 1)])
+                    }
+                    if let p = join.problem { report("answer \(n)", false, p); break }
+                }
+                report("interview finished on OpsAPI", join.view?.isFinished == true, "\(join.view?.state ?? "") after \(n) answers")
+                report("slides followed the interview", app.builder.current?.name.hasPrefix("interview-") == true, app.builder.current?.name ?? "")
+                try? await Task.sleep(for: .seconds(1))
+                report("interview mode ends by itself on the candidate's Mac", !iv.interviewMode, "")
+                join.reset()
+                await join.join(results.results[0].url!)
+                report("finished interview can't fetch the pack again", join.kit == nil, "\(join.stage)")
+                join.reset()
+            } catch {
+                report("join interview", false, error.localizedDescription)
+            }
+            return ok
+        }
         if arguments.contains("--prep-pack-test") {
             // Prep packs: shared as a plain zip (no passcode), opened on another Mac, removed.
             let app = AppModel()

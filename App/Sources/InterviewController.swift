@@ -79,6 +79,8 @@ final class InterviewController {
     @ObservationIgnored private unowned let app: AppModel
     @ObservationIgnored let store: InterviewStore
     @ObservationIgnored private(set) var auto: AutoInterview!
+    /// Interviews by invite link, run by OpsAPI (the candidate's side).
+    @ObservationIgnored private(set) var join: JoinInterview!
     @ObservationIgnored private var engines: [UUID: InterviewEngine] = [:]
     @ObservationIgnored private var server: InterviewLinkServer?
     /// Link tokens by their hash → interview id (tokens themselves are never stored).
@@ -94,6 +96,7 @@ final class InterviewController {
         if purged > 0 { Log.app.info("Interviews: deleted \(purged) past their retention date") }
         reload()
         auto = AutoInterview(app: app)
+        join = JoinInterview(app: app)
         opsapiURL = UserDefaults.standard.string(forKey: Self.opsapiURLKey).flatMap(URL.init(string:))
         opsapiWorkspace = UserDefaults.standard.string(forKey: Self.opsapiWorkspaceKey)
         updates = Task { [weak self] in
@@ -586,6 +589,46 @@ final class InterviewController {
         return remote.count
     }
 
+    // MARK: Interviews by invite link (OpsAPI runs them; many in parallel)
+
+    /// Where a bulk invite is.
+    enum InviteStage: Equatable {
+        case packing, uploading(Double), inviting
+    }
+
+    private(set) var inviteStage: InviteStage?
+
+    /// Invites many candidates at once to an approved kit. Each gets their own link,
+    /// opened in a browser or in Snazzy Pro. A pack (the kit, plus an optional
+    /// introduction deck) is encrypted here and uploaded once to S3; OpsAPI hands
+    /// its key only to valid invites. OpsAPI runs every interview (same model,
+    /// same questions), so they can all happen at the same time.
+    func inviteInBulk(kit: RoleKit, intro: BuilderProject?, invitees: [OpsAPILink.Invitee], days: Int,
+                      using override: OpsAPILink? = nil) async throws -> OpsAPILink.InviteResults {
+        try requireActive()
+        guard let link = override ?? link else { throw InterviewError("Link OpsAPI first (Interviews › OpsAPI).") }
+        guard kit.isApproved else { throw InterviewError("Approve the kit first.") }
+        guard !invitees.isEmpty else { throw InterviewError("Add at least one candidate: one per line, “Name, email”.") }
+        guard invitees.count <= 500 else { throw InterviewError("At most 500 candidates at a time.") }
+        defer { inviteStage = nil }
+        inviteStage = .packing
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("pack-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let introURL = intro.map { app.builder.workspace.projectURL($0.name) }
+        let sealed = try await Task.detached { try InterviewPack.build(kit: kit, intro: introURL, in: folder) }.value
+        let pack = try await link.createPack(sealed, title: kit.title)
+        guard let upload = pack.uploadUrl else { throw InterviewError("OpsAPI didn't send an upload link.") }
+        inviteStage = .uploading(0)
+        try await link.uploadPack(sealed, to: upload) { [weak self] fraction in
+            Task { @MainActor in self?.inviteStage = .uploading(fraction) }
+        }
+        _ = try await link.completePack(pack.uuid)
+        inviteStage = .inviting
+        let results = try await link.invite(kit: kit, packUUID: pack.uuid, invitees: invitees, days: days)
+        Log.app.info("Invited \(results.invited, privacy: .public) candidates (\(results.failed, privacy: .public) failed)")
+        return results
+    }
+
     // MARK: Simulated candidates
 
     /// Runs an interview against a simulated candidate (the Writing model plays
@@ -806,6 +849,14 @@ final class InterviewController {
         interviewMode = false
     }
     #endif
+
+    /// After an interview by link on the candidate's own Mac: they own it, so no unlock.
+    func endInterviewModeOnOwnMac() {
+        guard interviewMode else { return }
+        interviewMode = false
+        app.builder.closePopOutIfOpen()
+        NSApp.windows.first { $0.title == "Snazzy Pro" }?.makeKeyAndOrderFront(nil)
+    }
 
     /// Leaves interview mode after the Mac's owner confirms (Touch ID or password).
     func leaveInterviewMode() async {
