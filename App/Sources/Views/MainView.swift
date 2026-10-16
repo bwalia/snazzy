@@ -60,6 +60,7 @@ struct MainView: View {
         .onChange(of: model.interviews.windowRequest) { _, _ in openWindow(id: "interviews") }
         .onChange(of: model.interviews.candidateWindowRequest) { _, _ in openWindow(id: "candidate-interview") }
         .onChange(of: model.interviews.prepWindowRequest) { _, _ in openWindow(id: "interview-prep") }
+        .onChange(of: model.interviews.join.windowRequest) { _, _ in openWindow(id: "join-interview") }
     }
 }
 

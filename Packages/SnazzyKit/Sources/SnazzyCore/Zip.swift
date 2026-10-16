@@ -62,12 +62,59 @@ public enum Zip {
         return out
     }
 
+    /// Writes files into a zip without loading them whole (stored, not deflated:
+    /// decks' media is already compressed). For packs too big for `archive`.
+    public static func write(files: [(path: String, url: URL)], to output: URL) throws {
+        FileManager.default.createFile(atPath: output.path, contents: nil)
+        let out = try FileHandle(forWritingTo: output)
+        defer { try? out.close() }
+        var central = Data()
+        var offset: UInt64 = 0
+        for file in files {
+            guard isSafePath(file.path) else { throw Error("“\(file.path)” can't go in a zip.") }
+            let name = Data(file.path.utf8)
+            let size = try (FileManager.default.attributesOfItem(atPath: file.url.path)[.size] as? NSNumber)?.uint64Value ?? 0
+            guard size < UInt32.max, offset < UInt32.max else { throw Error("This is too big for a zip (4 GB at most).") }
+            // First pass: the checksum.
+            let input = try FileHandle(forReadingFrom: file.url)
+            var c: UInt32 = 0xFFFF_FFFF
+            while let chunk = try input.read(upToCount: 1 << 20), !chunk.isEmpty {
+                for byte in chunk { c = table[Int((c ^ UInt32(byte)) & 0xFF)] ^ (c >> 8) }
+            }
+            let crc = c ^ 0xFFFF_FFFF
+            var header = Data()
+            header.le32(0x0403_4B50); header.le16(20); header.le16(0x0800)
+            header.le16(0); header.le16(0); header.le16(0x21)
+            header.le32(crc); header.le32(UInt32(size)); header.le32(UInt32(size))
+            header.le16(UInt16(name.count)); header.le16(0)
+            header.append(name)
+            try out.write(contentsOf: header)
+            try input.seek(toOffset: 0)
+            while let chunk = try input.read(upToCount: 1 << 20), !chunk.isEmpty { try out.write(contentsOf: chunk) }
+            try input.close()
+            central.le32(0x0201_4B50); central.le16(0x0314); central.le16(20); central.le16(0x0800)
+            central.le16(0); central.le16(0); central.le16(0x21)
+            central.le32(crc); central.le32(UInt32(size)); central.le32(UInt32(size))
+            central.le16(UInt16(name.count)); central.le16(0); central.le16(0); central.le16(0); central.le16(0)
+            central.le32(0o100644 << 16)
+            central.le32(UInt32(offset))
+            central.append(name)
+            offset += UInt64(header.count) + size
+        }
+        guard offset < UInt32.max else { throw Error("This is too big for a zip (4 GB at most).") }
+        var end = central
+        end.le32(0x0605_4B50); end.le16(0); end.le16(0)
+        end.le16(UInt16(files.count)); end.le16(UInt16(files.count))
+        end.le32(UInt32(central.count)); end.le32(UInt32(offset)); end.le16(0)
+        try out.write(contentsOf: end)
+    }
+
     // MARK: Reading
 
     /// The files in a zip (folders, `__MACOSX` and hidden files left out).
     /// Throws for damaged archives, unsafe paths, or more than `limit` bytes in all.
     public static func entries(_ data: Data, limit: Int = 50 << 20, maxEntries: Int = 500) throws -> [Entry] {
-        let bytes = [UInt8](data)
+        let bytes = data.startIndex == 0 ? data : Data(data)
         guard let end = endOfCentralDirectory(bytes) else { throw Error("This isn't a zip file, or it's damaged.") }
         let count = Int(bytes.u16(end + 10))
         var p = Int(bytes.u32(end + 16))
@@ -86,7 +133,7 @@ public enum Zip {
             let extra = Int(bytes.u16(p + 30)) + Int(bytes.u16(p + 32))
             let local = Int(bytes.u32(p + 42))
             guard p + 46 + nameLength <= bytes.count else { throw Error("This zip file is damaged.") }
-            let name = String(decoding: bytes[(p + 46)..<(p + 46 + nameLength)], as: UTF8.self)
+            let name = String(decoding: bytes.subdata(in: (p + 46)..<(p + 46 + nameLength)), as: UTF8.self)
             p += 46 + nameLength + extra
             if name.hasSuffix("/") { continue }
             let parts = name.split(separator: "/")
@@ -98,7 +145,7 @@ public enum Zip {
             guard local + 30 <= bytes.count, bytes.u32(local) == 0x0403_4B50 else { throw Error("This zip file is damaged.") }
             let start = local + 30 + Int(bytes.u16(local + 26)) + Int(bytes.u16(local + 28))
             guard start + compressed <= bytes.count else { throw Error("This zip file is damaged.") }
-            let body = Data(bytes[start..<(start + compressed)])
+            let body = bytes.subdata(in: start..<(start + compressed))
             let file: Data
             switch method {
             case 0: file = body
@@ -118,7 +165,7 @@ public enum Zip {
         return path.split(separator: "/", omittingEmptySubsequences: false).allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
     }
 
-    private static func endOfCentralDirectory(_ b: [UInt8]) -> Int? {
+    private static func endOfCentralDirectory(_ b: Data) -> Int? {
         guard b.count >= 22 else { return nil }
         var i = b.count - 22
         let stop = max(0, b.count - 22 - 65_535)
@@ -168,7 +215,8 @@ private extension Data {
     mutating func le32(_ v: UInt32) { le16(UInt16(v & 0xFFFF)); le16(UInt16(v >> 16)) }
 }
 
-private extension [UInt8] {
+private extension Data {
+    /// Little-endian reads; only for Data whose startIndex is 0.
     func u16(_ i: Int) -> UInt16 { UInt16(self[i]) | UInt16(self[i + 1]) << 8 }
     func u32(_ i: Int) -> UInt32 { UInt32(u16(i)) | UInt32(u16(i + 2)) << 16 }
 }

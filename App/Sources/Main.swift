@@ -82,7 +82,19 @@ struct SnazzyProApp: App {
                             }
                             model.interviews.windowRequest += 1
                         }
-                        for url in urls where ["snazzyprep", "zip"].contains(url.pathExtension.lowercased()) {
+                        for url in urls where url.scheme?.lowercased() == "snazzypro" {
+                            if url.host() == "interview" {
+                                model.interviews.join.windowRequest += 1
+                                Task { await model.interviews.join.join(url.absoluteString) }
+                            } else if url.host() == "prep", let link = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                                .queryItems?.first(where: { $0.name == "url" })?.value.flatMap(URL.init(string:)) {
+                                Task {
+                                    do { try await model.interviews.addPrepPack(from: link) } catch { model.interviews.message = error.localizedDescription }
+                                    model.interviews.prepWindowRequest += 1
+                                }
+                            }
+                        }
+                        for url in urls where url.isFileURL && ["snazzyprep", "zip"].contains(url.pathExtension.lowercased()) {
                             do {
                                 try model.interviews.addPrepPack(url)
                             } catch {
@@ -138,6 +150,12 @@ struct SnazzyProApp: App {
                 .environment(model)
         }
         .defaultSize(width: 1000, height: 720)
+
+        Window("Join an Interview", id: "join-interview") {
+            JoinInterviewView()
+                .environment(model)
+        }
+        .defaultSize(width: 820, height: 680)
 
         Window("Interview", id: "candidate-interview") {
             CandidateInterviewView()
@@ -272,6 +290,7 @@ struct AppCommands: Commands {
             Button("Interviews…") { openWindow(id: "interviews") }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
             Button("Interview Prep (Free)…") { openWindow(id: "interview-prep") }
+            Button("Join an Interview with a Link…") { openWindow(id: "join-interview") }
             Button("Candidate Window") { openWindow(id: "candidate-interview") }
                 .disabled(model.interviews.auto.sessionID == nil)
         }

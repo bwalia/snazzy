@@ -9,6 +9,7 @@ struct KitEditorView: View {
     @State private var showInvite = false
     @State private var simulating: SimulatedCandidate?
     @State private var error: String?
+    @State private var showBulk = false
     let onDelete: () -> Void
     let onOpenInterview: (UUID) -> Void
 
@@ -182,6 +183,9 @@ struct KitEditorView: View {
                 .help("Run the kit against a simulated candidate")
                 Button { showInvite = true } label: { Label("Interview a Candidate", systemImage: "person.badge.plus") }
                     .disabled(saved?.isApproved != true || dirty || !iv.isActive)
+                Button { showBulk = true } label: { Label("Invite in Bulk", systemImage: "person.3.sequence") }
+                    .disabled(saved?.isApproved != true || dirty || !iv.isActive)
+                    .help("Paste a list of candidates: each gets their own link, and they can all interview at the same time (through OpsAPI).")
                 Menu {
                     if let prep = iv.prepKits.first(where: { $0.role == kit.title || $0.practice.title == kit.title }) {
                         Button("Copy Free Prep Kit Link for Candidates") {
@@ -201,6 +205,9 @@ struct KitEditorView: View {
         }
         .sheet(isPresented: $showInvite) {
             if let saved { StartInterviewSheet(kit: saved, onCreated: onOpenInterview) }
+        }
+        .sheet(isPresented: $showBulk) {
+            if let saved { BulkInviteSheet(kit: saved) }
         }
         .task(id: simulating) {
             guard let p = simulating, let saved else { return }

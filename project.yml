@@ -115,6 +115,10 @@ targets:
             CFBundleTypeRole: Viewer
             LSHandlerRank: Owner
             LSItemContentTypes: [com.snazzy.pro.prep]
+        # snazzypro://interview?link=… (an interview invite) and snazzypro://prep?url=… (a prep pack).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.snazzy.pro
+            CFBundleURLSchemes: [snazzypro]
         # Bonjour: the iPhone/iPad remote finds this Mac.
         NSBonjourServices: [_snazzyremote._tcp]
         NSCameraUsageDescription: Snazzy Pro records your camera (including an iPad or iPhone connected by USB) as an inset in your presentation videos.
