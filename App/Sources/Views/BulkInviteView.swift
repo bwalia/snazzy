@@ -6,7 +6,8 @@ import UniformTypeIdentifiers
 
 /// Invite many candidates at once to an approved kit: paste a list, and each
 /// candidate gets their own link (browser or Snazzy Pro). The pack is encrypted
-/// on this Mac and uploaded once; OpsAPI runs every interview, in parallel.
+/// on this Mac and uploaded once; OpsAPI runs every interview, in parallel, or
+/// (offline) each candidate's Snazzy Pro runs theirs and sends the results back.
 struct BulkInviteSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -14,6 +15,7 @@ struct BulkInviteSheet: View {
     @State private var list = ""
     @State private var days = 7
     @State private var intro: String = ""
+    @State private var offline = false
     @State private var running = false
     @State private var error: String?
     @State private var results: OpsAPILink.InviteResults?
@@ -52,6 +54,11 @@ struct BulkInviteSheet: View {
                         ForEach(decks) { Text($0.name).tag($0.name) }
                     }
                     .help("Shown to candidates before they start, in Snazzy Pro. It goes in the encrypted pack, media included.")
+                    Picker("Candidates take it", selection: $offline) {
+                        Text("Online (browser or Snazzy Pro)").tag(false)
+                        Text("Offline, in Snazzy Pro on their Mac").tag(true)
+                    }
+                    .help("Offline: the interview runs on the candidate's Mac with a model there, no internet needed until the end, when the results come back to OpsAPI to be evaluated. Needs Snazzy Pro on a Mac.")
                 }
                 .formStyle(.columns)
                 if let stage = iv.inviteStage {
@@ -91,7 +98,7 @@ struct BulkInviteSheet: View {
         let people = invitees
         Task {
             do {
-                results = try await model.interviews.inviteInBulk(kit: kit, intro: chosen, invitees: people, days: days)
+                results = try await model.interviews.inviteInBulk(kit: kit, intro: chosen, invitees: people, days: days, offline: offline)
             } catch {
                 self.error = error.localizedDescription
             }

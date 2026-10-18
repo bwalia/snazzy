@@ -34,6 +34,14 @@ public struct RoleKit: Codable, Hashable, Sendable, Identifiable {
 
     public var isApproved: Bool { approvedAt != nil }
 
+    /// The kit as a candidate's Mac may hold it: the rating anchors are only for
+    /// the evaluator (the interviewer never sees them), so they're left out.
+    public var forCandidate: RoleKit {
+        var kit = self
+        for i in kit.competencies.indices { kit.competencies[i].anchors = Competency.Anchors() }
+        return kit
+    }
+
     public init(
         id: UUID = UUID(), title: String, organisation: String = "", summary: String = "", language: String = "en-GB",
         jobDescription: String = "", competencies: [Competency] = [], eligibility: [EligibilityQuestion] = [],
@@ -80,12 +88,13 @@ public struct RoleKit: Codable, Hashable, Sendable, Identifiable {
         companyFacts = (try? c.decodeIfPresent(String.self, forKey: .companyFacts))
             ?? (try? c.decodeIfPresent([String].self, forKey: .companyFacts))?.joined(separator: "\n") ?? ""
         settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? Settings()
-        approvedAt = try c.decodeIfPresent(Date.self, forKey: .approvedAt)
+        // OpsAPI before October 2026 wrote this as Postgres prints it.
+        approvedAt = c.looseDate(.approvedAt)
         approvedBy = try c.decodeIfPresent(String.self, forKey: .approvedBy)
         warnings = (try? c.decodeIfPresent([String].self, forKey: .warnings))
             ?? (try? c.decodeIfPresent([[String: String]].self, forKey: .warnings))?.map { $0.values.sorted().joined(separator: " → ") } ?? []
-        created = try c.decodeIfPresent(Date.self, forKey: .created) ?? Date()
-        updated = try c.decodeIfPresent(Date.self, forKey: .updated) ?? created
+        created = c.looseDate(.created) ?? Date()
+        updated = c.looseDate(.updated) ?? created
     }
 
     public func competency(_ id: String) -> Competency? { competencies.first { $0.id == id } }

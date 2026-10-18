@@ -57,7 +57,8 @@ public enum InterviewPack {
         let fm = FileManager.default
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         let manifestURL = folder.appendingPathComponent("manifest.json")
-        let manifest = Manifest(title: kit.title, kit: kit, intro: intro == nil ? nil : "intro")
+        // The pack goes to candidates' Macs: no rating anchors in it.
+        let manifest = Manifest(title: kit.title, kit: kit.forCandidate, intro: intro == nil ? nil : "intro")
         try InterviewJSON.encoder.encode(manifest).write(to: manifestURL)
         var files: [(path: String, url: URL)] = [("manifest.json", manifestURL)]
         if let intro {

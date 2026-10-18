@@ -49,7 +49,9 @@ struct CandidateInterviewView: View {
 
     private func notice(_ s: InterviewSession, id: UUID) -> some View {
         let iv = model.interviews!
-        let text = InterviewPrompts.notice(for: s.kit, provider: iv.providerName)
+        // An offline invite shows OpsAPI's own notice, so what was accepted can be checked there.
+        let text = s.offline?.notice ?? InterviewPrompts.notice(for: s.kit, provider: iv.providerName)
+        let hash = s.offline?.noticeHash ?? InterviewPrompts.hash(text)
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(s.kit.title).font(.largeTitle.bold())
@@ -83,7 +85,7 @@ struct CandidateInterviewView: View {
                         var list = Array(adjustments).sorted()
                         if !other.trimmingCharacters(in: .whitespaces).isEmpty { list.append(other) }
                         if list.contains("text instead of voice") { iv.auto.useTyping() }
-                        iv.start(id, noticeHash: InterviewPrompts.hash(text), adjustments: list)
+                        iv.start(id, noticeHash: hash, adjustments: list)
                     }
                     .buttonStyle(.borderedProminent).controlSize(.large)
                     Button("I'd prefer to speak to a person") { iv.requestPerson(id) }.controlSize(.large)
@@ -226,6 +228,7 @@ struct CandidateInterviewView: View {
                 if s.state == .humanRequested {
                     Text("We've told the hiring team you'd like to speak to a person. This won't count against you.")
                 }
+                if let offline = s.offline { OfflineResultStatus(id: id, offline: offline) }
                 if s.candidate.reference == InterviewController.practiceReference {
                     // Practice: coaching for the user, no self-ID questions.
                     CoachingView(session: s)
@@ -256,6 +259,40 @@ struct CandidateInterviewView: View {
             }
             .padding(28)
             .frame(maxWidth: 760, alignment: .leading)
+        }
+    }
+}
+
+/// Where an offline interview's results are: sent, or waiting for the internet.
+struct OfflineResultStatus: View {
+    @Environment(AppModel.self) private var model
+    let id: UUID
+    let offline: OfflineInvite
+    @State private var sending = false
+
+    var body: some View {
+        if offline.isSent {
+            Label("Your answers have been sent to the hiring team.", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Your answers are saved on this Mac and will be sent to the hiring team as soon as it's online.",
+                      systemImage: "arrow.up.circle")
+                if let why = offline.lastError { Text(why).font(.callout).foregroundStyle(.orange) }
+                if let by = offline.uploadBy {
+                    Text("Please connect to the internet before \(by.formatted(date: .abbreviated, time: .shortened)).")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                Button {
+                    sending = true
+                    Task {
+                        await model.interviews.sendOfflineResult(id)
+                        sending = false
+                    }
+                } label: {
+                    if sending { ProgressView().controlSize(.small) } else { Text("Send Now") }
+                }
+                .disabled(sending)
+            }
         }
     }
 }

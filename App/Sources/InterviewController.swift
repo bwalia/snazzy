@@ -106,6 +106,8 @@ final class InterviewController {
             }
         }
         Task { await refreshActivation() }
+        removeSentOfflineInterviews()
+        Task { await sendPendingOfflineResults() }
     }
 
     static var defaultRoot: URL {
@@ -312,15 +314,18 @@ final class InterviewController {
         guard let e = engines[id] else { return }
         busy.insert(id)
         let voice = auto.sessionID == id && auto.options.speak
-        let selection = app.settings.selection(for: .quickCommands)
+        let selection: ModelSelection? = e.session.offline == nil ? app.settings.selection(for: .quickCommands) : offlineInterviewer
         let system = InterviewPrompts.interviewerSystem(for: e.session.kit, voice: voice)
         let user = InterviewPrompts.interviewerMessage(for: e.session, directive: directive)
         Task {
             var text = ""
-            do {
-                text = try await complete(selection, system: system, user: user, purpose: nil, maxTokens: 1200, effort: "low", timeout: .seconds(90))
-            } catch {
-                Log.app.error("Interviewer: \(error.localizedDescription, privacy: .public)")
+            // No model for an offline interview: the engine asks the fixed questions in order.
+            if let selection {
+                do {
+                    text = try await complete(selection, system: system, user: user, purpose: nil, maxTokens: 1200, effort: "low", timeout: .seconds(90))
+                } catch {
+                    Log.app.error("Interviewer: \(error.localizedDescription, privacy: .public)")
+                }
             }
             busy.remove(id)
             guard var e = engines[id] else { return }
@@ -333,8 +338,14 @@ final class InterviewController {
     private func finished(_ id: UUID) {
         guard let s = engines[id]?.session else { return }
         Task {
-            if s.state == .completed || s.state == .humanRequested { await evaluate(id) }
+            // Offline interviews are evaluated by OpsAPI, never on the candidate's Mac.
+            if s.offline == nil, s.state == .completed || s.state == .humanRequested { await evaluate(id) }
             await deliver(id)
+            // The candidate's own Mac: theirs again once the last words are spoken.
+            if s.offline != nil {
+                await auto.untilQuiet()
+                endInterviewModeOnOwnMac()
+            }
         }
     }
 
@@ -464,6 +475,7 @@ final class InterviewController {
 
     func delete(_ s: InterviewSession) {
         engines[s.id] = nil
+        if s.offline != nil { try? app.secrets.deleteSecret(for: OfflineInvite.keychainAccount(for: s.id)) }
         if let h = s.linkTokenHash { tokens[h] = nil }
         try? store.deleteInterview(s)
         reload()
@@ -508,6 +520,7 @@ final class InterviewController {
     func deliver(_ id: UUID) async {
         guard let s = session(id) else { return }
         if s.candidate.reference.hasPrefix("Simulation:") || s.candidate.reference == Self.practiceReference { return }
+        if s.offline != nil { _ = await sendOfflineResult(id); return }
         if isLinked, (try? await sendToOpsAPI(id)) != nil { return }
         _ = try? saveFile(s)
     }
@@ -551,12 +564,68 @@ final class InterviewController {
         let token = token.trimmingCharacters(in: .whitespacesAndNewlines)
         guard token.hasPrefix("snz_"), token.count > 20 else { throw InterviewError("Paste the integration token from the OpsAPI dashboard (it starts with snz_).") }
         let ping = try await OpsAPILink(baseURL: base, token: token).ping()
+        try keepLink(base: base, token: token, workspace: ping.namespace, active: ping.active)
+    }
+
+    private func keepLink(base: URL, token: String, workspace: String?, active: Bool?) throws {
         try app.secrets.setSecret(token, for: Self.opsapiTokenAccount)
         UserDefaults.standard.set(base.absoluteString, forKey: Self.opsapiURLKey)
-        UserDefaults.standard.set(ping.namespace, forKey: Self.opsapiWorkspaceKey)
+        UserDefaults.standard.set(workspace, forKey: Self.opsapiWorkspaceKey)
         opsapiURL = base
-        opsapiWorkspace = ping.namespace
-        if ping.active == false { message = "Linked, but interviews aren't active for that OpsAPI workspace yet." }
+        opsapiWorkspace = workspace
+        if active == false { message = "Linked, but interviews aren't active for that OpsAPI workspace yet: activate Hiring in the dashboard." }
+    }
+
+    /// This Mac's name, for the token's label in the dashboard.
+    private var deviceName: String { Host.current().localizedName ?? "Mac" }
+
+    /// Makes a recruiter account and a Hiring workspace at OpsAPI, and links this Mac to it.
+    func registerRecruiter(url: String, company: String, firstName: String, lastName: String, email: String, password: String) async throws {
+        let base = try RecruiterAccount.checkedBase(url)
+        let linked = try await RecruiterAccount.register(at: base, company: company, firstName: firstName, lastName: lastName,
+                                                         email: email, password: password, deviceName: deviceName)
+        try keepLink(base: base, token: linked.token, workspace: linked.namespace.name, active: linked.active)
+    }
+
+    /// Signs into an existing recruiter account. Returns the workspaces to choose
+    /// from when there are several (call again with one); nil once linked.
+    func signInRecruiter(url: String, email: String, password: String, workspace: String? = nil) async throws -> [RecruiterAccount.Workspace]? {
+        let base = try RecruiterAccount.checkedBase(url)
+        switch try await RecruiterAccount.signIn(at: base, email: email, password: password, workspace: workspace, deviceName: deviceName) {
+        case .choose(let options): return options
+        case .linked(let linked):
+            try keepLink(base: base, token: linked.token, workspace: linked.namespace.name, active: linked.active)
+            return nil
+        }
+    }
+
+    /// Every candidate's finished interview at OpsAPI (online or offline), with
+    /// OpsAPI's evaluation, copied into the Interviews list for review. Returns how many are new or updated.
+    @discardableResult
+    func fetchResultsFromOpsAPI(using override: OpsAPILink? = nil) async throws -> Int {
+        guard let link = override ?? link else { throw InterviewError("OpsAPI isn't linked.") }
+        var changed = 0
+        var page = 1
+        while page <= 50 {
+            let list = try await link.interviews(page: page, perPage: 100)
+            for item in list where item.isFinished {
+                let local = interviews.first { $0.audit.contains { $0.action == "fetched_from_opsapi" && $0.detail == item.uuid } }
+                if let local, let updated = item.updatedAt, let fetched = local.audit.last(where: { $0.action == "fetched_from_opsapi" })?.at,
+                   fetched >= updated { continue }
+                var s = try await link.interview(item.uuid)
+                // Interviews run at this Mac and sent from here are already here, with their recording.
+                if local == nil, interviews.contains(where: { $0.id == s.id }) { continue }
+                if let local { s.id = local.id }
+                s.offline = nil
+                s.log("fetched_from_opsapi", by: "app", detail: item.uuid)
+                try store.save(s)
+                changed += 1
+            }
+            if list.count < 100 { break }
+            page += 1
+        }
+        reload()
+        return changed
     }
 
     func unlinkOpsAPI() {
@@ -603,7 +672,7 @@ final class InterviewController {
     /// introduction deck) is encrypted here and uploaded once to S3; OpsAPI hands
     /// its key only to valid invites. OpsAPI runs every interview (same model,
     /// same questions), so they can all happen at the same time.
-    func inviteInBulk(kit: RoleKit, intro: BuilderProject?, invitees: [OpsAPILink.Invitee], days: Int,
+    func inviteInBulk(kit: RoleKit, intro: BuilderProject?, invitees: [OpsAPILink.Invitee], days: Int, offline: Bool = false,
                       using override: OpsAPILink? = nil) async throws -> OpsAPILink.InviteResults {
         try requireActive()
         guard let link = override ?? link else { throw InterviewError("Link OpsAPI first (Interviews › OpsAPI).") }
@@ -624,9 +693,123 @@ final class InterviewController {
         }
         _ = try await link.completePack(pack.uuid)
         inviteStage = .inviting
-        let results = try await link.invite(kit: kit, packUUID: pack.uuid, invitees: invitees, days: days)
+        let results = try await link.invite(kit: kit, packUUID: pack.uuid, invitees: invitees, days: days, offline: offline)
         Log.app.info("Invited \(results.invited, privacy: .public) candidates (\(results.failed, privacy: .public) failed)")
         return results
+    }
+
+    // MARK: Offline interviews by invite link (the candidate's own Mac runs them)
+
+    /// The interviewer for an offline interview: the Quick commands model if it
+    /// runs on this Mac, else Apple's on-device model, else none (the engine asks
+    /// the fixed questions without follow-ups). Answers never leave this Mac until the end.
+    var offlineInterviewer: ModelSelection? {
+        let s = app.settings.selection(for: .quickCommands)
+        if app.settings.runsOnThisMac(s.provider), app.unavailableReason(s.provider) == nil { return s }
+        if app.unavailableReason(.appleOnDevice) == nil { return ModelSelection(provider: .appleOnDevice, model: ProviderKind.appleModelID) }
+        return nil
+    }
+
+    /// Makes (or finds again) the local interview for an offline invite. Needs no
+    /// subscription here: the recruiter's OpsAPI workspace pays for it.
+    func offlineInterview(_ start: OfflineStart, link: InviteLink) throws -> UUID {
+        if let uuid = start.interviewUuid,
+           let existing = interviews.first(where: { $0.offline?.interviewUUID == uuid && $0.offline?.isSent == false }) {
+            try app.secrets.setSecret(link.token, for: OfflineInvite.keychainAccount(for: existing.id))
+            return existing.id
+        }
+        var kit = start.kit.forCandidate
+        kit.settings.offerCamera = false
+        var session = InterviewSession(kit: kit, candidate: Candidate(name: start.candidate?.name ?? NSFullUserName()), channel: .thisMac)
+        // The recording would stay on the candidate's Mac: not offered.
+        session.cameraOffered = false
+        session.offline = OfflineInvite(api: link.api, notice: start.notice, noticeHash: start.noticeHash,
+                                        uploadBy: start.uploadBy, interviewUUID: start.interviewUuid)
+        session.models["interviewer"] = (offlineInterviewer.map(describe) ?? "none (fixed questions)") + " · " + InterviewPrompts.interviewerVersion
+        session.log("offline_opened", by: "candidate", detail: link.api.host() ?? "")
+        try app.secrets.setSecret(link.token, for: OfflineInvite.keychainAccount(for: session.id))
+        try store.save(session)
+        reload()
+        return session.id
+    }
+
+    private func offlineClient(_ s: InterviewSession) -> InviteClient? {
+        guard let offline = s.offline,
+              let token = try? app.secrets.secret(for: OfflineInvite.keychainAccount(for: s.id)), !token.isEmpty else { return nil }
+        return InviteClient(link: InviteLink(token: token, api: offline.api))
+    }
+
+    /// Finished offline interviews whose results haven't reached OpsAPI yet.
+    var pendingOfflineResults: [InterviewSession] {
+        interviews.filter { $0.isFinished && $0.offline?.isPending() == true }
+    }
+
+    @ObservationIgnored private var sendingOffline: Set<UUID> = []
+    @ObservationIgnored private var pendingSelfID: [UUID: [String: String]] = [:]
+    @ObservationIgnored private var offlineRetry: Task<Void, Never>?
+
+    /// Sends a finished offline interview's results to OpsAPI. If that fails (no
+    /// internet), they stay here and are tried again every few minutes and at launch.
+    @discardableResult
+    func sendOfflineResult(_ id: UUID) async -> Bool {
+        guard var s = session(id), s.isFinished, let offline = s.offline, !offline.isSent, !sendingOffline.contains(id) else {
+            return session(id)?.offline?.isSent ?? false
+        }
+        guard let client = offlineClient(s) else {
+            s.offline?.lastError = "The invite link isn't on this Mac any more. Ask the hiring team for a new link."
+            save(session: s)
+            return false
+        }
+        sendingOffline.insert(id)
+        defer { sendingOffline.remove(id) }
+        do {
+            _ = try await client.submit(s, deviceID: JoinInterview.deviceID, app: appVersion)
+            s = session(id) ?? s
+            s.offline?.uploadedAt = Date()
+            s.offline?.lastError = nil
+            s.log("offline_result_sent", by: "app", detail: offline.api.host() ?? "")
+            save(session: s)
+            await sendSelfID(id)
+            return true
+        } catch {
+            s = session(id) ?? s
+            s.offline?.lastError = error.localizedDescription
+            save(session: s)
+            Log.app.error("Offline interview results: \(error.localizedDescription, privacy: .public)")
+            scheduleOfflineRetry()
+            return false
+        }
+    }
+
+    private func sendSelfID(_ id: UUID) async {
+        guard let answers = pendingSelfID.removeValue(forKey: id), let s = session(id), let client = offlineClient(s) else { return }
+        do { _ = try await client.selfID(answers) } catch {
+            Log.app.error("Offline self-ID: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func sendPendingOfflineResults() async {
+        for s in pendingOfflineResults { await sendOfflineResult(s.id) }
+    }
+
+    private func scheduleOfflineRetry() {
+        guard offlineRetry == nil else { return }
+        offlineRetry = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(180))
+                guard let self else { return }
+                await self.sendPendingOfflineResults()
+                if self.pendingOfflineResults.isEmpty { break }
+            }
+            self?.offlineRetry = nil
+        }
+    }
+
+    /// Offline interviews already sent: OpsAPI has them, so this Mac doesn't keep the
+    /// transcript (or the invite token) past the session it ended in.
+    func removeSentOfflineInterviews() {
+        // Sent, or too late to send (OpsAPI won't take them any more).
+        for s in interviews where s.offline.map({ $0.isSent || !$0.isPending() }) == true { delete(s) }
     }
 
     // MARK: Simulated candidates
@@ -765,7 +948,8 @@ final class InterviewController {
 
     /// Candidates' interviews (practice ones left out).
     var candidateInterviews: [InterviewSession] {
-        interviews.filter { $0.candidate.reference != Self.practiceReference }
+        // Practice, and offline interviews this Mac's owner took as a candidate, aren't a recruiter's.
+        interviews.filter { $0.candidate.reference != Self.practiceReference && $0.offline == nil }
     }
 
     /// Starts a practice interview at this Mac with the user's own models. Free:
@@ -910,7 +1094,10 @@ final class InterviewController {
         guard e.session.state == .invited else { return send(.askForPerson, to: id) }
         e.requestPersonBeforeStart()
         commit(e)
-        Task { await deliver(id) }
+        Task {
+            await deliver(id)
+            if e.session.offline != nil { endInterviewModeOnOwnMac() }
+        }
     }
 
     /// Voluntary self-ID, stored apart from the interview (only answers from the fixed lists).
@@ -920,6 +1107,12 @@ final class InterviewController {
         let allowed = Dictionary(uniqueKeysWithValues: SelfID.questions.map { ($0.id, Set($0.options)) })
         let kept = answers.filter { allowed[$0.key]?.contains($0.value) == true }
         guard !kept.isEmpty else { return }
+        if s.offline != nil {
+            // Kept by OpsAPI, apart from the interview, as for online interviews: sent once the results are there.
+            pendingSelfID[id] = kept
+            if s.offline?.isSent == true { Task { await sendSelfID(id) } }
+            return
+        }
         let key = UUID().uuidString
         try? store.save(SelfID(key: key, answers: kept))
         s.selfIDKey = key
