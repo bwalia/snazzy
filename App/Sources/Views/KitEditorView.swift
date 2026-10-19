@@ -209,6 +209,9 @@ struct KitEditorView: View {
         .sheet(isPresented: $showBulk) {
             if let saved { BulkInviteSheet(kit: saved) }
         }
+        .onChange(of: iv.bulkInviteRequest) { _, request in
+            if request?.kitID == kit.id { showBulk = true }
+        }
         .task(id: simulating) {
             guard let p = simulating, let saved else { return }
             do {

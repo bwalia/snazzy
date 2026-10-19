@@ -25,6 +25,8 @@ final class JoinInterview: NSObject, AVSpeechSynthesizerDelegate {
     private(set) var hasIntro = false
     var speak = true
     var listen = true
+    /// The link in the join window's box.
+    var linkText = ""
     var partial: String { speech.partial }
     /// Opens the join window.
     var windowRequest = 0
@@ -274,18 +276,21 @@ final class JoinInterview: NSObject, AVSpeechSynthesizerDelegate {
         synthesizer.speak(u)
     }
 
-    @ObservationIgnored private var finishedSpeaking: CheckedContinuation<Void, Never>?
+    /// Returns once every question has been read aloud.
+    func untilQuiet() async { await waitForSpeech() }
+
+    /// Everyone waiting for the questions to be read (the listener, the end of the interview).
+    @ObservationIgnored private var finishedSpeaking: [CheckedContinuation<Void, Never>] = []
 
     private func waitForSpeech() async {
         guard queued > 0 else { return }
         let guardTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(60))
             self?.queued = 0
-            self?.finishedSpeaking?.resume()
-            self?.finishedSpeaking = nil
+            self?.resumeWaiters()
         }
         await withCheckedContinuation { c in
-            if queued > 0 { finishedSpeaking = c } else { c.resume() }
+            if queued > 0 { finishedSpeaking.append(c) } else { c.resume() }
         }
         guardTask.cancel()
         try? await Task.sleep(for: .milliseconds(400))
@@ -301,10 +306,13 @@ final class JoinInterview: NSObject, AVSpeechSynthesizerDelegate {
 
     private func utteranceEnded() {
         queued = max(0, queued - 1)
-        if queued == 0 {
-            finishedSpeaking?.resume()
-            finishedSpeaking = nil
-        }
+        if queued == 0 { resumeWaiters() }
+    }
+
+    private func resumeWaiters() {
+        let waiting = finishedSpeaking
+        finishedSpeaking = []
+        for c in waiting { c.resume() }
     }
 }
 
