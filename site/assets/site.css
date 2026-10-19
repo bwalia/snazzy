@@ -412,6 +412,11 @@ footer a { text-decoration: none; } footer a:hover { color: var(--fg); }
 .tour-card p { margin: 0; color: var(--muted); font-size: 15px; }
 .tour-card .tour-tag { color: #B9A9FF; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 #see-it .see-all { text-align: center; margin-top: 28px; }
+.flow { display: flex; flex-direction: column; gap: 12px; }
+.flow-step { display: grid; grid-template-columns: 32px 1fr; gap: 14px; align-items: start; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; background: linear-gradient(180deg, var(--night), #10152C); }
+.flow-step .n { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--spotlight); color: #fff; font-weight: 800; font-size: 15px; }
+.flow-step h4 { margin: 4px 0 4px; font-size: 16px; letter-spacing: -0.01em; }
+.flow-step p { margin: 0; color: var(--muted); font-size: 14px; }
 @media (max-width: 900px) { .tour-grid, .tour-grid.devices { grid-template-columns: 1fr; } }
 
 /* Downloads */
