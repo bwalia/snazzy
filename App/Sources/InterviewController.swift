@@ -509,11 +509,19 @@ final class InterviewController {
     }
 
     private var link: OpsAPILink? {
+        #if DEBUG
+        if let tourLink { return tourLink }
+        #endif
         guard let opsapiURL, let token = try? app.secrets.secret(for: Self.opsapiTokenAccount), !token.isEmpty else { return nil }
         return OpsAPILink(baseURL: opsapiURL, token: token)
     }
 
-    var isLinked: Bool { opsapiURL != nil && link != nil }
+    var isLinked: Bool { link != nil }
+
+    #if DEBUG
+    /// Tours use a test OpsAPI without touching the user's own link.
+    var tourLink: OpsAPILink?
+    #endif
 
     /// Once an interview ends (and is evaluated): sent to OpsAPI if linked, else
     /// saved as a `.snazzy_interview` file. If sending fails, the file is saved too.
@@ -666,6 +674,18 @@ final class InterviewController {
     }
 
     private(set) var inviteStage: InviteStage?
+    /// The last bulk invite's results (the links aren't shown again once the sheet closes).
+    private(set) var lastInvites: OpsAPILink.InviteResults?
+
+    /// Opens Invite in Bulk on a kit with a list already filled in (and, if `send`, sends it).
+    struct BulkInviteRequest: Equatable {
+        var kitID: UUID
+        var list: String
+        var intro: String
+        var send: Bool
+    }
+
+    var bulkInviteRequest: BulkInviteRequest?
 
     /// Invites many candidates at once to an approved kit. Each gets their own link,
     /// opened in a browser or in Snazzy Pro. A pack (the kit, plus an optional
@@ -695,6 +715,7 @@ final class InterviewController {
         inviteStage = .inviting
         let results = try await link.invite(kit: kit, packUUID: pack.uuid, invitees: invitees, days: days, offline: offline)
         Log.app.info("Invited \(results.invited, privacy: .public) candidates (\(results.failed, privacy: .public) failed)")
+        lastInvites = results
         return results
     }
 

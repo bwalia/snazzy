@@ -83,6 +83,17 @@ struct BulkInviteSheet: View {
         }
         .padding(24)
         .frame(width: 640)
+        .task {
+            // Opened with a list already filled in (see `InterviewController.bulkInviteRequest`).
+            guard let request = model.interviews.bulkInviteRequest, request.kitID == kit.id else { return }
+            model.interviews.bulkInviteRequest = nil
+            list = request.list
+            intro = request.intro
+            if request.send {
+                try? await Task.sleep(for: .seconds(3))
+                invite()
+            }
+        }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
             guard case .success(let url) = result else { return }
             let access = url.startAccessingSecurityScopedResource()

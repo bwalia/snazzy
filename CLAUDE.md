@@ -48,6 +48,7 @@ $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj
 #       --offline-interview-test --opsapi <url> [--token snz_…] [--memory-secrets]   (recruiter registers and signs in, invites offline; the candidate's
 #                          app redeems the link once, runs the interview here, sends the results when back online; recruiter fetches them)
 # Interview tours: -SnazzyPro.tour interview-recruiter | auto-interview
+#   | interview-online -SnazzyPro.tourOpsAPI <url> (token in SNAZZY_TOUR_OPSAPI_TOKEN; bulk invite, then a candidate joins by link)
 # Tours (films the app window): -SnazzyPro.tour <name>, e.g. voice-presenter, agent-classroom (Tours.all)
 # App Store screenshots: -SnazzyPro.screenshots YES, then swift Scripts/frame-screenshots.swift (docs/launch/APP_STORE.md §5)
 #   (only the deck library: add -SnazzyPro.screenshotScenes decks [-SnazzyPro.screenshotDeckRepo <repo link>])

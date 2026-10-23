@@ -6,7 +6,6 @@ import SwiftUI
 /// interview; nothing about evidence or ratings is shown here.
 struct JoinInterviewView: View {
     @Environment(AppModel.self) private var model
-    @State private var link = ""
     @State private var adjustments: Set<String> = []
     @State private var other = ""
     @State private var typed = ""
@@ -39,10 +38,11 @@ struct JoinInterviewView: View {
             Text("Join an Interview").font(.largeTitle.bold())
             Text("Paste the link from your invitation. No account or passcode: the link is your invitation, and it works on one Mac.")
                 .foregroundStyle(.secondary)
-            TextField("https://…/i/…", text: $link).textFieldStyle(.roundedBorder).onSubmit { open(join) }
+            TextField("https://…/i/…", text: Binding(get: { join.linkText }, set: { join.linkText = $0 }))
+                .textFieldStyle(.roundedBorder).onSubmit { open(join) }
             Button("Open the Interview") { open(join) }
                 .buttonStyle(.borderedProminent).controlSize(.large)
-                .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(join.linkText.trimmingCharacters(in: .whitespaces).isEmpty)
             if case .failed(let why) = join.stage { Label(why, systemImage: "exclamationmark.triangle").foregroundStyle(.orange) }
         }
         .padding(28)
@@ -68,7 +68,7 @@ struct JoinInterviewView: View {
     }
 
     private func open(_ join: JoinInterview) {
-        let text = link
+        let text = join.linkText
         Task { await join.join(text) }
     }
 
