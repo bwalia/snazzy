@@ -60,6 +60,8 @@ public struct InterviewSession: Codable, Hashable, Sendable, Identifiable {
     public var created: Date
     /// When this interview is deleted (set at completion and moved on decision).
     public var deleteAfter: Date?
+    /// An interview by invite link taken offline at the candidate's own Mac: where its results go.
+    public var offline: OfflineInvite?
 
     public init(id: UUID = UUID(), kit: RoleKit, candidate: Candidate, channel: Channel, now: Date = Date()) {
         self.id = id
@@ -87,7 +89,7 @@ public struct InterviewSession: Codable, Hashable, Sendable, Identifiable {
         case id, kit, candidate, channel, state, linkTokenHash, linkExpires, turns, flags, eligibilityAnswers, adjustments,
              noticeHash, noticeAcceptedAt, startedAt, endedAt, endReason, pausedSeconds, pausedAt, step, followUps,
              forwardedQuestions, models, evaluation, review, selfIDKey = "selfIdKey", audit, created, deleteAfter,
-             cameraOffered, camera, recordingFiles
+             cameraOffered, camera, recordingFiles, offline
     }
 
     public init(from decoder: Decoder) throws {
@@ -123,6 +125,7 @@ public struct InterviewSession: Codable, Hashable, Sendable, Identifiable {
         cameraOffered = try c.decodeIfPresent(Bool.self, forKey: .cameraOffered) ?? false
         camera = try c.decodeIfPresent(CameraConsent.self, forKey: .camera)
         recordingFiles = try c.decodeIfPresent([String].self, forKey: .recordingFiles) ?? []
+        offline = try? c.decodeIfPresent(OfflineInvite.self, forKey: .offline)
     }
 
     /// The camera is on and recording only while the candidate agrees.

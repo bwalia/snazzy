@@ -215,6 +215,50 @@ Snazzy Pro app ── HTTPS + JWT ──▶ interview API ◀── link token, 
 | Voice | Speech-to-text and text-to-speech run on the server, behind a provider interface; candidates on a phone use the browser's mic | Browser speech APIs differ across devices and some send audio to third parties without saying so. One server provider gives one DPA and one place to configure retention. |
 | Recruiter console | In Snazzy Pro (Mac first, then the Windows/Linux app), with a web console later for teams who don't use Snazzy | Reuses the app's chat, recorder and Builder; a web console follows demand. |
 
+### Offline interviews by invite link (built, October 2026)
+
+For candidates without a reliable connection, a recruiter can invite them to take
+the interview **offline, in Snazzy Pro on their own Mac**. The same OpsAPI
+workspace, links and bulk invites are used; only `delivery` differs.
+
+```
+Recruiter (Snazzy Pro or dashboard)         OpsAPI                               Candidate's Snazzy Pro
+register / sign in ──────────────────────▶ /public/ats/recruiters/* → snz_ token
+bulk invite {delivery: offline} ─────────▶ invites + links (app links)
+                                           /interviews/:token/offline ◀──────── once, first device keeps it
+                                           kit without anchors, notice, pack ──▶ runs the interview here
+                                                                                 (on-device model, or none)
+                                           /interviews/:token/result  ◀──────── once, when back online
+                                           server evaluator, stage → review
+fetch results ◀──────────────────────────  /integration/interviews[/:uuid]
+```
+
+- **What reaches the candidate's Mac:** the kit with every rating anchor removed
+  (`RoleKit.forCandidate`; packs built on the recruiter's Mac carry the same), the
+  notice written by OpsAPI for offline interviews, and the optional encrypted pack
+  (introduction deck). The invite token is kept in the Keychain; the camera isn't
+  offered (the recording would stay on the candidate's Mac).
+- **Who runs it:** `InterviewController` + `AutoInterview`, as at a recruiter's Mac,
+  with the Quick commands model only if it runs on this Mac, else Apple's on-device
+  model, else no model (the engine asks the fixed questions without follow-ups).
+  Nothing is sent until the end. The assistant, Voice Mode and the prompter are off
+  while it runs (interview mode, without locking the candidate's own Mac).
+- **What goes back:** the `.snazzy_interview` file without any evaluation or review,
+  bound to the invite and the device that redeemed it. OpsAPI checks it against the
+  kit it sent (kit id, question ids, notice hash, times) and evaluates it itself; a
+  second, different result is refused. It's tried again every few minutes and at
+  launch until `upload_by` (the link's expiry plus 7 days); sent ones are removed
+  from the candidate's Mac at the next launch. Voluntary self-ID answers go to
+  OpsAPI after the results, kept apart as for online interviews.
+- **Limits, stated plainly:** an offline transcript is reported by the candidate's
+  device, so the dashboard labels it "Taken offline on the candidate's own Mac".
+  The app can't stop a determined candidate editing it before it's sent; treat it
+  like a take-home task that a person reviews, never as proof.
+- **Recruiters** make an account and a Hiring workspace from the app (Interviews ›
+  OpsAPI › Create Account) or sign in; either way the app keeps only a `snz_` token.
+  **Fetch Results** copies every finished interview (online and offline), with
+  OpsAPI's evaluation, into the Interviews window for review.
+
 ### Engine state machine
 
 `invited → opened → notice_shown → acknowledged → (check) → practice →

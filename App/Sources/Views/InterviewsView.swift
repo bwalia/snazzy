@@ -302,13 +302,28 @@ struct FairnessView: View {
 }
 
 /// Links OpsAPI's interview management: results go there as soon as they're ready,
-/// and kits made in the dashboard can be used here. Without it, results are saved
-/// as .snazzy_interview files.
+/// kits made in the dashboard can be used here, and every candidate's results
+/// (online or offline) can be fetched for review. A recruiter can make an account
+/// and a Hiring workspace here, sign in, or paste a token from the dashboard.
+/// Without it, results are saved as .snazzy_interview files.
 struct OpsAPILinkSheet: View {
+    enum Mode: String, CaseIterable, Identifiable {
+        case register = "Create Account", signIn = "Sign In", token = "Use a Token"
+        var id: String { rawValue }
+    }
+
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @State private var mode: Mode = .register
     @State private var url = ""
     @State private var token = ""
+    @State private var company = ""
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var email = ""
+    @State private var password = ""
+    @State private var workspaces: [RecruiterAccount.Workspace] = []
+    @State private var workspace = ""
     @State private var busy = false
     @State private var status: String?
 
@@ -319,24 +334,52 @@ struct OpsAPILinkSheet: View {
             if iv.isLinked {
                 Label("Linked to \(iv.opsapiWorkspace ?? "OpsAPI") at \(iv.opsapiURL?.host() ?? "")", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-                Text("Finished interviews are sent there as soon as their evidence is ready. If sending fails, a .snazzy_interview file is saved instead.")
+                Text("Finished interviews are sent there as soon as their evidence is ready. If sending fails, a .snazzy_interview file is saved instead. Candidates you invite can take interviews online, or offline in Snazzy Pro on their own Mac; either way their results come back to OpsAPI.")
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button("Get Kits from OpsAPI") {
-                        Task {
-                            busy = true
-                            defer { busy = false }
-                            do { status = "\(try await iv.fetchKitsFromOpsAPI()) approved kit(s) available." } catch { status = error.localizedDescription }
+                    Button("Fetch Results") {
+                        run {
+                            let n = try await iv.fetchResultsFromOpsAPI()
+                            status = n == 0 ? "No new results." : "\(n) interview\(n == 1 ? "" : "s") fetched: see To review."
                         }
                     }
+                    .help("Copies every candidate's finished interview, with OpsAPI's evidence, into this window for review")
+                    Button("Get Kits from OpsAPI") {
+                        run { status = "\(try await iv.fetchKitsFromOpsAPI()) approved kit(s) available." }
+                    }
                     Button("Unlink", role: .destructive) { iv.unlinkOpsAPI() }
+                    if busy { ProgressView().controlSize(.small) }
                 }
             } else {
-                Text("Without OpsAPI, results are saved as .snazzy_interview files in ~/Movies/Snazzy Pro/Interviews, which you can upload to OpsAPI later. To send them straight away, make an integration token in the OpsAPI dashboard (Interviews › Settings) and paste it here.")
-                    .foregroundStyle(.secondary)
+                Picker("", selection: $mode) { ForEach(Mode.allCases) { Text($0.rawValue).tag($0) } }
+                    .pickerStyle(.segmented).labelsHidden()
                 TextField("OpsAPI address, e.g. https://api.example.com", text: $url)
-                SecureField("Integration token (snz_…)", text: $token)
-                Text("Candidates' answers, kits and decisions are sent to that server. The token is kept in your Keychain.")
+                switch mode {
+                case .register:
+                    Text("Make a recruiter account and a Hiring workspace for your company. You can then invite candidates in bulk and review everyone's results here or in the dashboard.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    TextField("Company", text: $company)
+                    HStack {
+                        TextField("First name", text: $firstName)
+                        TextField("Last name", text: $lastName)
+                    }
+                    TextField("Work email", text: $email).textContentType(.username)
+                    SecureField("Password (at least 8 characters)", text: $password).textContentType(.newPassword)
+                case .signIn:
+                    TextField("Email", text: $email).textContentType(.username)
+                    SecureField("Password", text: $password).textContentType(.password)
+                    if !workspaces.isEmpty {
+                        Picker("Workspace", selection: $workspace) {
+                            Text("Choose…").tag("")
+                            ForEach(workspaces) { Text($0.name).tag($0.uuid) }
+                        }
+                    }
+                case .token:
+                    Text("Make an integration token in the OpsAPI dashboard (Hiring › Settings) and paste it here.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    SecureField("Integration token (snz_…)", text: $token)
+                }
+                Text("Candidates' answers, kits and decisions are sent to that server. This Mac keeps only a token, in your Keychain; your password isn't kept.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if let status { Text(status).font(.callout) }
@@ -344,24 +387,56 @@ struct OpsAPILinkSheet: View {
                 Spacer()
                 Button("Close") { dismiss() }
                 if !iv.isLinked {
-                    Button("Link") {
-                        Task {
-                            busy = true
-                            defer { busy = false }
-                            do {
-                                try await iv.linkOpsAPI(url: url, token: token)
-                                token = ""
-                                status = "Linked."
-                            } catch { status = error.localizedDescription }
-                        }
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(busy || url.isEmpty || token.isEmpty)
+                    Button(mode == .register ? "Create Account" : mode == .signIn ? "Sign In" : "Link") { link(iv) }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(busy || !ready)
                 }
             }
         }
         .padding(20)
         .frame(width: 560)
+        .onChange(of: mode) { _, _ in status = nil; workspaces = []; workspace = "" }
+    }
+
+    private var ready: Bool {
+        guard !url.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        switch mode {
+        case .register: return ![company, firstName, lastName, email].contains { $0.trimmingCharacters(in: .whitespaces).isEmpty } && password.count >= 8
+        case .signIn: return !email.isEmpty && !password.isEmpty && (workspaces.isEmpty || !workspace.isEmpty)
+        case .token: return !token.isEmpty
+        }
+    }
+
+    private func link(_ iv: InterviewController) {
+        run {
+            switch mode {
+            case .register:
+                try await iv.registerRecruiter(url: url, company: company, firstName: firstName, lastName: lastName, email: email, password: password)
+            case .signIn:
+                if let choose = try await iv.signInRecruiter(url: url, email: email, password: password, workspace: workspace.isEmpty ? nil : workspace) {
+                    workspaces = choose
+                    status = "This account has more than one workspace: choose one."
+                    return
+                }
+            case .token:
+                try await iv.linkOpsAPI(url: url, token: token)
+            }
+            password = ""
+            token = ""
+            status = iv.message ?? "Linked."
+        }
+    }
+
+    private func run(_ work: @escaping @MainActor () async throws -> Void) {
+        Task {
+            busy = true
+            defer { busy = false }
+            do { try await work() } catch {
+                status = error.localizedDescription
+                // Two-step sign-in can't happen here: a token from the dashboard links this Mac instead.
+                if (error as? RecruiterAccount.Problem)?.code == "mfa_required" { mode = .token; status = error.localizedDescription }
+            }
+        }
     }
 }
 

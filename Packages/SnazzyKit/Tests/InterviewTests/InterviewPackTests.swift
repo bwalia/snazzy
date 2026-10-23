@@ -59,7 +59,8 @@ import SnazzyCore
         let sealed = try InterviewPack.build(kit: kit, intro: intro, in: dir.appendingPathComponent("build"))
         #expect(sealed.size > 200_000)
         let opened = try InterviewPack.open(sealed.file, keyBase64: sealed.keyBase64, sha256: sealed.sha256, into: dir.appendingPathComponent("open"))
-        #expect(opened.manifest.kit == kit)
+        #expect(opened.manifest.kit == kit.forCandidate)
+        #expect(opened.manifest.kit.competencies.allSatisfy { $0.anchors.level1.isEmpty && $0.anchors.level5.isEmpty })
         #expect(try Data(contentsOf: opened.introFolder!.appendingPathComponent("media/welcome.mp4")) == video)
         #expect(throws: (any Error).self) {
             try InterviewPack.open(sealed.file, keyBase64: sealed.keyBase64, sha256: String(repeating: "0", count: 64), into: dir.appendingPathComponent("x"))

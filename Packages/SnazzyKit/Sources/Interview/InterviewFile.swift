@@ -23,6 +23,8 @@ public enum InterviewFile {
         copy.selfIDKey = nil
         // Local file paths stay on this Mac (the recording isn't in the file).
         copy.recordingFiles = []
+        // Where an offline interview's results go is this Mac's business.
+        copy.offline = nil
         return try InterviewJSON.encoder.encode(Wrapper(format: format, version: version, exportedAt: now, app: app, interview: copy))
     }
 

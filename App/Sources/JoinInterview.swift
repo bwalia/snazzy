@@ -5,15 +5,21 @@ import Interview
 import Observation
 import SnazzyCore
 
-/// The candidate's side of an interview by invite link. OpsAPI runs the
+/// The candidate's side of an interview by invite link. Online, OpsAPI runs the
 /// interview (the same model and questions for everyone); this Mac shows the
 /// interview deck, speaks the questions and hears the answers on-device. If the
 /// invite has a pack, it's downloaded with a short-lived link, checked and
 /// decrypted here: the link itself is the key, so there's no passcode.
+///
+/// Offline, OpsAPI sends the kit once and this Mac runs the whole interview
+/// (InterviewController + AutoInterview, as at a recruiter's Mac), with a model
+/// that runs here or none; the results go back once at the end.
 @MainActor @Observable
 final class JoinInterview: NSObject, AVSpeechSynthesizerDelegate {
     enum Stage: Equatable {
         case idle, loading, downloading(Double), ready, failed(String)
+        /// An offline interview, running in the Interview window.
+        case offline(UUID)
     }
 
     private(set) var stage: Stage = .idle
@@ -72,6 +78,10 @@ final class JoinInterview: NSObject, AVSpeechSynthesizerDelegate {
         self.client = client
         do {
             var v = try await client.view()
+            if v.isOffline, !v.isFinished {
+                try await startOffline(client)
+                return
+            }
             if v.hasPack == true, !v.isFinished {
                 try await openPack(client)
                 v = try await client.view()
@@ -84,21 +94,33 @@ final class JoinInterview: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    private func openPack(_ client: InviteClient) async throws {
-        let pack = try await client.pack(deviceID: Self.deviceID)
-        guard let url = URL(string: pack.url), url.scheme == "https" || ["localhost", "127.0.0.1"].contains(url.host() ?? "") else {
-            throw InterviewError("The interview pack's link isn't secure.")
+    /// Redeems an offline invite on this Mac and opens it in the Interview window.
+    private func startOffline(_ client: InviteClient) async throws {
+        let start = try await client.offline(deviceID: Self.deviceID)
+        if let pack = start.pack {
+            // The kit comes from OpsAPI's reply; the pack adds the recruiter's introduction deck.
+            let folder = Self.scratchFolder()
+            defer { try? FileManager.default.removeItem(at: folder) }
+            let opened = try await download(pack, into: folder)
+            if let intro = opened.introFolder {
+                let project = try app.builder.workspace.importFolder(intro, name: "Intro: \(start.kit.title)")
+                introProject = project.name
+                hasIntro = true
+                app.builder.refreshProjects()
+            }
         }
-        stage = .downloading(0)
-        let progress = DownloadProgress { [weak self] fraction in Task { @MainActor in self?.stage = .downloading(fraction) } }
-        let (file, response) = try await URLSession.shared.download(from: url, delegate: progress)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw InterviewError("The interview pack didn't download. Please try again.") }
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("interview-\(UUID().uuidString)", isDirectory: true)
+        let id = try app.interviews.offlineInterview(start, link: client.link)
+        if listen, !(await SpeechInput.authorize()) { listen = false }
+        await app.interviews.auto.prepare(id, options: AutoInterview.Options(speak: speak, listen: listen, showDeck: true))
+        app.interviews.enterInterviewMode(lockMac: false)
+        app.interviews.candidateWindowRequest += 1
+        stage = .offline(id)
+    }
+
+    private func openPack(_ client: InviteClient) async throws {
+        let folder = Self.scratchFolder()
         defer { try? FileManager.default.removeItem(at: folder) }
-        let opened = try await Task.detached {
-            try InterviewPack.open(file, keyBase64: pack.key, sha256: pack.sha256, into: folder)
-        }.value
-        try? FileManager.default.removeItem(at: file)
+        let opened = try await download(client.pack(deviceID: Self.deviceID), into: folder)
         kit = opened.manifest.kit
         // The interview deck, made from the kit (as at a recruiter's Mac).
         try app.builder.createDeck(AutoInterview.deck(for: opened.manifest.kit))
@@ -111,6 +133,26 @@ final class JoinInterview: NSObject, AVSpeechSynthesizerDelegate {
             app.builder.refreshProjects()
         }
         if let deckProject { app.builder.open(deckProject, announce: false) }
+    }
+
+    private static func scratchFolder() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("interview-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    /// Downloads a pack with its short-lived link, then checks and decrypts it into `folder` (the caller removes it).
+    private func download(_ pack: InviteClient.Pack, into folder: URL) async throws -> InterviewPack.Opened {
+        guard let url = URL(string: pack.url), url.scheme == "https" || ["localhost", "127.0.0.1"].contains(url.host() ?? "") else {
+            throw InterviewError("The interview pack's link isn't secure.")
+        }
+        stage = .downloading(0)
+        let progress = DownloadProgress { [weak self] fraction in Task { @MainActor in self?.stage = .downloading(fraction) } }
+        let (file, response) = try await URLSession.shared.download(from: url, delegate: progress)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw InterviewError("The interview pack didn't download. Please try again.") }
+        let opened = try await Task.detached {
+            try InterviewPack.open(file, keyBase64: pack.key, sha256: pack.sha256, into: folder)
+        }.value
+        try? FileManager.default.removeItem(at: file)
+        return opened
     }
 
     /// Shows the recruiter's introduction deck (if the pack has one).

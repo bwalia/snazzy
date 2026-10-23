@@ -8,6 +8,11 @@ public struct InviteLink: Equatable, Sendable {
     /// OpsAPI's API address (from the app link; for a web link, the link's own host).
     public var api: URL
 
+    public init(token: String, api: URL) {
+        self.token = token
+        self.api = api
+    }
+
     public init?(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: trimmed), let scheme = url.scheme?.lowercased() else { return nil }
@@ -76,7 +81,10 @@ public struct CandidateView: Codable, Sendable, Equatable {
     public var questionCount: Int?
     public var selfId: [SelfIDQuestion]?
     public var hasPack: Bool?
+    /// "online" (OpsAPI runs it, answer by answer) or "offline" (this Mac runs it, then sends the results).
+    public var delivery: String?
 
+    public var isOffline: Bool { delivery == "offline" }
     public var isFinished: Bool { !["invited", "in_progress", "paused"].contains(state) }
 
     public init(from decoder: Decoder) throws {
@@ -98,6 +106,7 @@ public struct CandidateView: Codable, Sendable, Equatable {
         questionCount = try c.decodeIfPresent(Int.self, forKey: .questionCount)
         selfId = try? c.decodeIfPresent([SelfIDQuestion].self, forKey: .selfId)
         hasPack = try c.decodeIfPresent(Bool.self, forKey: .hasPack)
+        delivery = try c.decodeIfPresent(String.self, forKey: .delivery)
     }
 
     /// The interview deck's slide for where the interview is (AutoInterview.deck layout:
@@ -279,11 +288,13 @@ extension OpsAPILink {
     }
 
     /// Invites many candidates at once to an approved kit (and pack): each gets their own link.
-    public func invite(kit: RoleKit, packUUID: String?, invitees: [Invitee], days: Int) async throws -> InviteResults {
+    /// `offline`: each candidate's Snazzy Pro runs the interview on their Mac and sends the results at the end.
+    public func invite(kit: RoleKit, packUUID: String?, invitees: [Invitee], days: Int, offline: Bool = false) async throws -> InviteResults {
         var body: [String: Any] = [
             "kit": try JSONSerialization.jsonObject(with: InterviewJSON.encoder.encode(kit)),
             "candidates": invitees.map { ["name": $0.name, "email": $0.email] },
             "expires_in_days": days,
+            "delivery": offline ? "offline" : "online",
         ]
         if let packUUID { body["pack_uuid"] = packUUID }
         var r = request("invites", method: "POST", body: try JSONSerialization.data(withJSONObject: body))

@@ -476,6 +476,193 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--offline-interview-test") {
+            // Offline interviews by invite link, end to end against an OpsAPI (e.g. a local Docker one):
+            //   --offline-interview-test --opsapi http://127.0.0.1:4021 [--token snz_…]
+            // A recruiter registers (and signs in again), invites candidates to take the interview
+            // offline; a candidate's app redeems the link once, runs the interview on this Mac,
+            // fails to send while "offline", sends once back online; the recruiter fetches the
+            // results. Without --token the new workspace must be active for the invite steps.
+            func value(_ flag: String) -> String? { arguments.firstIndex(of: flag).flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil } }
+            guard let api = value("--opsapi").flatMap(URL.init(string:)) else {
+                report("arguments", false, "--opsapi <url> [--token snz_…] [--memory-secrets]")
+                return false
+            }
+            // --memory-secrets: for a Mac whose login keychain is locked (e.g. over SSH).
+            let app = AppModel(secrets: arguments.contains("--memory-secrets") ? InMemorySecretStore() : KeychainStore())
+            app.sessionLoggingSuspended = true
+            let iv = app.interviews!
+            iv.unlockForTesting()
+            var made: [String] = []
+            var sessions: [UUID] = []
+            defer {
+                for name in made { try? FileManager.default.removeItem(at: app.builder.workspace.projectURL(name)) }
+                app.builder.refreshProjects()
+                for id in sessions { if let s = iv.session(id) { iv.delete(s) } }
+                iv.auto.stop()
+                app.builder.closePopOutIfOpen()
+                if iv.interviewMode { iv.leaveInterviewModeForTesting() }
+            }
+            do {
+                // The recruiter: a new account and workspace, then signing in again from "another Mac".
+                let email = "selftest-\(UUID().uuidString.prefix(8).lowercased())@example.com"
+                let password = "Self-test \(UUID().uuidString)"
+                let made1 = try await RecruiterAccount.register(at: api, company: "Self-Test Hiring \(email.prefix(17).suffix(8))", firstName: "Self",
+                                                                lastName: "Test", email: email, password: password, deviceName: "Self-test Mac")
+                report("recruiter registers: workspace and token", made1.token.hasPrefix("snz_") && !made1.namespace.uuid.isEmpty, made1.namespace.name)
+                do {
+                    _ = try await RecruiterAccount.register(at: api, company: "Again", firstName: "A", lastName: "B", email: email,
+                                                            password: password, deviceName: "x")
+                    report("the same email can't register twice", false, "")
+                } catch let p as RecruiterAccount.Problem {
+                    report("the same email can't register twice", p.code == "email_taken", p.message)
+                }
+                do {
+                    if case .linked(let again) = try await RecruiterAccount.signIn(at: api, email: email, password: password, deviceName: "Second Mac") {
+                        report("recruiter signs in again", again.namespace.uuid == made1.namespace.uuid && again.token != made1.token, "")
+                    } else {
+                        report("recruiter signs in again", false, "asked to choose a workspace")
+                    }
+                } catch let p as RecruiterAccount.Problem where p.code == "mfa_required" {
+                    // New workspaces ask for two-step sign-in: the app says to use a dashboard token.
+                    report("recruiter signs in again (two-step: token instead)", true, p.message)
+                }
+                do {
+                    _ = try await RecruiterAccount.signIn(at: api, email: email, password: password + "x", deviceName: "x")
+                    report("a wrong password is refused", false, "")
+                } catch {
+                    report("a wrong password is refused", true, error.localizedDescription)
+                }
+                let link = OpsAPILink(baseURL: api, token: value("--token") ?? made1.token)
+                let ping = try await link.ping()
+                guard ping.active == true else {
+                    report("workspace active (for invites)", false, "activate \(ping.namespace ?? "") or pass --token of an active one")
+                    return false
+                }
+
+                guard var kit = iv.sampleKit("interview-kit-cdn") else { report("sample kit", false, ""); return false }
+                kit.id = UUID()
+                kit.approve(by: "Self-test")
+                try? app.builder.createDeck(DeckOutline(title: "Offline intro \(UUID().uuidString.prefix(6))",
+                                                        slides: [SampleDeck.Slide(.title, "Welcome", ["About the team"], notes: "Intro")]))
+                let intro = app.builder.current
+                made += intro.map { [$0.name] } ?? []
+                let results = try await iv.inviteInBulk(kit: kit, intro: intro, invitees: [
+                    .init(name: "Offline One", email: "off1@example.com"), .init(name: "Offline Two", email: "off2@example.com"),
+                ], days: 2, offline: true, using: link)
+                report("2 invited to take it offline", results.invited == 2 && results.failed == 0, "")
+                guard let appURL = results.results.first?.appUrl, let invited = results.results.first?.uuid else { report("app link", false, ""); return false }
+
+                // The candidate opens the link: one request, then everything runs here.
+                let join = iv.join!
+                join.speak = false
+                join.listen = false
+                await join.join(appURL)
+                guard case .offline(let id) = join.stage, let s0 = iv.session(id), let offline = s0.offline else {
+                    report("candidate opens an offline interview", false, "\(join.stage)")
+                    return false
+                }
+                sessions.append(id)
+                made += app.builder.projects.filter { $0.name.hasPrefix("intro-") || $0.name.hasPrefix("interview-") }.map(\.name)
+                report("candidate opens an offline interview", s0.state == .invited && !offline.notice.isEmpty, offline.api.absoluteString)
+                report("the kit arrived without rating anchors", s0.kit.questions.map(\.id) == kit.questions.map(\.id)
+                       && s0.kit.competencies.allSatisfy { $0.anchors.level1.isEmpty && $0.anchors.level3.isEmpty && $0.anchors.level5.isEmpty }, "")
+                report("intro deck arrived from the pack", join.hasIntro, "")
+                report("no camera offered (it would stay on the candidate's Mac)", !s0.cameraOffered, "")
+                report("not in the recruiter's list", !iv.candidateInterviews.contains { $0.id == id }, "")
+                report("interviewer runs on this Mac", s0.models["interviewer"]?.hasPrefix("anthropic") == false, s0.models["interviewer"] ?? "")
+                report("invite token kept in the Keychain, not the file",
+                       (try? app.secrets.secret(for: OfflineInvite.keychainAccount(for: id))) != nil
+                       && !String(decoding: (try? InterviewJSON.encoder.encode(s0)) ?? Data(), as: UTF8.self).contains(appURL), "")
+                let other = InviteClient(link: InviteLink(appURL)!)
+                do {
+                    _ = try await other.offline(deviceID: "another-device-\(UUID().uuidString)")
+                    report("a second device is refused", false, "")
+                } catch {
+                    report("a second device is refused", true, error.localizedDescription)
+                }
+
+                // "Offline": results can't be sent until the network is back.
+                var cut = s0
+                cut.offline?.api = URL(string: "http://127.0.0.1:9")!
+                iv.save(session: cut)
+                iv.start(id, noticeHash: offline.noticeHash, adjustments: [])
+                let answers = [
+                    "I designed cache keys that ignore tracking parameters, which raised our offload from 70% to 93%, and I checked it with the edge logs.",
+                    "A 503 spike: I compared edge and origin logs, found the origin rate-limiting edge IPs, and fixed the allow list with the network team.",
+                    "I'd move changes into code with review, test on staging, and keep a one-click rollback to the last version.",
+                    "We measured it for two weeks with real-user monitoring.",
+                ]
+                var n = 0
+                let began = Date()
+                while let s = iv.session(id), !s.isFinished, n < 30, Date().timeIntervalSince(began) < 900 {
+                    if iv.busy.contains(id) { try await Task.sleep(for: .milliseconds(200)); continue }
+                    n += 1
+                    if let choices = iv.engine(id)?.currentChoices, let first = choices.first {
+                        iv.send(.answer(choices.contains("Yes") ? "Yes" : first, input: .typed), to: id)
+                    } else if case .candidateQuestions = iv.engine(id)?.currentStep {
+                        iv.send(.answer("No more questions, thank you.", input: .typed), to: id)
+                    } else {
+                        iv.send(.answer(answers[min(n - 1, answers.count - 1)], input: .typed), to: id)
+                    }
+                    try await Task.sleep(for: .milliseconds(200))
+                }
+                let finished = iv.session(id)
+                report("interview ran to the end on this Mac", finished?.state == .completed, "\(finished?.state.rawValue ?? "") after \(n) answers, \(Int(Date().timeIntervalSince(began))) s")
+                report("not evaluated on the candidate's Mac", finished?.evaluation == nil, "")
+                for _ in 0..<50 where iv.session(id)?.offline?.lastError == nil { try await Task.sleep(for: .milliseconds(200)) }
+                report("while offline, the results wait here", iv.session(id)?.offline?.isPending() == true && iv.session(id)?.offline?.lastError != nil,
+                       iv.session(id)?.offline?.lastError ?? "")
+                try await Task.sleep(for: .seconds(1))
+                report("interview mode ends by itself", !iv.interviewMode, "")
+
+                // Back online.
+                if var back = iv.session(id) { back.offline?.api = offline.api; iv.save(session: back) }
+                iv.saveSelfID(id, answers: [SelfID.questions[0].id: SelfID.questions[0].options[0]])
+                await iv.sendPendingOfflineResults()
+                report("back online, the results are sent", iv.session(id)?.offline?.isSent == true, iv.session(id)?.offline?.lastError ?? "")
+                if let s = iv.session(id) {
+                    let again = try await InviteClient(link: InviteLink(appURL)!).submit(s, deviceID: JoinInterview.deviceID, app: "self-test")
+                    report("sending the same results again is harmless", again.isFinished, again.state)
+                    var forged = s
+                    forged.id = UUID()
+                    do {
+                        _ = try await InviteClient(link: InviteLink(appURL)!).submit(forged, deviceID: JoinInterview.deviceID, app: "self-test")
+                        report("different results for the same invite are refused", false, "")
+                    } catch {
+                        report("different results for the same invite are refused", true, error.localizedDescription)
+                    }
+                }
+
+                // Next launch: the candidate's Mac forgets what OpsAPI has.
+                iv.removeSentOfflineInterviews()
+                report("sent offline interviews are removed from the candidate's Mac", iv.session(id) == nil
+                       && (try? app.secrets.secret(for: OfflineInvite.keychainAccount(for: id))) == nil, "")
+
+                // The recruiter fetches every candidate's results.
+                let list = try await link.interviews()
+                let mine = list.first { $0.uuid == invited }
+                report("recruiter sees the offline result", mine?.delivery == "offline" && mine?.state == "completed",
+                       "\(mine?.state ?? "missing") · evaluation \(mine?.evaluationStatus ?? "")")
+                report("and the candidate still invited", list.contains { $0.uuid == results.results[1].uuid && $0.state == "invited" }, "")
+                let before = Set(iv.interviews.map(\.id))
+                let fetched = try await iv.fetchResultsFromOpsAPI(using: link)
+                let new = iv.interviews.filter { !before.contains($0.id) }
+                sessions += new.map(\.id)
+                let got = new.first { $0.candidate.name == "Offline One" }
+                report("results fetched into the Interviews list", fetched >= 1 && got != nil && iv.candidateInterviews.contains { $0.id == got?.id },
+                       "\(fetched) fetched")
+                report("with the transcript from the candidate's Mac", got?.candidateTurns.count == finished?.candidateTurns.count,
+                       "\(got?.candidateTurns.count ?? 0) answers")
+                report("and the full kit (anchors) from OpsAPI", got?.kit.competencies.contains { !$0.anchors.level3.isEmpty } == true, "")
+                _ = try await iv.fetchResultsFromOpsAPI(using: link)
+                report("fetching again doesn't duplicate", iv.interviews.filter { $0.candidate.name == "Offline One" && $0.offline == nil }.count == 1, "")
+                join.reset()
+            } catch {
+                report("offline interview", false, error.localizedDescription)
+            }
+            return ok
+        }
         if arguments.contains("--prep-pack-test") {
             // Prep packs: shared as a plain zip (no passcode), opened on another Mac, removed.
             let app = AppModel()

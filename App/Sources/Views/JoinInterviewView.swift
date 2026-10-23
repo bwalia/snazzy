@@ -21,6 +21,7 @@ struct JoinInterviewView: View {
             case .idle, .failed: paste(join)
             case .loading: busy("Opening your interview…", nil)
             case .downloading(let f): busy("Downloading the interview pack…", f)
+            case .offline(let id): offline(id)
             case .ready:
                 if let v = join.view {
                     if v.state == "invited" { notice(join, v) } else if v.isFinished { finished(join, v) } else { interview(join, v) }
@@ -43,6 +44,24 @@ struct JoinInterviewView: View {
                 .buttonStyle(.borderedProminent).controlSize(.large)
                 .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
             if case .failed(let why) = join.stage { Label(why, systemImage: "exclamationmark.triangle").foregroundStyle(.orange) }
+        }
+        .padding(28)
+        .frame(maxWidth: 680, alignment: .leading)
+    }
+
+    /// An offline interview runs in the Interview window; this says where it is and what happens to the answers.
+    private func offline(_ id: UUID) -> some View {
+        let iv = model.interviews!
+        let s = iv.session(id)
+        return VStack(alignment: .leading, spacing: 14) {
+            Text(s?.kit.title ?? "Your interview").font(.largeTitle.bold())
+            Text("This interview runs on this Mac, so you can take it without an internet connection. Your answers stay here until the end, then go to the hiring team.")
+            if let s, s.isFinished, let offline = s.offline {
+                OfflineResultStatus(id: id, offline: offline)
+            } else {
+                Button("Open the Interview Window") { iv.candidateWindowRequest += 1 }
+                    .buttonStyle(.borderedProminent).controlSize(.large)
+            }
         }
         .padding(28)
         .frame(maxWidth: 680, alignment: .leading)
