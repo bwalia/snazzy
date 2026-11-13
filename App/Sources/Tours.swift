@@ -19,12 +19,12 @@ import SnazzyCore
 enum Tours {
     static let all = ["deck-by-talking", "sample-decks", "present-and-record", "live-classroom", "share", "go-live",
                       "voice-presenter", "agent-classroom", "interview-recruiter", "auto-interview",
-                      "interview-kit-from-jd", "auto-interview-camera"]
+                      "interview-kit-from-jd", "auto-interview-camera", "interview-online"]
     /// Tours that film sound (the assistant speaking).
-    static let withSound: Set<String> = ["voice-presenter", "auto-interview", "auto-interview-camera"]
+    static let withSound: Set<String> = ["voice-presenter", "auto-interview", "auto-interview-camera", "interview-online"]
     /// Interview tours: `-SnazzyPro.tourRole cdn|devops|fde|mlops` picks the sample role
     /// (the film is named after it), `-SnazzyPro.tourCamera iPad` the candidate's camera.
-    static let interviewTours: Set<String> = ["interview-recruiter", "auto-interview", "interview-kit-from-jd", "auto-interview-camera"]
+    static let interviewTours: Set<String> = ["interview-recruiter", "auto-interview", "interview-kit-from-jd", "auto-interview-camera", "interview-online"]
     static var tourRole: String? { UserDefaults.standard.string(forKey: "SnazzyPro.tourRole") }
 
     static var folder: URL {
@@ -96,7 +96,7 @@ enum Tours {
             case "go-live": cleanUp.append(try await goLive(app))
             case "voice-presenter": cleanUp.append(try await voicePresenter(app))
             case "agent-classroom": cleanUp.append(try await agentClassroom(app))
-            case "interview-recruiter", "auto-interview", "interview-kit-from-jd", "auto-interview-camera": if let interviewSetup { cleanUp.append(try await interviewSetup.play(app)) }
+            case "interview-recruiter", "auto-interview", "interview-kit-from-jd", "auto-interview-camera", "interview-online": if let interviewSetup { cleanUp.append(try await interviewSetup.play(app)) }
             default: print("TOUR: unknown tour \(name). Tours: \(all.joined(separator: ", "))")
             }
         } catch {
@@ -432,6 +432,12 @@ extension Array {
 /// - auto-interview: the whole screen, with sound. The role's deck (left) follows
 ///   an Auto Interview in the candidate window (right): questions spoken aloud, a
 ///   simulated candidate's answers, then the thank-you page.
+/// - interview-online: the whole screen, with sound, against a test OpsAPI
+///   (`-SnazzyPro.tourOpsAPI http://127.0.0.1:4021`, token in `SNAZZY_TOUR_OPSAPI_TOKEN`).
+///   The recruiter invites five candidates in bulk (the pack is encrypted here and
+///   uploaded once to S3), then a candidate opens their link: the pack is downloaded
+///   and decrypted, the introduction deck plays, and OpsAPI runs the interview while
+///   this Mac shows the slides and reads the questions aloud.
 @MainActor
 struct InterviewTour {
     let name: String
@@ -440,6 +446,7 @@ struct InterviewTour {
     let sessionID: UUID?
     let restore: () -> Void
     let jobDescription: String
+    var introDeck: String?
 
     static func prepare(_ name: String, app: AppModel, screen: NSScreen) async throws -> InterviewTour {
         let iv = app.interviews!
@@ -447,9 +454,12 @@ struct InterviewTour {
         // Anything an interrupted tour left (with its recording) goes first.
         for s in iv.interviews where s.candidate.reference == "Simulation: tour" { iv.delete(s) }
         let restoreModel = Tours.useLocalModel(app)
-        let resource = "interview-kit" + (Tours.tourRole.map { "-\($0)" } ?? "")
+        let resource = "interview-kit" + ((Tours.tourRole ?? (name == "interview-online" ? "cdn" : nil)).map { "-\($0)" } ?? "")
         guard let kit = iv.addSample(resource) else { throw CaptureError("No sample kit \(resource).") }
         let v = screen.visibleFrame
+        if name == "interview-online" {
+            return try await prepareOnline(app, kit: kit, frame: v, restore: restoreModel)
+        }
         if name == "interview-recruiter" || name == "interview-kit-from-jd" {
             iv.windowRequest += 1
             let w = try await waitForWindow("Interviews")
@@ -516,6 +526,134 @@ struct InterviewTour {
         self.jobDescription = jobDescription
     }
 
+    /// interview-online: a test OpsAPI, the approved kit, an introduction deck, the
+    /// join window opened and put aside, then the Interviews window on its own.
+    static func prepareOnline(_ app: AppModel, kit: RoleKit, frame v: NSRect, restore: @escaping () -> Void) async throws -> InterviewTour {
+        let iv = app.interviews!
+        guard let api = UserDefaults.standard.string(forKey: "SnazzyPro.tourOpsAPI").flatMap(URL.init(string:)),
+              let token = ProcessInfo.processInfo.environment["SNAZZY_TOUR_OPSAPI_TOKEN"], !token.isEmpty else {
+            throw CaptureError("Give a test OpsAPI: -SnazzyPro.tourOpsAPI <url>, token in SNAZZY_TOUR_OPSAPI_TOKEN.")
+        }
+        iv.tourLink = OpsAPILink(baseURL: api, token: token)
+        try iv.approve(iv.kits.first { $0.id == kit.id }!)
+        try app.builder.createDeck(DeckOutline(title: "Welcome to Northwind Edge", accent: "#0E9F8F", slides: [
+            .init(.title, "Welcome to Northwind Edge", ["Your first-round interview: CDN Engineer"], notes: "Welcome."),
+            .init(.stats, "Who we are", ["40", "edge locations", "2.1 Tbps", "peak traffic", "18", "engineers on the CDN team"], notes: "The team."),
+            .init(.steps, "What happens next", ["This interview: about 20 minutes, the same questions for everyone",
+                                                "A person on the team reads your answers",
+                                                "We reply within five working days"], notes: "The process."),
+            .init(.closing, "Take your time", ["You can ask for a question again, pause, or speak to a person instead"], notes: "Good luck."),
+        ]))
+        let intro = app.builder.current?.name
+        app.builder.refreshProjects()
+        // The join window opens now (while the main window can still open windows), then waits off screen.
+        iv.join.windowRequest += 1
+        let join = try await waitForWindow("Join an Interview")
+        join.orderOut(nil)
+        iv.windowRequest += 1
+        let w = try await waitForWindow("Interviews")
+        // The film is the whole screen: the recruiter's window fills it, so it can be read.
+        w.setFrame(v, display: true)
+        w.makeKeyAndOrderFront(nil)
+        iv.focus = .kit(kit.id)
+        NSApp.windows.first { $0.title == "Snazzy Pro" }?.orderOut(nil)
+        try await Tours.pause(1.5)
+        var tour = InterviewTour(name: "interview-online", window: nil, kitID: kit.id, sessionID: nil, restore: restore)
+        tour.introDeck = intro
+        return tour
+    }
+
+    /// interview-online, played: the recruiter's bulk invite, then one candidate's interview.
+    func playOnline(_ app: AppModel, cleanUp: @escaping () async -> Void) async throws -> () async -> Void {
+        let iv = app.interviews!
+        let join = iv.join!
+        let done: () async -> Void = {
+            join.reset()
+            iv.tourLink = nil
+            for title in ["Join an Interview", "Interviews"] { NSApp.windows.first { $0.title == title }?.close() }
+            app.builder.closePopOutIfOpen()
+            await cleanUp()
+        }
+        guard let screen = NSApp.windows.first(where: { $0.title == "Interviews" })?.screen ?? NSScreen.main else { return done }
+        let v = screen.visibleFrame
+        // The recruiter: the approved kit, then Invite in Bulk with a list pasted in.
+        try await Tours.pause(3)
+        iv.bulkInviteRequest = .init(kitID: kitID, list: """
+            Jordan Lee, jordan.lee@example.com
+            Priya Shah, priya.shah@example.com
+            Sam Okafor, sam.okafor@example.com
+            Mei Chen, mei.chen@example.com
+            Alex Moreno, alex.moreno@example.com
+            """, intro: introDeck ?? "", send: true)
+        for _ in 0..<600 where iv.lastInvites == nil { try await Tours.pause(0.2) }
+        guard let first = iv.lastInvites?.results.first(where: { $0.appUrl != nil }), let appURL = first.appUrl else {
+            throw CaptureError("The invites weren't made.")
+        }
+        try await Tours.pause(6)
+        // A candidate (Jordan) opens their link in Snazzy Pro.
+        NSApp.windows.first { $0.title == "Interviews" }?.orderOut(nil)
+        guard let joinWindow = NSApp.windows.first(where: { $0.title == "Join an Interview" }) else { throw CaptureError("No join window.") }
+        let side = (v.width * 0.4).rounded()
+        joinWindow.setFrame(NSRect(x: v.maxX - side, y: v.minY, width: side, height: v.height), display: true)
+        joinWindow.makeKeyAndOrderFront(nil)
+        join.linkText = ""
+        try await Tours.pause(1.5)
+        for chunk in stride(from: 0, to: appURL.count, by: 6) {
+            join.linkText = String(appURL.prefix(chunk + 6))
+            try await Tours.pause(0.02)
+        }
+        try await Tours.pause(1.5)
+        join.speak = true
+        join.listen = false
+        await join.join(appURL)
+        guard join.stage == .ready else { throw CaptureError("The invite didn't open: \(join.stage)") }
+        func placeDeck() {
+            app.builder.presentWindow?.setFrame(NSRect(x: v.minX, y: v.minY, width: v.width - side, height: v.height), display: true)
+            app.builder.presentWindow?.orderFront(nil)
+            joinWindow.makeKeyAndOrderFront(nil)
+        }
+        // The notice, then the recruiter's introduction deck (it came in the encrypted pack).
+        try await Tours.pause(4)
+        if join.hasIntro {
+            join.showIntro()
+            try await Tours.pause(1)
+            placeDeck()
+            try await Tours.showSlides(app, count: 4, each: 3)
+        }
+        // Jordan starts: OpsAPI runs the interview, this Mac shows the slides and reads the questions.
+        await join.start(adjustments: [])
+        try await Tours.pause(1)
+        placeDeck()
+        let answers = [
+            "I designed cache keys that ignore tracking parameters, which raised our offload from 70% to 93%, and I checked it against the edge logs.",
+            "A 503 spike: I compared edge and origin logs, found the origin was rate-limiting edge addresses, and fixed the allow list with the network team.",
+            "I'd move changes into code with review, test them on staging, and keep a one-click rollback to the last version.",
+            "We measured it for two weeks with real-user monitoring: the 95th percentile load time fell by about a third.",
+        ]
+        var n = 0
+        while let view = join.view, view.state == "in_progress", n < 20 {
+            await join.untilQuiet()
+            try await Tours.pause(1.5)
+            n += 1
+            if let choices = view.choices, let first = choices.first {
+                await join.answer(choices.contains("Yes") ? "Yes" : first)
+            } else if view.turns.last?.text.contains("questions for me") == true || view.turns.last?.text.contains("anything else") == true {
+                await join.answer("No more questions, thank you.")
+            } else {
+                await join.answer(answers[min(n - 1, answers.count - 1)])
+            }
+            if let p = join.problem { throw CaptureError(p) }
+        }
+        await join.untilQuiet()
+        // The thank-you page (interview mode has ended and brought the main window back).
+        try await Tours.pause(1)
+        NSApp.windows.first { $0.title == "Snazzy Pro" }?.orderOut(nil)
+        joinWindow.setFrame(NSRect(x: v.midX - 450, y: v.minY + 60, width: 900, height: v.height - 120), display: true)
+        joinWindow.makeKeyAndOrderFront(nil)
+        try await Tours.pause(6)
+        return done
+    }
+
     static func waitForWindow(_ title: String) async throws -> NSWindow {
         for _ in 0..<50 {
             if let w = NSApp.windows.first(where: { $0.title == title && $0.isVisible }) { return w }
@@ -534,6 +672,7 @@ struct InterviewTour {
             NSApp.windows.first { $0.title == "Snazzy Pro" }?.makeKeyAndOrderFront(nil)
             restore()
         }
+        if name == "interview-online" { return try await playOnline(app, cleanUp: cleanUp) }
         if name == "interview-kit-from-jd" {
             // A job description in, a draft kit out: competencies, rubric, questions, eligibility.
             try await Tours.pause(1.5)

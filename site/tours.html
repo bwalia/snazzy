@@ -54,6 +54,21 @@
         <div><p class="tour-tag">Mac · Snazzy Interview · with sound</p><h3>Auto Interview: the deck follows the conversation</h3><p>The candidate reads what the AI does and doesn't do, then each question is spoken aloud while the role's deck moves on to it. Short, neutral follow-ups ask for specifics. Here a simulated candidate answers, with a local model on the Mac.</p></div>
       </article>
     </div>
+    <h3 style="margin-top:36px" id="online">Online interviews through OpsAPI</h3>
+    <p class="section-lede">Invite a whole shortlist at once. OpsAPI, the interview management service, keeps the interviews in its database, runs them on the server (so any number can happen at the same time), and moves the interview pack to each candidate securely, with no account and no passcode.</p>
+    <div class="tour-grid">
+      <article class="tour-card" id="interview-online">
+        <video controls playsinline preload="none" poster="tours/interview-online.jpg" aria-label="Invite candidates in bulk, then a candidate joins from their link"><source src="tours/interview-online.mp4" type="video/mp4"></video>
+        <div><p class="tour-tag">Mac · Snazzy Interview · OpsAPI · with sound</p><h3>From a pasted list to a finished interview</h3><p>The recruiter pastes five candidates and an introduction deck: the pack is encrypted on the Mac and uploaded once, and OpsAPI makes a link for each person. Then one candidate opens their link: the pack is downloaded and unlocked, the introduction plays, and the questions are read aloud while the slides follow. Recorded against a test OpsAPI with a local model.</p></div>
+      </article>
+      <div class="flow">
+        <div class="flow-step"><span class="n">1</span><div><h4>Encrypted on the recruiter's Mac</h4><p>The approved questions and an optional introduction deck go into one pack, locked with a new random key (AES-256-GCM). It's uploaded once to file storage through a link that only works for that upload.</p></div></div>
+        <div class="flow-step"><span class="n">2</span><div><h4>Stored by OpsAPI</h4><p>OpsAPI records the pack, the role and every invite in its database, in the hiring team's own workspace. It keeps the pack's key sealed and never needs to open the pack.</p></div></div>
+        <div class="flow-step"><span class="n">3</span><div><h4>One link per candidate</h4><p>Up to 500 at a time. The link is the invitation: OpsAPI gives the key and a 15-minute download link only to a valid, unfinished invite, and the first device to open it keeps it, so a forwarded link doesn't work.</p></div></div>
+        <div class="flow-step"><span class="n">4</span><div><h4>Checked and unlocked on the candidate's Mac</h4><p>The download is checked against its fingerprint (SHA-256) and decrypted. The introduction deck opens without internet access. Candidates without the app can use the same link in a browser.</p></div></div>
+        <div class="flow-step"><span class="n">5</span><div><h4>Run and kept by OpsAPI</h4><p>The same questions, in the same order, for everyone. Answers are heard on the candidate's Mac, and the transcript and evidence are saved to OpsAPI for the hiring team. A person reviews them and decides.</p></div></div>
+      </div>
+    </div>
     <h3 style="margin-top:28px">Engineering roles, camera on</h3>
     <div class="tour-grid">
       <article class="tour-card" id="interview-camera-cdn">
