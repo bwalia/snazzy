@@ -6,6 +6,7 @@ import CaptureEngine
 import Foundation
 import Observation
 import SnazzyCore
+import UniformTypeIdentifiers
 
 /// A recording on disk (`~/Movies/Snazzy Pro/Recordings`), with what's been
 /// made from it.
@@ -219,6 +220,102 @@ final class DeveloperController {
         refresh()
         app.chat.logSession("captions_made", ["recording": .string(item.id), "cues": .number(Double(cues.count))])
         return CaptionResult(srt: srt, vtt: vtt, burned: burned, cues: cues)
+    }
+
+    struct TranscriptResult {
+        var txt: URL
+        var srt: URL
+        var vtt: URL
+        var cues: [CaptionCue]
+        var text: String
+    }
+
+    /// Transcribes any audio or video file on this Mac. Writes
+    /// `<name> (transcript).txt`, `.srt` and `.vtt` next to it; the original stays.
+    func transcribeFile(_ url: URL) async throws -> TranscriptResult {
+        guard settings.captionsEnabled else { throw disabled("Captions") }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        busy = "Transcribing \(url.lastPathComponent) on this Mac…"
+        defer { busy = nil }
+        let words = try await RecordingTranscriber.words(in: url)
+        guard !words.isEmpty else { throw CaptureActionError(message: "No speech found in \(url.lastPathComponent).") }
+        let cues = Captions.cues(from: words)
+        let text = Captions.timedTranscript(cues)
+        let txt = RecordingEditor.sibling(of: url, suffix: "transcript", ext: "txt")
+        let stem = txt.deletingPathExtension()
+        let srt = stem.appendingPathExtension("srt")
+        let vtt = stem.appendingPathExtension("vtt")
+        try text.write(to: txt, atomically: true, encoding: .utf8)
+        try Captions.srt(cues).write(to: srt, atomically: true, encoding: .utf8)
+        try Captions.vtt(cues).write(to: vtt, atomically: true, encoding: .utf8)
+        app.chat.logSession("audio_transcribed", [
+            "file": .string(url.lastPathComponent),
+            "cues": .number(Double(cues.count)),
+        ])
+        return TranscriptResult(txt: txt, srt: srt, vtt: vtt, cues: cues, text: text)
+    }
+
+    /// Files always stay on the Mac. The transcript text is only returned to a
+    /// cloud model after CloudReview.
+    func transcribeFileResult(_ url: URL, offMac: String?) async throws -> JSONValue {
+        let r = try await transcribeFile(url)
+        var out: [String: JSONValue] = [
+            "source": .string(url.lastPathComponent),
+            "txt": .string(r.txt.lastPathComponent),
+            "srt": .string(r.srt.lastPathComponent),
+            "vtt": .string(r.vtt.lastPathComponent),
+            "caption_count": .number(Double(r.cues.count)),
+            "folder": .string(r.txt.deletingLastPathComponent().path),
+        ]
+        if let offMac {
+            if CloudReview.confirm(provider: offMac, what: "this transcript", text: r.text,
+                                   note: "The files are already saved next to the original. Send the text to the assistant only if you want it in the chat.") {
+                out["transcript"] = .string(r.text)
+            } else {
+                out["transcript_kept_on_mac"] = true
+            }
+        } else {
+            out["transcript"] = .string(r.text)
+        }
+        return .object(out)
+    }
+
+    /// Tools › Transcribe Audio… — the user picks a file (sandbox access).
+    func chooseAudioToTranscribe() {
+        guard settings.captionsEnabled else {
+            NSAlert(error: disabled("Captions")).runModal()
+            return
+        }
+        guard let url = pickAudioFile() else { return }
+        Task { @MainActor in
+            do {
+                let result = try await transcribeFile(url)
+                NSWorkspace.shared.activateFileViewerSelecting([result.txt, result.srt, result.vtt])
+            } catch {
+                NSAlert(error: error).runModal()
+            }
+        }
+    }
+
+    func pickAudioFile() -> URL? {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.audio, .movie]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.message = "Choose an audio or video file. Speech is turned into text on this Mac; the original is not changed."
+        guard panel.runModal() == .OK else { return nil }
+        return panel.url
+    }
+
+    func audioFile(at path: String) throws -> URL {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw CaptureActionError(message: "Choose an audio file.") }
+        let url = URL(fileURLWithPath: (trimmed as NSString).expandingTildeInPath)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw CaptureActionError(message: "No file at \(url.path).")
+        }
+        return url
     }
 
     /// Captions from the .srt if they exist, otherwise made now.

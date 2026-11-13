@@ -113,6 +113,24 @@ enum DeveloperTools {
                 return .object(out)
             })
             tools.append(RegisteredTool(
+                name: "transcribe_audio",
+                description: "Transcribe any audio or video file on this Mac (not only Snazzy recordings): writes '<name> (transcript).txt', .srt and .vtt next to the original, which is never changed. Leave path empty to pick a file. Audio never leaves the Mac.",
+                inputSchema: AssistantTools.object([
+                    "path": ["type": "string", "description": "Full path to an audio or video file. Omit to show a file picker."],
+                ], required: []),
+                external: "an audio file"
+            ) { @Sendable args in
+                let url: URL
+                if let path = args["path"]?.stringValue, !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    url = try await dev.audioFile(at: path)
+                } else if let picked = await dev.pickAudioFile() {
+                    url = picked
+                } else {
+                    throw CaptureActionError(message: "No file chosen. Use Tools › Transcribe Audio… or pass path.")
+                }
+                return try await dev.transcribeFileResult(url, offMac: offMac)
+            })
+            tools.append(RegisteredTool(
                 name: "summarize_recording",
                 description: "Write a short summary of a recording (title, 3–5 bullets, chapter times) from its transcript using the Writing model, saved as <name>.md. Makes captions first if needed. recording_id can be \"latest\".",
                 inputSchema: AssistantTools.object(["recording_id": ["type": "string", "minLength": 1]], required: ["recording_id"])

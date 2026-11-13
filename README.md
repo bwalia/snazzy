@@ -108,7 +108,7 @@ exact text is shown and approved first. Originals are never changed.
 | Feature | Tools | Notes |
 |---|---|---|
 | Trim | `list_recordings`, `trim_recording` | Pass-through export to `<name> (trimmed).mp4`; raw tracks trimmed in step; Apple's trim view in the **Recordings** tab |
-| Captions and summary | `make_captions`, `summarize_recording` | On-device `SpeechAnalyzer` → `.srt`/`.vtt`, optional `(captioned).mp4`; summary `.md` by the Writing model; text only, never audio |
+| Captions and summary | `make_captions`, `transcribe_audio`, `summarize_recording` | On-device `SpeechAnalyzer` → `.srt`/`.vtt`, optional `(captioned).mp4`; **Tools › Transcribe Audio…** (or `transcribe_audio`) for any audio/video file, writing `<name> (transcript).txt`/`.srt`/`.vtt` next to it; summary `.md` by the Writing model; text only, never audio |
 | Share links (off by default) | `share_recording` | Own S3/R2/MinIO bucket (SigV4, time-limited link), GitHub release asset, or Gist for text; confirm before every upload; Slack/PR/Jira text; delete remote copies |
 | PR demos | `load_pull_request`, `load_git_changes` | GitHub API (token optional for public repos); diff capped; local branches compared through GitHub (the sandbox can't run `git`) |
 | What's on screen | `read_front_window`, `zoom_screen` | On-device OCR of the front window (Accessibility isn't available in the sandbox); secrets hidden and the text shown first whenever it leaves the Mac (a cloud model, or an AI agent over MCP); smooth zoom to text while recording |

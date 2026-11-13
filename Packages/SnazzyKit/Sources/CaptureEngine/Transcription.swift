@@ -6,27 +6,35 @@ import Foundation
 import SnazzyCore
 @preconcurrency import Speech
 
-/// On-device transcription of a recording's audio, with word timings.
+/// On-device transcription of a movie or audio file, with word timings.
 public enum RecordingTranscriber {
-    /// Transcribes the audio track of a movie. Audio never leaves the Mac.
-    public static func words(in movie: URL, locale: Locale = .current) async throws -> [TimedWord] {
-        let audio = try await extractAudio(movie)
-        defer { try? FileManager.default.removeItem(at: audio) }
+    /// Transcribes the audio of a movie or sound file. Audio never leaves the Mac.
+    public static func words(in media: URL, locale: Locale = .current) async throws -> [TimedWord] {
+        let prepared = try await preparedAudio(media)
+        defer { if prepared.deleteWhenDone { try? FileManager.default.removeItem(at: prepared.url) } }
         if #available(macOS 26.0, *) {
-            return try await analyzerWords(audio, locale: locale)
+            return try await analyzerWords(prepared.url, locale: locale)
         }
-        return try await legacyWords(audio, locale: locale)
+        return try await legacyWords(prepared.url, locale: locale)
+    }
+
+    /// Uses the file as-is when Speech can read it; otherwise extracts a temporary .m4a.
+    static func preparedAudio(_ media: URL) async throws -> (url: URL, deleteWhenDone: Bool) {
+        if (try? AVAudioFile(forReading: media)) != nil {
+            return (media, false)
+        }
+        return (try await extractAudio(media), true)
     }
 
     /// Audio track → temporary .m4a (SpeechAnalyzer reads audio files).
     static func extractAudio(_ movie: URL) async throws -> URL {
         let asset = AVURLAsset(url: movie)
         guard try await !asset.loadTracks(withMediaType: .audio).isEmpty else {
-            throw CaptureError("This recording has no sound to transcribe.")
+            throw CaptureError("This file has no sound to transcribe.")
         }
         let out = FileManager.default.temporaryDirectory.appending(path: "snazzy-audio-\(UUID().uuidString).m4a")
         guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
-            throw CaptureError("Can't read this recording's audio.")
+            throw CaptureError("Can't read this file's audio.")
         }
         try await session.export(to: out, as: .m4a)
         return out

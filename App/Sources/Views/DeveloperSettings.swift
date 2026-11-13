@@ -13,7 +13,7 @@ struct DeveloperSettingsView: View {
                 Text("Cut the start or end of a take. Saves a new “(trimmed)” copy; the original is never changed.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Captions and summaries", isOn: binding(\.captionsEnabled))
-                Text("Captions are made on this Mac (.srt and .vtt). Summaries use your Writing model; with a cloud model you see the exact text before it's sent. Audio and video are never sent.")
+                Text("Captions are made on this Mac (.srt and .vtt). Tools › Transcribe Audio… does the same for any audio or video file you pick. Summaries use your Writing model; with a cloud model you see the exact text before it's sent. Audio and video are never sent.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Recordings") }
             DeveloperShareSection()

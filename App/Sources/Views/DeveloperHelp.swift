@@ -16,8 +16,8 @@ struct DeveloperHelpView: View {
     static let items: [Item] = [
         Item(title: "Trim", enabled: { $0.trimEnabled }, detail: "Cut the start or end of a take. Saves a “(trimmed)” copy; the original stays untouched.",
              examples: ["Cut the first 5 seconds of my last recording.", "Trim the last bit where I stop the recording."]),
-        Item(title: "Captions and summaries", enabled: { $0.captionsEnabled }, detail: "Captions made on this Mac (.srt, .vtt, optional burned-in copy) and a short summary with chapters.",
-             examples: ["Make captions for my latest recording.", "Summarise my last recording."]),
+        Item(title: "Captions and summaries", enabled: { $0.captionsEnabled }, detail: "Captions made on this Mac (.srt, .vtt, optional burned-in copy) and a short summary with chapters. Tools › Transcribe Audio… (or “transcribe this file”) works on any audio or video file, not only Snazzy recordings.",
+             examples: ["Make captions for my latest recording.", "Transcribe this audio file.", "Summarise my last recording."]),
         Item(title: "Share links", enabled: { $0.shareEnabled }, detail: "Upload to your own S3 bucket or GitHub and get a link plus text for Slack, a PR or Jira. You approve every upload.",
              examples: ["Share my latest recording to S3.", "Put the summary of my last recording in a Gist."]),
         Item(title: "Demos from pull requests", enabled: { $0.pullRequestDemosEnabled }, detail: "Loads a PR's description and diff and plans a 2–4 slide demo with a talk script.",

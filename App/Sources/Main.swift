@@ -201,6 +201,10 @@ struct AppCommands: Commands {
                 model.slidesMode = .github
             }
         }
+        CommandMenu("Tools") {
+            Button("Transcribe Audio…") { model.developer.chooseAudioToTranscribe() }
+                .disabled(!model.developer.settings.captionsEnabled || model.developer.busy != nil)
+        }
         CommandMenu("Devices") {
             Button("Open Inset Preview") { try? model.capture.openPreview() }
                 .keyboardShortcut("p", modifiers: [.command, .shift])

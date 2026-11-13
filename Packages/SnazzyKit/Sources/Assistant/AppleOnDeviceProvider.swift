@@ -283,6 +283,7 @@ enum AppleToolPolicy {
         "load_preset", "save_preset", "list_presets", "list_devices", "get_project_state",
         "create_project", "write_file", "check_preview", "show_slide", "update_settings", "set_model",
         "set_prompter", "get_prompter", "search_slides", "open_deck",
+        "make_captions", "transcribe_audio",
     ]
 
     static func order(_ tools: [ToolDefinition]) -> [ToolDefinition] {
