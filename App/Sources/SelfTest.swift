@@ -1353,7 +1353,8 @@ enum SelfTest {
             return await toolChat(prompt: prompt, model: value(after: "--model") ?? "gpt-oss:120b", provider: value(after: "--provider") ?? "ollama")
         }
         if let seconds = value(after: "--record").flatMap(Double.init) {
-            return await recordTest(seconds: seconds, display: value(after: "--display"), camera: value(after: "--feed"), pauseAt: value(after: "--pause-at").flatMap(Double.init))
+            return await recordTest(seconds: seconds, display: value(after: "--display"), camera: value(after: "--feed"), mic: value(after: "--mic"),
+                                    pauseAt: value(after: "--pause-at").flatMap(Double.init))
         }
         if arguments.contains("--composite") {
             return await compositeSnapshot(display: value(after: "--display"), camera: value(after: "--feed"), out: value(after: "--out") ?? "composite",
@@ -1607,7 +1608,7 @@ enum SelfTest {
 
     /// Records the main display (or --display), the first iOS device (or
     /// --feed) and the default mic into a temp folder, then inspects the files.
-    static func recordTest(seconds: Double, display: String?, camera: String?, pauseAt: Double?) async -> Bool {
+    static func recordTest(seconds: Double, display: String?, camera: String?, mic: String? = nil, pauseAt: Double?) async -> Bool {
         let catalog = DeviceCatalog()
         await catalog.refresh()
         guard let target = display.flatMap({ q in DeviceMatcher.match(q, in: catalog.displays, id: { String($0.id) }, name: \.name) })
@@ -1620,11 +1621,14 @@ enum SelfTest {
             feed?.start()
             for _ in 0..<40 where feed?.receiver.latest == nil { try? await Task.sleep(for: .milliseconds(250)) }
         }
+        // --mic <name or id>: record from that mic instead of the default one.
+        let micID = mic.flatMap { q in DeviceMatcher.match(q, in: catalog.microphones, id: \.id, name: \.name) }?.id
+        if let mic { print("mic: \(micID.map { id in catalog.microphones.first { $0.id == id }?.name ?? id } ?? "no match for \(mic), using the default")") }
         let folder = FileManager.default.temporaryDirectory.appending(path: "record-test-\(UUID().uuidString.prefix(6))")
         let recorder = Recorder()
         let spec = CompositeSpec(layout: InsetLayout(), profile: feed.map { DeviceProfile.defaults(for: $0.device.kind) } ?? .defaults(for: .camera))
         do {
-            try await recorder.start(screen: screen, camera: feed, micID: nil, spec: spec, countdown: 0, folder: folder)
+            try await recorder.start(screen: screen, camera: feed, micID: micID, spec: spec, countdown: 0, folder: folder)
         } catch {
             print("FAIL start: \(error.localizedDescription)")
             return false
