@@ -44,6 +44,16 @@ Windows 11 ARM (runs the x64 `.msi` under emulation).
 
 ## Checklist
 
+**Voice Notes** (the Voice Notes tab)
+- [ ] Record: the system asks for the microphone once; the timer and level move. ★ (or Ctrl+M) counts marks. Stop saves a note.
+- [ ] The note plays back, and the ★ buttons jump near each mark.
+- [ ] With no transcription server, Transcribe opens Settings. With whisper.cpp's server running
+      (`whisper-server -m ggml-base.en.bin --port 8080`, address `http://localhost:8080/inference`),
+      a new recording gets timed text by itself.
+- [ ] A server on another computer is refused until "This server is mine" is ticked.
+- [ ] Edit Text, tags and title are kept; Export writes `<title>.md` to Downloads; Delete removes the folder.
+- [ ] A note made on the Mac (copied into the Voice Notes folder) opens here, and one made here opens on the Mac.
+
 Do each step on Windows and on Linux.
 
 **Window**

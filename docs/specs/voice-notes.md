@@ -17,7 +17,7 @@ One folder per note, named by its id, under the voice notes folder:
 | Mac | `~/Movies/Snazzy Pro/Voice Notes/` |
 | iPhone, iPad | the app's Documents, `Voice Notes/` (visible in the Files app) |
 | Windows | `%APPDATA%\Snazzy Pro\Voice Notes\` |
-| Linux | `~/.local/share/snazzy-pro/voice-notes/` |
+| Linux | `$XDG_DATA_HOME/snazzy-pro/Voice Notes/` (default `~/.local/share`) |
 
 Each folder holds `note.json` and, if the audio was kept, `audio.<ext>`
 (`audio.m4a` on Apple devices, `audio.webm` or `audio.ogg` from Windows and Linux).

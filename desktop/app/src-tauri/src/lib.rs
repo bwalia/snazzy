@@ -3,6 +3,7 @@
 
 mod chat;
 mod decks;
+mod voice;
 
 use serde::Serialize;
 use tauri::Manager;
@@ -27,6 +28,15 @@ pub fn run() {
     tauri::Builder::default()
         .manage(chat::ChatState::new())
         .manage(decks::DeckState::new(opened))
+        .manage(voice::VoiceState::new())
+        // Voice notes record with the webview's MediaRecorder: the main window may
+        // use the microphone (the OS still asks the user the first time).
+        .on_permission_request(|webview, kind| match kind {
+            tauri::webview::PermissionKind::Microphone if webview.label() == "main" => {
+                tauri::webview::PermissionResponse::Allow
+            }
+            _ => tauri::webview::PermissionResponse::Default,
+        })
         // Projects for the Builder, the library and the Present window: only
         // links handed out this run are served (snazzy_core::preview).
         .register_asynchronous_uri_scheme_protocol(
@@ -84,6 +94,17 @@ pub fn run() {
             decks::remove_deck_repo,
             decks::list_repo_decks,
             decks::add_repo_deck,
+            voice::voice_notes,
+            voice::voice_note,
+            voice::save_voice_recording,
+            voice::transcribe_voice_note,
+            voice::update_voice_note,
+            voice::delete_voice_note,
+            voice::voice_note_audio,
+            voice::export_voice_note,
+            voice::show_voice_notes_folder,
+            voice::voice_settings,
+            voice::set_voice_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Snazzy Pro");
