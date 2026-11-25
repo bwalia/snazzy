@@ -148,3 +148,35 @@ body.present-view.idle { cursor: none; }
 .panel .subtabs button[aria-selected="true"] { background: var(--panel); border-color: var(--line); }
 .deck-head button { padding: 4px 10px; font-size: 13px; }
 .banner button { white-space: nowrap; }
+
+/* Voice Notes */
+.panel-body[data-panel="notes"] { padding: 0; overflow: hidden; }
+.notes { display: grid; grid-template-columns: minmax(220px, 280px) 1fr; height: 100%; }
+.notes-side { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-right: 1px solid var(--line); min-height: 0; }
+.notes-record { display: flex; gap: 8px; }
+.notes-record .record { flex: 1; font-weight: 600; padding: 9px 12px; }
+.notes-record .record.on { background: #b42318; border-color: #b42318; }
+.notes-record #vn-mark { color: #facc15; font-size: 16px; }
+.notes-live { display: flex; gap: 8px; align-items: center; font-variant-numeric: tabular-nums; font-size: 13px; }
+.notes-live meter { flex: 1; height: 8px; }
+.notes-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }
+.notes-list button { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; margin: 2px 0; }
+.notes-list button strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-list button:hover, .notes-list button.on { background: var(--panel); border-color: var(--line); }
+.notes-foot { display: flex; gap: 6px; }
+.notes-detail { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; overflow: auto; min-width: 0; }
+.notes-detail .note-title { font-size: 22px; font-weight: 700; background: transparent; border-color: transparent; padding: 2px 4px; }
+.notes-detail .note-title:hover, .notes-detail .note-title:focus { border-color: var(--line); }
+.notes-detail p { margin: 0; line-height: 1.5; }
+.notes-detail audio { width: 100%; }
+.notes-detail .marks { display: flex; flex-wrap: wrap; gap: 6px; }
+.notes-detail .marks button { color: #facc15; }
+.note-text { display: flex; flex-direction: column; gap: 10px; }
+.note-text textarea { width: 100%; resize: vertical; line-height: 1.5; }
+.notes-detail label { display: flex; gap: 8px; align-items: center; }
+.notes-detail label input { flex: 1; }
+.actions.left { justify-content: flex-start; flex-wrap: wrap; align-items: center; }
+.panel button.link { background: none; border: none; padding: 0 6px 0 0; color: #a99dff; font-variant-numeric: tabular-nums; text-decoration: underline; }
+.dialog .check { flex-direction: row; align-items: center; }
+.dialog code { font-size: 12px; }
+@media (max-width: 1100px) { .notes { grid-template-columns: 1fr; } .notes-side { border-right: none; border-bottom: 1px solid var(--line); max-height: 45vh; } }

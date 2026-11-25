@@ -1,5 +1,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { mountDecks } from "./decks";
+import { mountVoiceNotes } from "./voice";
 import { startPresentWindow } from "./present";
 
 interface AppInfo {
@@ -35,6 +36,7 @@ const PANELS: { id: string; name: string; later?: string }[] = [
   { id: "builder", name: "Builder" },
   { id: "sources", name: "Sources & Preview", later: "Cameras, mics, screens and the live preview arrive in phase 5." },
   { id: "slides", name: "Slides" },
+  { id: "notes", name: "Voice Notes" },
   { id: "recordings", name: "Recordings", later: "Recording arrives in phase 6." },
   { id: "live", name: "Live", later: "The live room and streaming arrive in phase 7." },
 ];
@@ -341,6 +343,11 @@ function startMainWindow() {
   });
   const panel = (id: string) => document.querySelector<HTMLElement>(`[data-panel=${id}]`)!;
   mountDecks(panel("builder"), panel("slides"), showTab);
+  // "Make a Deck" and the rest go through the chat (and its cloud consent).
+  mountVoiceNotes(panel("notes"), (text) => {
+    prompt.value = text;
+    void submit();
+  });
   showTab("builder");
 
   // Start

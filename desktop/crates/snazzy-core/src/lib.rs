@@ -16,6 +16,7 @@ pub mod search;
 pub mod settings;
 pub mod share;
 pub mod timeline;
+pub mod voice_notes;
 pub mod workspace;
 
 /// A problem with a project, a path or a file, in words for the user (the same
