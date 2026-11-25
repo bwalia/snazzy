@@ -210,6 +210,13 @@ targets:
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: Snazzy Pro scans the pairing code shown on your Mac.
+        NSMicrophoneUsageDescription: Snazzy Pro records your voice notes.
+        NSSpeechRecognitionUsageDescription: Snazzy Pro turns your voice notes into text on this device. Nothing is sent to Apple's servers.
+        # Voice notes keep recording when the screen locks or you switch apps.
+        UIBackgroundModes: [audio]
+        # Voice notes are in Documents, so they show in the Files app.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
         # Ollama on a computer on your network (plain http on the LAN).
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true

@@ -6,6 +6,7 @@ import SwiftUI
 struct SnazzyRemoteApp: App {
     @State private var model = RemoteModel()
     @State private var studio = StudioModel()
+    @State private var voiceNotes = VoiceNotesModel()
     @Environment(\.scenePhase) private var phase
 
     var body: some Scene {
@@ -13,6 +14,7 @@ struct SnazzyRemoteApp: App {
             RootView()
                 .environment(model)
                 .environment(studio)
+                .environment(voiceNotes)
                 .preferredColorScheme(.dark)
                 .tint(Color(red: 0.42, green: 0.36, blue: 1))
                 // A pairing link from the Camera app (snazzypro://pair?...).
@@ -27,6 +29,16 @@ struct SnazzyRemoteApp: App {
 struct RootView: View {
     @Environment(RemoteModel.self) private var model
     @State private var accepted = Legal.hasAccepted() || RootView.skipWelcome
+    @State private var tab = RootView.firstTab
+
+    /// Screenshots can start on another tab (`-debugTab notes`).
+    static var firstTab: String {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "debugTab") ?? "studio"
+        #else
+        "studio"
+        #endif
+    }
 
     /// UI tests start straight in the app.
     static var skipWelcome: Bool {
@@ -46,9 +58,10 @@ struct RootView: View {
         } else if RootView.skipWelcome {
             remote  // UI tests drive the remote directly
         } else {
-            TabView {
-                Tab("Studio", systemImage: "sparkles.rectangle.stack") { StudioView() }
-                Tab("Mac Remote", systemImage: "desktopcomputer") { remote }
+            TabView(selection: $tab) {
+                Tab("Studio", systemImage: "sparkles.rectangle.stack", value: "studio") { StudioView() }
+                Tab("Notes", systemImage: "waveform", value: "notes") { VoiceNotesView() }
+                Tab("Mac Remote", systemImage: "desktopcomputer", value: "remote") { remote }
             }
         }
     }
