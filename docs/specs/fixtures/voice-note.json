@@ -1,0 +1,40 @@
+{
+  "audio" : "audio.m4a",
+  "created_at" : "2026-01-02T03:04:05Z",
+  "device" : "Mac",
+  "duration" : 14,
+  "format" : "snazzy-voice-note",
+  "id" : "0f8fad5b-d9cb-469f-a165-70867728950e",
+  "language" : "en-GB",
+  "marks" : [
+    {
+      "at" : 4.2,
+      "label" : "Idea"
+    }
+  ],
+  "segments" : [
+    {
+      "end" : 2.5,
+      "start" : 0,
+      "text" : "Okay, ideas for the spring launch."
+    },
+    {
+      "end" : 6,
+      "start" : 2.6,
+      "text" : "We could run a live demo every Friday."
+    },
+    {
+      "end" : 13.25,
+      "start" : 9.5,
+      "text" : "And send the slides to everyone who joins."
+    }
+  ],
+  "tags" : [
+    "launch"
+  ],
+  "title" : "",
+  "transcribed_by" : "on-device",
+  "transcript" : "Okay, ideas for the spring launch. We could run a live demo every Friday. And send the slides to everyone who joins.",
+  "updated_at" : "2026-01-02T03:04:05Z",
+  "version" : 1
+}

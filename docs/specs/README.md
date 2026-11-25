@@ -14,6 +14,7 @@ each spec names the Swift file that defines it.
 | [projects.md](projects.md) | `.snazzy-project.json`, folder names, path rules | `Builder/Workspace.swift` | `snazzy_core::{project, workspace}` |
 | [search.md](search.md) | Deck search: slides from HTML, folding, scoring, snippets | `Builder/DeckSearch.swift` | `snazzy_core::search` |
 | [deck-repos.md](deck-repos.md) | Deck repositories on GitHub | `Builder/DeckRepo.swift`, `decks/README.md` | `snazzy_core::deck_repo` |
+| [voice-notes.md](voice-notes.md) | Voice notes: `note.json`, folders, titles, search, Markdown | `SnazzyCore/VoiceNotes.swift` | `snazzy_core::voice_notes` |
 | [settings.md](settings.md) | App settings and presets | `SnazzyCore/AppSettings.swift`, `Presets.swift` | `snazzy_core::settings` |
 
 ## Fixtures
@@ -23,9 +24,10 @@ each spec names the Swift file that defines it.
 - `Packages/SnazzyKit/Tests/BuilderTests/SpecFixtureTests.swift` (decks, projects, share, search, deck repos, settings)
 - `Packages/SnazzyKit/Tests/RemoteTests/RemoteSpecFixtureTests.swift` (remote)
 - `Packages/SnazzyKit/Tests/CaptureEngineTests/TimelineFixtureTests.swift` (recordings)
+- `Packages/SnazzyKit/Tests/SnazzyCoreTests/VoiceNoteTests.swift` (voice notes)
 
 ```sh
-SNAZZY_WRITE_FIXTURES=1 swift test --package-path Packages/SnazzyKit --filter "SpecFixture|TimelineFixture"
+SNAZZY_WRITE_FIXTURES=1 swift test --package-path Packages/SnazzyKit --filter "SpecFixture|TimelineFixture|VoiceNoteTests"
 ```
 
 Without the variable those tests check that the committed fixtures still match

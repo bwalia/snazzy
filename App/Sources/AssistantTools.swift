@@ -163,7 +163,7 @@ enum AssistantTools {
                 inputSchema: emptySchema
             ) { @Sendable _ in await capture.backgroundsJSON() },
         ] + recordingTools(capture) + builderTools(builder, sharing: app.sharing) + modelTools(app) + settingsTools(app) + liveTools(app.live) + broadcastTools(app.broadcast) + prompterTools(app.prompter) + deckTools(app)
-          + DeveloperTools.tools(app.developer, offMac: offMac)
+          + DeveloperTools.tools(app.developer, offMac: offMac) + voiceNoteTools(app.voiceNotes, offMac: offMac)
           + (includeMCP ? app.mcp.registeredTools() : []))
     }
 
@@ -614,6 +614,42 @@ enum AssistantTools {
             throw CaptureActionError(message: "No camera matches “\(query)”. Cameras: " + all.map(\.name).joined(separator: ", "))
         }
         return device.id
+    }
+
+    /// Voice notes: the assistant can read them (after the user reviews, if it runs off this Mac)
+    /// and start or stop one, which asks first: it turns the microphone on.
+    static func voiceNoteTools(_ notes: VoiceNotesController, offMac: String?) -> [RegisteredTool] {
+        [
+            RegisteredTool(
+                name: "list_voice_notes",
+                description: "List the user's voice notes (newest first): id, title, date, length in seconds, how many ideas they marked, tags.",
+                inputSchema: emptySchema
+            ) { @Sendable _ in await notes.listJSON() },
+            RegisteredTool(
+                name: "read_voice_note",
+                description: "Read a voice note as Markdown: the ideas the user marked (with what they said), then the text in timed paragraphs. id can be \"latest\".",
+                inputSchema: object(["id": ["type": "string", "minLength": 1]], required: ["id"]),
+                external: "a voice note"
+            ) { @Sendable args in try await notes.readJSON(args["id"]?.stringValue ?? "latest", offMac: offMac) },
+            RegisteredTool(
+                name: "record_voice_note",
+                description: "Start or stop a voice note (the microphone is recorded and turned into text on this Mac). action: start, stop or mark (mark an idea at this moment).",
+                inputSchema: object(["action": ["type": "string", "enum": ["start", "stop", "mark"]]], required: ["action"]),
+                requiresConfirmation: true
+            ) { @Sendable args in
+                switch args["action"]?.stringValue {
+                case "start":
+                    await notes.start()
+                    if let p = await notes.problem { throw CaptureActionError(message: p) }
+                    await MainActor.run { notes.windowRequest += 1 }
+                case "stop":
+                    if let note = await notes.stop() { return ["saved": .string(note.id), "title": .string(note.displayTitle)] }
+                case "mark": await notes.mark()
+                default: break
+                }
+                return await notes.stateJSON()
+            },
+        ]
     }
 
     nonisolated static let emptySchema: JSONValue = ["type": "object", "properties": [:], "additionalProperties": false]

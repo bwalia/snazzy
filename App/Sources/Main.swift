@@ -111,6 +111,10 @@ struct SnazzyProApp: App {
                             await Screenshots.run(app: model)
                         }
                     }
+                    if UserDefaults.standard.bool(forKey: "SnazzyPro.openVoiceNotes") {
+                        model.voiceNotes.selection = model.voiceNotes.notes.first?.id
+                        model.voiceNotes.windowRequest += 1
+                    }
                     if let tour = UserDefaults.standard.string(forKey: "SnazzyPro.tour") {
                         Task { @MainActor in
                             try? await Task.sleep(for: .seconds(2))
@@ -163,6 +167,12 @@ struct SnazzyProApp: App {
         }
         .defaultSize(width: 820, height: 680)
 
+        Window("Voice Notes", id: "voice-notes") {
+            VoiceNotesView()
+                .environment(model)
+        }
+        .defaultSize(width: 980, height: 680)
+
         Window("Diagnostics", id: "diagnostics") {
             DiagnosticsView()
                 .environment(model.capture)
@@ -202,6 +212,18 @@ struct AppCommands: Commands {
             }
         }
         CommandMenu("Tools") {
+            Button("Voice Notes…") { openWindow(id: "voice-notes") }
+                .keyboardShortcut("n", modifiers: [.command, .option])
+            Button(model.voiceNotes.isRecording ? "Stop Voice Note" : "Record Voice Note") {
+                openWindow(id: "voice-notes")
+                Task { await model.voiceNotes.toggle() }
+            }
+            .keyboardShortcut("r", modifiers: [.command, .option])
+            .disabled(model.voiceNotes.phase == .saving || model.interviews.interviewMode)
+            Button("Mark an Idea") { model.voiceNotes.mark() }
+                .keyboardShortcut("m", modifiers: [.command, .option])
+                .disabled(!model.voiceNotes.isRecording)
+            Divider()
             Button("Transcribe Audio…") { model.developer.chooseAudioToTranscribe() }
                 .disabled(!model.developer.settings.captionsEnabled || model.developer.busy != nil)
         }

@@ -42,6 +42,7 @@ $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj
 #       --decks-test [--deck-repo owner/repo/tree/branch/decks]   (search, categories/tags, open at a slide, add from GitHub)
 #       --interview-test [--provider anthropic --model …] [--all-personas] [--print]   (Snazzy Interview with real models and simulated candidates; Ollama by default)
 #       --interview-camera-test   (the candidate's camera: recorded only with consent, deleted when turned off or with the interview)
+#       --voice-notes-test --audio <speech.m4a> [--live]   (voice notes: audio → timed text on this Mac, search, edit, tools, delete; --live records the mic)
 #       --prep-pack-test   (prep packs: .snazzyprep plain zips, shared, opened, removed; site packs: python3 Scripts/prep-packs.py)
 #       --join-interview-test --opsapi <url> --token snz_…   (interviews by invite link, end to end against an OpsAPI, e.g. local Docker:
 #                          encrypted pack uploaded to S3, bulk invites, candidate opens the snazzypro:// link and takes the interview)
@@ -104,7 +105,7 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 
 | Module | Contents |
 |---|---|
-| `SnazzyCore` | `AppSettings`, `KeychainStore`/`SecretStore`, `JSONValue`, `Log`, `CaptureSetup`/`InsetGeometry`/`DeviceProfile`, `PresetStore`, `HTTPMessage` (hand-rolled HTTP/1.1 parser shared by the Live and MCP servers), `SigV4`, `SecretRedactor`, `Zip` (small zip reader/writer; the sandbox can't run `zip`) |
+| `SnazzyCore` | `AppSettings`, `KeychainStore`/`SecretStore`, `JSONValue`, `Log`, `CaptureSetup`/`InsetGeometry`/`DeviceProfile`, `PresetStore`, `HTTPMessage` (hand-rolled HTTP/1.1 parser shared by the Live and MCP servers), `SigV4`, `SecretRedactor`, `Zip` (small zip reader/writer; the sandbox can't run `zip`), `VoiceNote`/`VoiceNoteStore` (voice notes, shared with iOS and Windows/Linux: `docs/specs/voice-notes.md`; Mac side `VoiceNotesController` + `Views/VoiceNotesView.swift`, Tools › Voice Notes ⌥⌘N, record ⌥⌘R, mark an idea ⌥⌘M; live words from `SpeechInput`, then the saved audio is transcribed again with `RecordingTranscriber` for timed text) |
 | `Assistant` | `ModelProvider` protocol with `AnthropicProvider` (SSE), `OllamaProvider` (NDJSON), `AppleOnDeviceProvider` (FoundationModels). Also `ConversationRunner` (agent loop), `ToolRegistry`, `SchemaValidator`, `ConversationStore` |
 | `CaptureEngine` | `DeviceCatalog`, `CameraFeed`/`FeedManager`/`FrameReceiver`, `ScreenFeed` (ScreenCaptureKit), `FrameTransform`, `Compositor`, `Recorder`, `BackgroundEffect` (Vision segmentation), `LiveEncoder` (fMP4/HLS), `RecordingEditor` (trim), `Transcription`/`Captions`/`Chapters`, `ScreenReader` (OCR) |
 | `Builder` | `Workspace` (project folders with path confinement; `BuilderProject` has optional `category`, `tags`, `origin`), `Templates` (starter `deck.js`), `PartialJSON`, `SampleDecks` (12 sectors), `SnazzyShare` (`.snazzy` file format), `DeckSearch` (slides from deck.json or index.html, search over titles/text/notes/tags), `DeckRepo`/`DeckRepoCatalogue` (GitHub deck repos: parse what people paste, find deck folders in a tree listing, file limits) |
@@ -225,6 +226,7 @@ The other schemes are `SnazzyProiOS` and `SnazzyProWatch`. iOS signing needs
 |---|---|
 | Keychain service `com.snazzy.pro.api-keys` | `anthropic`, `mcp.server.token`, `mcp.<uuid>.<header>`, `broadcast.<platform>`, `share.s3.access-key`, `share.s3.secret-key`, `github.token`, remote device keys |
 | UserDefaults, keys prefixed `SnazzyPro.` | `settings.v1` (AppSettings JSON), `captureSetup.v1`, `developer.v1`, `mcpServers.v1`, `mcpServerEnabled`, `mcpServerPort`, `activePreset`, `sidePanelTab` |
+| `~/Movies/Snazzy Pro/Voice Notes/<id>/` | Voice notes: `note.json` + `audio.m4a` |
 | `~/Library/Application Support/Snazzy Pro/` (sandbox container) | `Conversations/<uuid>.json`, `Presets/<slug>.json`, `Projects/<slug>/` (with `.snazzy-project.json`), background images |
 | Ports | Live room 8787–8790 (all interfaces); MCP server 47823 (loopback only); remote host uses a random port, advertised over Bonjour |
 
