@@ -663,6 +663,67 @@ enum SelfTest {
             }
             return ok
         }
+        if arguments.contains("--voice-notes-test") {
+            // Voice notes, in a scratch folder: a recording's audio is turned into timed
+            // text on this Mac, saved, searched, read by the assistant tools, deleted.
+            //   --voice-notes-test --audio <speech.m4a>   (e.g. made with `say -o speech.m4a …`)
+            //   add --live to record 4 s from the real mic too
+            func value(_ flag: String) -> String? { arguments.firstIndex(of: flag).flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil } }
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let root = FileManager.default.temporaryDirectory.appending(path: "voice-notes-test-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: root) }
+            let notes = VoiceNotesController(app: app, root: root)
+            do {
+                if let path = value("--audio") {
+                    let copy = FileManager.default.temporaryDirectory.appending(path: "vn-\(UUID().uuidString).\(URL(fileURLWithPath: path).pathExtension)")
+                    try FileManager.default.copyItem(at: URL(fileURLWithPath: path), to: copy)
+                    var note = VoiceNote(device: "Mac", transcribedBy: "none")
+                    note.marks = [VoiceNote.Mark(at: 1)]
+                    try notes.store.adoptAudio(copy, into: &note)
+                    try notes.store.save(note)
+                    notes.reload()
+                    let started = Date()
+                    await notes.polish(note.id)
+                    let polished = notes.note(note.id)
+                    report("audio turned into timed text on this Mac", (polished?.segments.count ?? 0) > 0,
+                           String(format: "%.1f s, %d segments: %@", Date().timeIntervalSince(started), polished?.segments.count ?? 0,
+                                  String((polished?.transcript ?? "").prefix(80))))
+                    report("a title from the first words", !(polished?.displayTitle.hasPrefix("Voice note") ?? true), polished?.displayTitle ?? "")
+                    let word = polished?.transcript.split(separator: " ").dropFirst(2).first.map(String.init) ?? "zzz"
+                    notes.query = word
+                    report("search finds it", notes.shown.map(\.id) == [note.id], word)
+                    notes.query = "no-such-words-here"
+                    report("search leaves others out", notes.shown.isEmpty, "")
+                    notes.query = ""
+                    notes.update(note.id, title: "Launch ideas", tags: ["launch", " friday "])
+                    let edited = notes.note(note.id)
+                    report("title and tags saved", edited?.title == "Launch ideas" && edited?.tags == ["launch", "friday"], "")
+                    let md = edited?.markdown() ?? ""
+                    report("Markdown has the mark and timed paragraphs", md.contains("0:01 Idea") && md.contains("**0:00**"), String(md.prefix(60)))
+                    let listed = notes.listJSON()
+                    report("list_voice_notes", listed["notes"]?.arrayValue?.count == 1, "")
+                    let read = try notes.readJSON("latest", offMac: nil)
+                    report("read_voice_note (local model: no review)", read["markdown"]?.stringValue?.contains("# Launch ideas") == true, "")
+                    notes.delete(note.id)
+                    report("delete removes the folder", notes.notes.isEmpty && !FileManager.default.fileExists(atPath: root.appending(path: note.id).path), "")
+                }
+                if arguments.contains("--live") {
+                    await notes.start()
+                    report("recording from the mic", notes.isRecording, notes.problem ?? "")
+                    try await Task.sleep(for: .seconds(2))
+                    notes.mark()
+                    try await Task.sleep(for: .seconds(2))
+                    let saved = await notes.stop()
+                    report("saved with its audio and the mark", saved?.audio == "audio.m4a" && saved?.marks.count == 1,
+                           "\(Int(saved?.duration ?? 0)) s, text: \(saved?.transcript.prefix(60) ?? "")")
+                    if let saved { notes.delete(saved.id) }
+                }
+            } catch {
+                report("voice notes", false, error.localizedDescription)
+            }
+            return ok
+        }
         if arguments.contains("--prep-pack-test") {
             // Prep packs: shared as a plain zip (no passcode), opened on another Mac, removed.
             let app = AppModel()
