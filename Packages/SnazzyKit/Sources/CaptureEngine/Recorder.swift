@@ -342,7 +342,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
 
     func start(screen: ScreenReceiver, camera: FrameReceiver?, micID: String?) throws {
         guard writer.startWriting() else {
-            throw CaptureError("Can't write the movie: \(writer.error?.localizedDescription ?? "unknown error")")
+            throw CaptureError("Can't write the movie: \(writer.error.map(WriterError.describe) ?? "unknown error")")
         }
         let now = CMClockGetTime(clock)
         queue.sync { startTime = now }
@@ -451,7 +451,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
 
     private func renderFrame() {
         guard writer.status == .writing else {
-            if writer.status == .failed { fail(writer.error?.localizedDescription ?? "writer failed") }
+            if writer.status == .failed { fail(writer.error.map(WriterError.describe) ?? "writer failed") }
             return
         }
         guard let t = recordingTime(spec.syncedVideoTime(CMClockGetTime(clock), hasCamera: camera != nil)) else { return }
@@ -503,8 +503,10 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
             lastLevel = Date()
             onMicLevel?(AudioLevel.rms(buffer))
         }
+        // A clean copy, not the captured buffer: on macOS 27 some mic buffers make both the
+        // AAC and the PCM writer fail on the first sample (-11800 / -12737) and end the recording.
         guard writer.status == .writing, let t = recordingTime(CMSampleBufferGetPresentationTimeStamp(buffer)),
-              let retimed = buffer.retimed(to: t) else { return }
+              let retimed = buffer.pcmCopy(at: t) ?? buffer.retimed(to: t) else { return }
         if let start = sessionStart, t >= start, audioInput.isReadyForMoreMediaData { audioInput.append(retimed) }
         raw(retimed, kind: .mic, alreadyRetimed: true)
     }
@@ -583,7 +585,7 @@ final class RecordingSession: NSObject, AVCaptureAudioDataOutputSampleBufferDele
         // The raw tracks share this timeline, so keep it even if the composite failed.
         writeTimeline(result, recordingStart: recordingStart)
         if writer.status != .completed {
-            return .failure(CaptureError(writer.error?.localizedDescription ?? "The movie couldn't be finished."))
+            return .failure(CaptureError(writer.error.map(WriterError.describe) ?? "The movie couldn't be finished."))
         }
         return .success(result)
     }
@@ -693,7 +695,7 @@ final class RawTrack: @unchecked Sendable {
         }
     }
 
-    var error: String? { writer.status == .failed ? writer.error?.localizedDescription ?? "failed" : nil }
+    var error: String? { writer.status == .failed ? writer.error.map(WriterError.describe) ?? "failed" : nil }
 
     func finish() async {
         guard writer.status == .writing else { return }
@@ -718,7 +720,71 @@ struct SampleBox: @unchecked Sendable {
     init(_ buffer: CMSampleBuffer) { self.buffer = buffer }
 }
 
+/// Writer errors with the codes that say what went wrong: AVFoundation's own text is
+/// often just "The operation could not be completed".
+enum WriterError {
+    static func describe(_ error: Error) -> String {
+        let e = error as NSError
+        var codes = "\(e.domain) \(e.code)"
+        if let under = e.userInfo[NSUnderlyingErrorKey] as? NSError { codes += ", \(under.domain) \(under.code)" }
+        let reason = (e.userInfo[NSLocalizedFailureReasonErrorKey] as? String).map { " \($0)" } ?? ""
+        return "\(e.localizedDescription).\(reason) (\(codes))"
+    }
+}
+
 extension CMSampleBuffer {
+    /// A self-contained copy of PCM audio starting at `time`: fresh data, one timing entry and a
+    /// plain format (mono/stereo layout), so nothing odd about the captured buffer reaches a writer.
+    /// Nil if it isn't PCM or can't be copied (callers fall back to `retimed`).
+    func pcmCopy(at time: CMTime) -> CMSampleBuffer? {
+        guard let source = CMSampleBufferGetFormatDescription(self),
+              var asbd = CMAudioFormatDescriptionGetStreamBasicDescription(source)?.pointee,
+              asbd.mFormatID == kAudioFormatLinearPCM, asbd.mSampleRate > 0, asbd.mBytesPerFrame > 0 else { return nil }
+        let frames = CMSampleBufferGetNumSamples(self)
+        guard frames > 0 else { return nil }
+
+        var listSize = 0
+        guard CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
+            self, bufferListSizeNeededOut: &listSize, bufferListOut: nil, bufferListSize: 0, blockBufferAllocator: nil,
+            blockBufferMemoryAllocator: nil, flags: 0, blockBufferOut: nil) == noErr, listSize > 0 else { return nil }
+        let list = UnsafeMutableRawPointer.allocate(byteCount: listSize, alignment: MemoryLayout<AudioBufferList>.alignment)
+        defer { list.deallocate() }
+        let audioList = list.bindMemory(to: AudioBufferList.self, capacity: 1)
+        var retained: CMBlockBuffer?
+        guard CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
+            self, bufferListSizeNeededOut: nil, bufferListOut: audioList, bufferListSize: listSize, blockBufferAllocator: nil,
+            blockBufferMemoryAllocator: nil, flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment,
+            blockBufferOut: &retained) == noErr else { return nil }
+        // Every buffer must hold exactly `frames` frames, or the copy would be wrong.
+        let nonInterleaved = asbd.mFormatFlags & kAudioFormatFlagIsNonInterleaved != 0
+        let bytesPerBuffer = frames * Int(asbd.mBytesPerFrame)
+        let buffers = UnsafeMutableAudioBufferListPointer(audioList)
+        guard buffers.count == (nonInterleaved ? Int(asbd.mChannelsPerFrame) : 1),
+              buffers.allSatisfy({ Int($0.mDataByteSize) == bytesPerBuffer && $0.mData != nil }) else { return nil }
+
+        let channels = asbd.mChannelsPerFrame
+        var layout = AudioChannelLayout()
+        layout.mChannelLayoutTag = channels == 1 ? kAudioChannelLayoutTag_Mono : kAudioChannelLayoutTag_Stereo
+        var format: CMAudioFormatDescription?
+        let made = channels <= 2
+            ? CMAudioFormatDescriptionCreate(allocator: nil, asbd: &asbd, layoutSize: MemoryLayout<AudioChannelLayout>.size, layout: &layout,
+                                             magicCookieSize: 0, magicCookie: nil, extensions: nil, formatDescriptionOut: &format)
+            : CMAudioFormatDescriptionCreate(allocator: nil, asbd: &asbd, layoutSize: 0, layout: nil,
+                                             magicCookieSize: 0, magicCookie: nil, extensions: nil, formatDescriptionOut: &format)
+        guard made == noErr, let format else { return nil }
+
+        var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: CMTimeScale(asbd.mSampleRate)),
+                                        presentationTimeStamp: time, decodeTimeStamp: .invalid)
+        var out: CMSampleBuffer?
+        guard CMSampleBufferCreate(allocator: nil, dataBuffer: nil, dataReady: false, makeDataReadyCallback: nil, refcon: nil,
+                                   formatDescription: format, sampleCount: frames, sampleTimingEntryCount: 1,
+                                   sampleTimingArray: &timing, sampleSizeEntryCount: 0, sampleSizeArray: nil,
+                                   sampleBufferOut: &out) == noErr, let out,
+              CMSampleBufferSetDataBufferFromAudioBufferList(out, blockBufferAllocator: nil, blockBufferMemoryAllocator: nil,
+                                                             flags: 0, bufferList: audioList) == noErr else { return nil }
+        return out
+    }
+
     /// A copy with every sample shifted so the first starts at `time`.
     func retimed(to time: CMTime) -> CMSampleBuffer? {
         let shift = time - CMSampleBufferGetPresentationTimeStamp(self)
