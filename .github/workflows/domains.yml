@@ -1,14 +1,14 @@
 name: Domains (Cloudflare DNS + WSL Proxy)
 
 # Takes every host in .github/wslproxy/data/servers/<env>/ live, with no manual step:
-#   1. Cloudflare: CNAME <host> -> lon1.pop0.uk (DNS-only, so the edge can solve
+#   1. Cloudflare: CNAME <host> -> edge.pop0.uk (DNS-only, so the edge can solve
 #      the ACME HTTP-01 challenge and terminate TLS itself). The apex (snazzy.pro)
 #      works through Cloudflare's CNAME flattening.
 #   2. WSL Proxy control plane cp.pop0.uk (source of truth).
-#   3. WSL Proxy POP lon1.pop0.uk (the edge the CNAMEs point at).
+#   3. WSL Proxy POP lon1.pop0.uk (edge.pop0.uk points here while lon1 is healthy).
 #
 # Chain once live:
-#   browser -> snazzy.pro / www.snazzy.pro --(CNAME)--> lon1.pop0.uk (TLS)
+#   browser -> snazzy.pro / www.snazzy.pro --(CNAME)--> edge.pop0.uk -> lon1/lon2 (TLS)
 #   -> rule snazzy-prod-gh-pages -> https://bwalia.github.io/snazzy/
 #
 # Every step is an idempotent upsert, so re-runs (and the scheduled drift guard,
@@ -49,7 +49,8 @@ concurrency:
 
 env:
   TARGET_ENV: prod
-  DNS_TARGET: lon1.pop0.uk
+  # edge.pop0.uk is the lon1<->lon2 failover switch; see diy-tax-return-infra docs/runbooks/edge-failover.md
+  DNS_TARGET: edge.pop0.uk
   DNS_PROXIED: "false"
 
 jobs:
