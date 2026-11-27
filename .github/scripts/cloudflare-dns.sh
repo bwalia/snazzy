@@ -7,8 +7,8 @@
 # from a naive "POST a record" step.
 #
 # Usage:
-#   cloudflare-dns.sh --name www.snazzy.pro --content lon1.pop0.uk
-#   cloudflare-dns.sh --name snazzy.pro --content lon1.pop0.uk --proxied true
+#   cloudflare-dns.sh --name www.snazzy.pro --content edge.pop0.uk
+#   cloudflare-dns.sh --name snazzy.pro --content edge.pop0.uk --proxied true
 #   cloudflare-dns.sh --name x.example.com --content 1.2.3.4 --type A --dry-run
 #
 # Environment:
