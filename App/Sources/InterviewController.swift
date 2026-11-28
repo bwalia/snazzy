@@ -7,6 +7,7 @@ import LocalAuthentication
 import Observation
 import SnazzyCore
 import StoreKit
+import UniformTypeIdentifiers
 
 /// Snazzy Interview on this Mac: role kits, interviews (at this Mac or by a link
 /// on the local network), the AI's evidence, and the recruiter's decisions.
@@ -418,11 +419,14 @@ final class InterviewController {
     func saveReview(_ id: UUID, levels: [String: Int], note: String) {
         guard var s = session(id) else { return }
         var r = s.review ?? Review(reviewer: reviewer)
+        let changes = ReviewLevels.changes(kit: s.kit, evaluation: s.evaluation, before: r.levels, after: levels)
         r.levels = levels
         r.note = note
         r.reviewer = reviewer
         r.at = Date()
         s.review = r
+        // Each level a person changes is kept, next to the AI's suggestion, in the audit trail.
+        for line in changes { s.log("level_changed", by: reviewer, detail: line) }
         s.log("review_saved", by: reviewer)
         save(session: s)
     }
@@ -431,6 +435,7 @@ final class InterviewController {
     func decide(_ id: UUID, _ decision: Review.Decision, reason: String, note: String, levels: [String: Int]) {
         guard var s = session(id) else { return }
         var r = s.review ?? Review(reviewer: reviewer)
+        let changes = ReviewLevels.changes(kit: s.kit, evaluation: s.evaluation, before: r.levels, after: levels)
         r.decision = decision
         r.reason = reason
         r.note = note
@@ -439,8 +444,53 @@ final class InterviewController {
         r.at = Date()
         s.review = r
         s.deleteAfter = Calendar.current.date(byAdding: .day, value: max(s.kit.settings.retentionDays, 1), to: Date())
+        for line in changes { s.log("level_changed", by: reviewer, detail: line) }
         s.log("decided", by: reviewer, detail: "\(decision.rawValue): \(reason)")
         save(session: s)
+    }
+
+    // MARK: For hiring managers
+
+    /// Every finished interview for a role (all versions of its kit), side by side.
+    func comparison(for kitID: UUID) -> RoleComparison? {
+        guard let kit = kits.first(where: { $0.id == kitID }) else { return nil }
+        return RoleComparison(kitID: kitID, competencies: kit.competencies, sessions: candidateInterviews)
+    }
+
+    /// Roles with at least one finished interview, for the sidebar.
+    var comparableKits: [RoleKit] {
+        kits.filter { kit in candidateInterviews.contains { $0.kit.id == kit.id && $0.isFinished } }
+    }
+
+    /// A Markdown brief for the next interviewer, saved where the person chooses.
+    func saveBrief(_ id: UUID) {
+        guard var s = session(id) else { return }
+        let panel = NSSavePanel()
+        let name = s.candidate.name.isEmpty ? "Candidate" : s.candidate.name
+        panel.nameFieldStringValue = "\(name) - \(s.kit.title) brief.md".replacingOccurrences(of: "/", with: "-")
+        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try HiringBrief.markdown(s).write(to: url, atomically: true, encoding: .utf8)
+            s.log("brief_saved", by: reviewer)
+            save(session: s)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            message = "Couldn't save the brief: \(error.localizedDescription)"
+        }
+    }
+
+    /// The comparison as CSV (rows in the order shown), saved where the person chooses.
+    func saveComparisonCSV(_ comparison: RoleComparison, order: [RoleComparison.Row], title: String) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "\(title) candidates.csv".replacingOccurrences(of: "/", with: "-")
+        panel.allowedContentTypes = [.commaSeparatedText]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try comparison.csv(order: order).write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            message = "Couldn't save the CSV: \(error.localizedDescription)"
+        }
     }
 
     /// The email text for telling a candidate; a person sends it from their own mail app.

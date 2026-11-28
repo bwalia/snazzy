@@ -329,6 +329,9 @@ struct InterviewDetailView: View {
                 } label: { Label("Send to OpsAPI", systemImage: "icloud.and.arrow.up") }
                 .disabled(!s.isFinished)
             }
+            Button { iv.saveBrief(id) } label: { Label("Brief for Next Round", systemImage: "doc.text") }
+                .help("A one-page brief for the next interviewer: evidence, levels, what to probe, your decision and note")
+                .disabled(!s.isFinished)
             Button {
                 let panel = NSSavePanel()
                 panel.nameFieldStringValue = InterviewFile.fileName(for: s)

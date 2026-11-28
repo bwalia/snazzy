@@ -767,6 +767,61 @@ enum SelfTest {
             app.prompter.hide()
             return ok
         }
+        if arguments.contains("--manager-review-test") {
+            // The hiring manager's side, through the controller the UI uses: level changes kept
+            // in the audit next to the AI's suggestion, a decision, the comparison for the role
+            // (name order by default, no overall score) and the next-round brief. No models.
+            let app = AppModel()
+            app.sessionLoggingSuspended = true
+            let iv = app.interviews!
+            iv.unlockForTesting()
+            guard let url = Bundle.main.url(forResource: "interview-kit", withExtension: "json"),
+                  var kit = try? InterviewJSON.decoder.decode(RoleKit.self, from: Data(contentsOf: url)) else { return false }
+            kit.id = UUID()
+            iv.save(kit)
+            defer { if let k = iv.kits.first(where: { $0.id == kit.id }) { iv.delete(k) } }
+            var made: [UUID] = []
+            defer { for id in made { if let s = iv.session(id) { iv.delete(s) } } }
+            do {
+                try iv.approve(iv.kits.first { $0.id == kit.id }!)
+                let approved = iv.kits.first { $0.id == kit.id }!
+                for (name, levels) in [("Priya Test", [3, 4, 2]), ("Ade Test", [5, 3, 4]), ("Ben Test", [2, 2, 3])] {
+                    var (s, _) = try await iv.createInterview(kit: approved, candidate: Candidate(name: name), channel: .thisMac)
+                    s.state = .completed
+                    s.startedAt = Date().addingTimeInterval(-1200)
+                    s.endedAt = Date()
+                    s.evaluation = Evaluation(competencies: zip(approved.competencies, levels).map { c, level in
+                        CompetencyResult(id: c.id, evidence: [], level: level, reason: "test", probeNext: "Ask \(name) for an example about \(c.name.lowercased()).")
+                    })
+                    iv.save(session: s)
+                    made.append(s.id)
+                }
+                let c1 = approved.competencies[0]
+                let priya = made[0]
+                iv.saveReview(priya, levels: [c1.id: 4], note: "Good examples")
+                iv.decide(priya, .advance, reason: "Evidence meets the role's needs", note: "Good examples", levels: [c1.id: 2])
+                let audit = iv.session(priya)!.audit.filter { $0.action == "level_changed" }.map(\.detail)
+                report("level changes kept with the AI's suggestion", audit == ["\(c1.name): AI suggested 3, set to 4", "\(c1.name): 4 → 2"], audit.joined(separator: " | "))
+                report("decision recorded", iv.session(priya)?.review?.decision == .advance, "")
+
+                report("role offered for comparison", iv.comparableKits.contains { $0.id == kit.id }, "")
+                let comparison = iv.comparison(for: kit.id)!
+                report("comparison in name order", comparison.rows.map(\.candidate) == ["Ade Test", "Ben Test", "Priya Test"], comparison.rows.map(\.candidate).joined(separator: ", "))
+                let byLevel = comparison.sorted(by: .level(c1.id)).map(\.candidate)
+                // Priya: the person set 2 (the AI said 3), tying with Ben's 2, so name order; with the AI's 3 she'd come before Ben.
+                report("sorting by a level uses the person's level", byLevel == ["Ade Test", "Ben Test", "Priya Test"], byLevel.joined(separator: ", "))
+                let csv = comparison.csv(order: comparison.rows)
+                report("CSV marks AI levels", csv.contains("5 (AI)") && csv.contains("Priya Test"), "")
+
+                let brief = HiringBrief.markdown(iv.session(priya)!)
+                report("brief has the decision, levels and probes", brief.contains("**Advance**") && brief.contains("reviewer: 2, AI suggested: 3")
+                       && brief.contains("Ask Priya Test for an example"), "")
+                if arguments.contains("--print") { print(brief) }
+            } catch {
+                report("manager review", false, error.localizedDescription)
+            }
+            return ok
+        }
         if arguments.contains("--interview-camera-test") {
             // The candidate's camera: recorded only after they agree, linked to the
             // interview and deleted with it; turned off mid-way, the recording is deleted.

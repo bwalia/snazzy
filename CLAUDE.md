@@ -42,6 +42,7 @@ $APP --self-test --devices | --record 6 | --composite | --builder-snapshot <proj
 #       --decks-test [--deck-repo owner/repo/tree/branch/decks]   (search, categories/tags, open at a slide, add from GitHub)
 #       --interview-test [--provider anthropic --model …] [--all-personas] [--print]   (Snazzy Interview with real models and simulated candidates; Ollama by default)
 #       --interview-camera-test   (the candidate's camera: recorded only with consent, deleted when turned off or with the interview)
+#       --manager-review-test [--print]   (hiring manager: level changes in the audit, decision, compare candidates per role, next-round brief)
 #       --voice-notes-test --audio <speech.m4a> [--live]   (voice notes: audio → timed text on this Mac, search, edit, tools, delete; --live records the mic)
 #       --prep-pack-test   (prep packs: .snazzyprep plain zips, shared, opened, removed; site packs: python3 Scripts/prep-packs.py)
 #       --join-interview-test --opsapi <url> --token snz_…   (interviews by invite link, end to end against an OpsAPI, e.g. local Docker:
