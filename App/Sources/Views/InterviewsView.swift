@@ -11,7 +11,7 @@ struct InterviewsView: View {
     @State private var error: String?
 
     enum Item: Hashable {
-        case kit(UUID), interview(UUID), fairness, activation
+        case kit(UUID), interview(UUID), compare(UUID), fairness, activation
     }
 
     var body: some View {
@@ -55,6 +55,9 @@ struct InterviewsView: View {
                     }
                 }
                 Section("Reports") {
+                    ForEach(iv.comparableKits) { kit in
+                        Label("Compare: \(kit.title)", systemImage: "tablecells").lineLimit(1).tag(Item.compare(kit.id))
+                    }
                     Label("Fairness", systemImage: "chart.bar.xaxis").tag(Item.fairness)
                 }
             }
@@ -90,6 +93,10 @@ struct InterviewsView: View {
                 case .interview(let id)?:
                     if iv.session(id) != nil {
                         InterviewDetailView(id: id, onDelete: { selection = nil }).id(id)
+                    } else { placeholder }
+                case .compare(let id)?:
+                    if let comparison = iv.comparison(for: id), let kit = iv.kits.first(where: { $0.id == id }) {
+                        CompareCandidatesView(kit: kit, comparison: comparison, onOpen: { selection = .interview($0) }).id(id)
                     } else { placeholder }
                 case .fairness?:
                     FairnessView()
